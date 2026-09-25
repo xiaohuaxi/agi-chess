@@ -21,7 +21,7 @@ from . import claude_cli, memory, records, runner
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RUNS = ROOT / 'runs'
-GAMES = {'xiangqi': 'llmchess.xiangqi'}
+GAMES = {'xiangqi': 'llmchess.xiangqi', 'chess': 'llmchess.chess_'}
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
 SIDE_KEYS = {'effort': str, 'memory': str, 'view': str, 'history': int, 'legal': str, 'selfcheck': str,
              'recite': str, 'notes_keep': int, 'session_view': str}
