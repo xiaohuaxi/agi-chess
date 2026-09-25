@@ -45,6 +45,12 @@
 - `docs/thinking-carryover.md`：各家模型跨轮是否保留思考（文档加实测）。「同一会话连续下」这档靠它成立。
 - 上游研究，在另一个仓库：`~/repos/ai-research/topics/llm-board-games-survey.md`（别人怎么让模型下棋，有出处）、`~/repos/ai-research/topics/llm-xiangqi-play.md`（第一轮 Opus 对 Opus：读盘全对，昏招集中在「谁能吃到谁」）。
 
+## 跑与验证
+
+- 程序在 `llmchess/`，用法看 `python3 -m llmchess --help`；对局记录落在 `runs/<tag>/`（被 git 忽略）。
+- 验证命令：`python3 -m unittest discover -s tests -t .`（离线，不调 `claude`；会起本机引擎）。
+- 冒烟和实验会调 `claude -p` 吃订阅额度：冒烟只用 medium，半回合数压到个位数。
+
 ## 硬约束
 
 - **棋手不准用引擎或规则库帮忙**：引擎只能当对手，或事后当裁判判昏招。Codex 当棋手前，先证明它的工具关掉了、调不到本机引擎。

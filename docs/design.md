@@ -15,9 +15,9 @@
 | P2 | 服务端按档位真的多想 | **已核实（小样本）** | 同一个国际象棋中局（无清单，只给 FEN、字符棋盘、着法记录），每档 2 次，思考 token：medium 151/121，high 191/231，xhigh 602/308，max 2225/1111；单次用时 6–26 秒。档位是有效的，而且 max 比 medium 多一个数量级；但在平静局面里绝对量都不大。上一轮 medium→high 只多 14% 的结论是在中国象棋、带自查提示的条件下，两者不矛盾。 |
 | P3 | 能拿到每步的输入、输出、思考 token | **已核实** | `--output-format json` 的 `usage` 里有 `input_tokens`、`cache_read_input_tokens`、`cache_creation_input_tokens`、`output_tokens`、`output_tokens_details.thinking_tokens`；`modelUsage.<模型串>` 里另有 `thinkingTokens`、`costUSD`、`canonicalModel`。另有 `duration_ms`、`ttft_ms`、`total_cost_usd`、`session_id`、`stop_reason`、`api_error_status`。**output_tokens 已包含思考**：回复 "ok" 那次 output 37、thinking 33。输入总量 = 三个输入字段相加。 |
 | P4 | 思考原文拿不到 | **已核实** | 请求里 `display: "omitted"`，会话记录里 thinking 块是空字符串加一段 868 字符的签名。Opus 5.5 文档：原始思考链在任何设置下都不返回，最多给摘要（`display: "summarized"`），`claude -p` 没有开关能改这一项（help 里没找到）。所以"它想了什么"只能看它写出来的正文。 |
-| P5 | 同一会话续接（`--resume <id>`）时，上一轮的思考会带回模型上下文 | **已核实** | 三层证据：①**客户端确实发回去了**：续接时抓到的请求里，上一轮的 assistant 消息是 `[thinking(空文本, 签名 892 字符), text "ready"]`，且 `context_management: {"edits": [{"type": "clear_thinking_20251015", "keep": "all"}]}`，即全部保留、不清理。②**文档**（claude-api skill 随 2.1.282 带的迁移指南，Opus 5.5 节）：思考块绑定模型和会话，同一模型、同一会话、前缀逐字节不变时模型读得到；Claude Code 会保持前缀不变。③**实测**：第一轮让它"心里想一个 1–100 的数，只回 ready"，然后从这个状态分叉（`--resume --fork-session`）3 次，问同一组 6 个是/否问题。5 个会话 15 次分叉，同一会话内 3 次答案完全一致，不同会话之间出现 4 种不同答案（C `YYNNYN`、D/F `YNYNYN`、E `YYNYYN`、G `NYNYYN`）。这 5 个会话能看到的正文逐字相同（都是同一问题加 "ready"），唯一不同的就是那块看不见的思考；若思考没带回去，5 个会话应该答出同一种分布。 |
+| P5 | 同一会话续接（`--resume <id>`）时，上一轮的思考会带回模型上下文 | **已核实** | 三层证据：①**客户端确实发回去了**：续接时抓到的请求里，上一轮的 assistant 消息是 `[thinking(空文本, 签名 892 字符), text "ready"]`，且 `context_management: {"edits": [{"type": "clear_thinking_20251015", "keep": "all"}]}`，即全部保留、不清理。②**文档**（claude-api skill 随 2.1.282 带的迁移指南，Opus 5.5 节）：思考块绑定模型和会话，同一模型、同一会话、前缀逐字节不变时模型读得到；Claude Code 会保持前缀不变。③**实测**：第一轮让它"心里想一个 1–100 的数，只回 ready"，然后从这个状态分叉（`--resume --fork-session`）3 次，问同一组 6 个是/否问题。5 个会话 15 次分叉，同一会话内 3 次答案完全一致，不同会话之间出现 4 种不同答案（C `YYNNYN`、D/F `YNYNYN`、E `YYNYYN`、G `NYNYYN`）。这 5 个会话能看到的正文逐字相同（都是同一问题加 "ready"），唯一不同的就是那块看不见的思考；若思考没带回去，5 个会话应该答出同一种分布。**2026-09-25 在棋手同款开关下（P7 那套加空临时目录）复核**：①照样成立——续接请求里上一轮的 thinking 块（带 804–1852 字符签名）原样发回，`keep: "all"`，`tools` 仍为 `[]`，对局会话记录里也存着带签名的思考块；③行为复测**没得出定论**：两轮共 6 个会话，一轮里模型常先声明"我没有跨轮的隐藏记忆"、分叉答案不一致，另一轮 3 个会话全挑 37（`NNNYYY`，分不出是记得还是现编），还有 1 次被分类器拦下。要定论得做"删掉思考块再续接"的对照，没做。 |
 | P6 | 不能直接问它"你上一轮想了什么" | **已核实** | 直接问"上一轮你在思考里挑的数是多少"，3/3 被安全分类器拦下（`Opus 5.5's safeguards flagged this message`）。文档说这是 `reasoning_extraction` 类拒答：要求在正文里吐出思考会被拒。换成"我放弃了，公布答案"，6 次里 2 次被拦、2 次它自称看不到之前的思考、2 次给了答案；而且 **Claude Code 会自动往会话里塞一条"上面的回复被安全分类器拦了，别再输出"的用户消息然后重试一次**，这条消息会永久留在会话里。 |
-| P7 | 关掉工具、MCP、用户设置、CLAUDE.md 后，模型拿不到引擎 | **已核实** | 沿用上一轮命令（`--tools "" --strict-mcp-config --setting-sources "" --system-prompt ... CLAUDE_CODE_DISABLE_CLAUDE_MDS=1`），抓到的请求 `tools: []`。system 里只剩 Claude Code 固定的一句身份说明和我们的系统提示，用户消息前多一小段 userEmail 提示，另有一条环境说明（工作目录、日期、模型名）。 |
+| P7 | 关掉工具、MCP、用户设置、CLAUDE.md 后，模型拿不到引擎 | **已核实** | 沿用上一轮命令（`--tools "" --strict-mcp-config --setting-sources "" --system-prompt ... CLAUDE_CODE_DISABLE_CLAUDE_MDS=1`），抓到的请求 `tools: []`。system 里只剩 Claude Code 固定的一句身份说明和我们的系统提示，用户消息前多一小段 userEmail 提示，另有一条环境说明（工作目录、日期、模型名）。**2026-09-25 用对弈程序实际拼出的命令复核**（运行目录是仓库外的空临时目录，桩服务抓请求）：`tools: []`，没有 MCP，system 只有身份说明和我们的提示，全文搜不到 stockfish / fairy / lc0 / maia / `/opt/homebrew` / llm-chess / CLAUDE.md / AGENTS / memory / skill / hook。`--bare` 只认 API key、不能走订阅，不用；加 `--safe-mode` 请求体没有变化，不加。 |
 | P8 | 续接跨天、跨长暂停后思考仍保留 | 待验证 | 文档说前缀必须逐字节一致。环境说明里带日期，续接时 Claude Code 是重放当初那条还是重新生成，没测。上一段 P5 的实测都在几分钟内完成。 |
 | P9 | 走 API 直连更可控，但本研究不需要 | **已核实（文档）/ 决定不用** | 直连能多拿到：`display: "summarized"` 的思考摘要、`thinking-binding-controls` 的丢块报告、完全干净的 system（没有 Claude Code 那两段）、per-message effort。代价是走 API 计费、不走订阅额度，而且要自己维护 messages 数组、保证只追加不改写，否则思考块会被丢掉或 400。本研究要的"思考深度、思考延续、token 统计"`claude -p` 全都能做到，所以**默认 `claude -p`**，API 只作为以后要看思考摘要时的可选后端；要加时再在对局循环里加一个棋手分支。 |
 | P10 | Codex 能当另一方 | 待验证（没写，要加时再加一个棋手分支） | `codex exec` 有 `--json`、`-m`、`-c key=value`（推理档位走配置项）、`--ephemeral`、`exec resume`。**它自带 shell**，只读沙箱也能跑本机的 python-chess 和 Fairy-Stockfish，等于能用引擎。怎么把它的工具全关掉、怎么取思考 token，实施前要单独核实。 |
@@ -26,8 +26,9 @@
 | P13 | 中国象棋固定强度对手 | 部分核实 | 同一个 Fairy-Stockfish 下中国象棋可限强，但 `UCI_Elo` 的标定是国际象棋的，**分数在中国象棋上没有意义**，只能当一把强度旋钮做相对比较。本机没有中国象棋的 Maia 类"像人"引擎。已定：这次不引入 Pikafish，就用本机 Fairy-Stockfish 限节点数或深度造几档弱对手，不和人类段位对应。 |
 | P14 | 规则库 | **已核实** | 本机 python-chess 1.11.2、pyffish 0.0.90；系统 Python 3.9.6（代码要兼容 3.9，别用 `match`、`X | Y` 类型写法）。 |
 | P15 | 长捉只能靠规则库判 | **已核实（文档）/ 边界待验证** | 规则库 pyffish 0.0.90 内嵌的 Fairy-Stockfish 和外部对手引擎 14.0.1 不是一个版本；外部引擎只禁长将、不禁长捉，所以不能指望引擎自己避开长捉。程序先用规则库算出会被判负的着法，引擎对手出棋时用 `searchmoves` 把它们排除；模型走到这类着法当非法着退回。长捉是 pyffish 的近似实现，边界没全测。 |
-| P16 | 国际象棋三次重复、五十回合 | **已核实 / 已定口径** | python-chess 的 `outcome()` 默认不因三次重复、五十回合结束，要 `claim_draw=True`（本机实测）。口径：**程序替棋手自动申诉，按终局判和**，终局原因写明是哪一条。五次重复、七十五回合是强制和，同样判和。 |
-| P17 | `claude -p` 的运行目录会进提示 | **已核实** | 桩服务抓到的请求里，环境说明写着工作目录全路径、"Is a git repository"、当天日期，**没有** git 状态和提交记录。所以运行目录放在 `runs/<tag>/cwd`（仓库内、被忽略）只多透露一个路径名，可以接受。 |
+| P16 | 国际象棋三次重复、五十回合 | **已核实 / 已定口径** | python-chess 的 `outcome()` 默认不因三次重复、五十回合结束，要 `claim_draw=True`（本机实测）；但 `claim_draw=True` 在"走一步就能凑成三次重复"时也算可申诉，会早一个半回合结束（本机实测），所以程序改为直接查"局面已经出现三次""计数已经到 100 个半回合"。口径：**程序替棋手自动申诉，按终局判和**，终局原因写明是哪一条。五次重复、七十五回合是强制和，同样判和。 |
+| P17 | `claude -p` 的运行目录会进提示 | **已核实** | 桩服务抓到的请求里，环境说明写着工作目录全路径、"Is a git repository"、当天日期，**没有** git 状态和提交记录。运行目录放在仓库外的空临时目录 `$TMPDIR/llmchess-cwd/<tag>-<随机>`（路径记进 config，续跑沿用，会话记录按它存），往上找不到任何 CLAUDE.md / AGENTS.md、也不是 git 仓库。 |
+| P18 | 便条的措辞会触发安全分类器 | **已核实（小样本）** | 冒烟时原版便条要求（"留给下一步的自己：当前意图、预料对手会怎么应、下一两步打算走什么、要提防的坑"，加系统提示"你看不到自己之前的思考"）2/2 被以 `reasoning_extraction` 拒答，只改其中一处的三种写法又拒 3 次；改成"写一段便条，写什么由你定，程序下一步原样给你看"、系统提示不提思考后 4/4 通过，模型自己会写意图和计划。拒答时 `claude -p` 退出码 1、`is_error`、`stop_reason: "refusal"`，程序按拦截记，不当调用失败。 |
 
 ## 二、程序结构
 
@@ -92,7 +93,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 **思考与计划的延续（`memory`）**：
 
 - `stateless`：每步新开一次，看不到自己之前的任何东西。主流做法 [1][5]。
-- `notes`：每步回复最后要求多写一段"给下一步自己的便条"（不超过约 150 字：当前意图、预料对手会怎么应、下一两步打算走什么、自己挖的坑）。程序把上一步的便条原样放进下一步提示；默认只带最近 1 条，`--notes-keep N` 可以多带。便条是正文，不是思考，不会触发 P6 的拦截。个人博客 [27] 的"跨步保留部分推理记录"就是这类做法，但没有对照。
+- `notes`：每步回复最后要求多写一段便条（不超过约 150 字，写什么由它定；不列要写的内容，原因见 P18），程序把上一步的便条原样放进下一步提示；默认只带最近 1 条，`--notes-keep N` 可以多带。实测模型自己会写意图、预料的应着和下一两步打算。个人博客 [27] 的"跨步保留部分推理记录"就是这类做法，但没有对照。
 - `session`：每方一条连续会话，第一步 `--session-id`，之后 `--resume`，平台把之前每一轮的思考块原样带着（P5）。每轮仍给完整局面（默认），这样测到的是"计划延续"而不是"记盘能力"；`--session-view move` 只告诉对手走了什么，就成了盲棋压力测试 [6]。
 - 两条硬约束：提示里**不要**让它"回忆 / 复述上一轮的思考"（会被拦，P6）；便条的措辞用"给下一步的自己留话"，别用"总结你的推理"。
 
@@ -103,7 +104,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 - `config`：全部变量、两边系统提示、完整命令行、本机 Claude Code 版本、引擎名与参数、代码 commit。
 - `attempt`（每次调用一条）：半回合号、哪方、第几次尝试、提示原文、回复原文、解析出的着法、是否合法及原因、便条文本、复述得分；`usage` 展开成 `in`（无缓存输入）、`cache_read`、`cache_write`、`out`、`think`、`text_out = out − think`；`cost`、`duration_ms`、`ttft_ms`、`session_id`、服务端模型串、`stop_reason`、`api_error_status`；`claude` 字段存返回 JSON 原样。
 - `move`：落定的一步、记谱、是否将军、本步各次尝试的合计用量。
-- `flag`：安全分类器拦截（结果正文含 `safeguards flagged`，或 `session` 模式下会话记录里出现 Claude Code 自动插入的那条"被安全分类器拦下"消息）单独记一条，并在报告里单列；这类不算非法着法。
+- `flag`：安全分类器拦截（`stop_reason` 为 `refusal` 或结果正文含 `safeguards flagged`，或 `session` 模式下会话记录里出现 Claude Code 自动插入的那条"被安全分类器拦下"消息）单独记一条，并在报告里单列；这类不算非法着法、不扣重试次数。正文为空的回复（冒烟见过一次：`end_turn`、有思考、正文空）同样不扣重试次数，另计"空回复"。一步里被拦或空回复超过 2 次就暂停，交给人看。
 - `pause` / `resume` / `forfeit` / `end`（结果、每方合计与中位数：调用数、非法数、每步输入/输出/思考 token、用时、花费）。
 - 不管给模型的 `history` 设多少，记录里都有起始局面和全部落定着法；续跑时按它重放，重复局面照样判得出。
 - 结束时另写 `record.txt`（棋谱加统计）；国际象棋另出 `game.pgn`，中国象棋的 `record.txt` 用中文记谱。终局原因用棋种自己的说法。
