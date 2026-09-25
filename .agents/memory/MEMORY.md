@@ -1,0 +1,3 @@
+- [用中文交互](reply-in-chinese.md) — 回答、进度播报一律中文；代码与英文原文保持原样。
+- [尽力而为、别做成大工程](best-effort-not-big-project.md) — 事不可为就停；额度充裕，可开 xhigh/max。
+- [思考延续是核心变量](thinking-carryover-is-key.md) — 用户假设每步丢思考是下得臭的根源；两家跨轮保留已核实。

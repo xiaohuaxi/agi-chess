@@ -1,0 +1,10 @@
+# Project-local Codex settings, kept in the repo so a fresh checkout works
+# without anyone having to fix their own config first.
+#
+# Codex reads at most this many bytes of AGENTS.md and silently drops the rest.
+# The default is 32 KiB, which a spec written in Chinese (3 bytes per character
+# in UTF-8) passes at around 11k characters.
+#
+# Note: project-local config only applies once the folder is trusted -- Codex
+# asks the first time you run it here.
+project_doc_max_bytes = 131072

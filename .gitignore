@@ -1,0 +1,4 @@
+.agents/worktrees/
+.agents/tmp-*
+.agents/settings.local.json
+.agents/scheduled_tasks.lock
