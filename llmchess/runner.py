@@ -254,8 +254,9 @@ TURNS = {'claude': model_turn, 'engine': engine_turn, 'random': random_turn}
 
 
 # ---------------------------------------------------------------- 一盘
-def play(ctx, stop_after=None):
-    """下到终局或暂停。返回终局 dict；暂停返回 None（已写 pause）。stop_after：本次最多再走几个半回合（冒烟测续跑用）。"""
+def play(ctx, stop_after=None, stop_file=None):
+    """下到终局或暂停。返回终局 dict；暂停返回 None（已写 pause）。stop_after：本次最多再走几个半回合（冒烟测续跑用）；
+    stop_file：每步走之前看一眼这个文件，在了就暂停（批量驱动用它让在跑的盘停在两步之间）。"""
     G, cfg, st = ctx['G'], ctx['cfg'], ctx['st']
     n_open = len(opening.moves_of(cfg))
     os.makedirs(ctx['cwd'], exist_ok=True)
@@ -273,6 +274,8 @@ def play(ctx, stop_after=None):
                 break
             if stop_after is not None and moved >= stop_after:
                 raise Paused('按 --stop-after %d 停下' % stop_after)
+            if stop_file and os.path.exists(stop_file):
+                raise Paused('批量驱动要求停下（%s）' % stop_file)
             side = G.turn(st)
             moves = G.legal(st)
             ban = G.banned(st, moves)

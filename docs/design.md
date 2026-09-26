@@ -44,6 +44,7 @@ llmchess/
   records.py     JSONL 事件读写、每方统计汇总
   engine.py      很薄的 UCI 文本收发：带完整历史（position fen 起始局面 moves …）、等待有上限、退出时收掉进程
   opening.py     随机开局：引擎浅搜 MultiPV 3，按种子抽前 N 个半回合（见第三节 opening）
+  batch.py       批量驱动：一批盘并发跑完、续跑、自动 analyze、按对手汇总（见第五节末尾）
   xiangqi.py     中国象棋：规则包装（从 boards.py 搬）、终局与禁着（从 play_xiangqi.py 搬）、呈现 / 提示 / 自查 /
                  复述打分 / 着法解析（从 llm_duel.py 搬）、中文棋谱、引擎参数与坐标换算
   chess_.py      国际象棋：python-chess 包装、UCI / SAN 解析与非法原因（原因分类照搬 boards.violation 的国际象棋分支）、
@@ -126,6 +127,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
   - 国际象棋按从弱到强排一架梯子：`random` → Maia-1100 → Maia-1300/1500 → Stockfish 限 Elo。先用 Maia：它像人、强度有公开对照（ChessArena 里没有通用模型赢过 Maia-1100 [6]），Stockfish 限强在低分段走法不像人。要换算大致分数，就在梯子上找模型胜率约 50% 的那一档，每档至少 10 盘；只有一两盘的结果只能说"明显高于 / 低于"某一档。
   - 中国象棋只有 Fairy-Stockfish，限节点数或深度造几档，当相对旋钮用，不报分数（P13）。
 - 引擎每步给固定时间或节点数（Maia `nodes 1`；Stockfish 限强每步 0.1–0.5 秒），写进 config。
+- **批量驱动**（第二批 0.5，`python3 -m llmchess.batch run|summary`，用法见模块说明）：一批 = `runs/<批>/`，一盘一个子目录 `<对手>-s<种子>-<w|b>`（种子同时是开局种子和随机走子种子，w / b 是「我方」执先走方还是黑方，同一开局两色各一盘）。我方默认 `claude:opus` xhigh stateless，`--player` 换成引擎就是引擎对引擎（B2 标定）；随机开局默认国际象棋 8、中国象棋 6 个半回合。我方设置记在 `batch.json`，再跑须一致，对手和种子可以追加。再跑同一条命令即续跑：下完的跳过、没下完的 resume。任一盘暂停，或收到 Ctrl-C / SIGTERM，驱动就在批次目录放 `.stop`，不再开新盘，在跑的盘在下一步之前停（play / resume 的 `--stop-file`）；第二次信号直接打断在跑的盘；都退出码 3。每盘各在自己的进程组里跑。`summary.md` / `.json` 按（批次，对手）分组：只算下完的盘；战绩、得分率与 Wilson 95% 区间；我方未分胜负、非开局步的大失误率（国际象棋 lichess Blunder，中国象棋亏损 ≥250）与 ACPL，全组合计；第 20 个半回合局面的两两重合与独立盘数。
 
 ## 六、实验建议（第一批）
 

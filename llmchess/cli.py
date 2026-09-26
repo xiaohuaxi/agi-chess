@@ -107,7 +107,7 @@ def play_stoppable(ctx, a):
     claude_cli.LIMIT_MODE = a.on_limit
     restore = claude_cli.install_stop_handlers()
     try:
-        return 0 if runner.play(ctx, a.stop_after) else 3
+        return 0 if runner.play(ctx, a.stop_after, a.stop_file) else 3
     finally:
         restore()
 
@@ -225,9 +225,12 @@ def main(argv=None):
     p.add_argument('--timeout', type=int, default=claude_cli.TIMEOUT, help='单次 claude -p 调用的超时秒数，默认 3600')
     p.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait', help=LIMIT_HELP)
     p.add_argument('--dry-run', action='store_true', help='只打印系统提示和第一步提示，不调模型')
+    stop_help = '每步之前看这个文件在不在，在就暂停（批量驱动用）'
+    p.add_argument('--stop-file', dest='stop_file', help=stop_help)
     r = sub.add_parser('resume', help='按记录接着下')
     r.add_argument('dir')
     r.add_argument('--stop-after', dest='stop_after', type=int)
+    r.add_argument('--stop-file', dest='stop_file', help=stop_help)
     r.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait', help=LIMIT_HELP)
     a = ap.parse_args(argv)
     return cmd_play(a) if a.cmd == 'play' else cmd_resume(a)
