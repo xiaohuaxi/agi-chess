@@ -90,7 +90,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 | `selfcheck` | on / off | off | 上一轮开了没见效；作单独变量。两种棋的自查文字各写各的 |
 | `recite` | on / off | off | 先复述局面再走，程序逐格比对。复述格式和打分目前只有中国象棋有 |
 | `retries` | 整数 | 3 | 非法重试上限，用完判负（和 Game Arena 一致 [1]） |
-| `timeout` | 秒 | 3600 | 单次 `claude -p` 的超时（`--timeout`，整盘记进 config、resume 沿用；局面题同名参数）。第一批写死 1800，max 档撞了 7/120 次 |
+| `timeout` | 秒 | 3600 | 单次 `claude -p` 的超时（`--timeout`，整盘记进 config、resume 沿用，`resume --timeout` 只改那一次续跑并记进 resume 记录；局面题同名参数）。第一批写死 1800，max 档撞了 7/120 次 |
 | `on_limit` | `wait` / `pause` | wait | 撞额度时：`wait` 在程序里等到解除接着调（报错里读得出解除时间就等到那时再加 2 分钟，读不出按 10 分钟起翻倍、最多 30 分钟退避；这种等待不占调不通的重试、也不占着法重试）；`pause` 是旧行为，写 pause、退出码 3。整盘 `play` / `resume` 和 `quiz run` 都有 `--on-limit`。等待中 Ctrl-C / SIGTERM：在等的线程马上醒来写 pause、退出码 3，再跑同一条命令（或 resume）接着来；已在跑的调用答完为止，再按一次强退 |
 | `max_plies` | 整数 | 200 | 研究设的上限，到了判和；和棋规里的限着（中国象棋一百个半回合无吃子、国际象棋五十回合）分开记终局原因 |
 | `opening` | 不设 / `random:N`，加 `--opening-seed` | 不设 | 随机开局（第二批 0.4）：前 N 个半回合由程序替双方走。每个半回合引擎浅搜（国际象棋 Stockfish、中国象棋 Fairy-Stockfish，固定深度 10、单线程、每局面 ucinewgame，同种子可复现），MultiPV 3，从和最好着分差 ≤50 厘兵的着法里按 (种子, 半回合号) 抽。建盘时生成一次写进 config，续跑照记录重放。引擎输出不进提示，模型只在着法历史里看到这几步 |
@@ -127,7 +127,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
   - 国际象棋按从弱到强排一架梯子：`random` → Maia-1100 → Maia-1300/1500 → Stockfish 限 Elo。先用 Maia：它像人、强度有公开对照（ChessArena 里没有通用模型赢过 Maia-1100 [6]），Stockfish 限强在低分段走法不像人。要换算大致分数，就在梯子上找模型胜率约 50% 的那一档，每档至少 10 盘；只有一两盘的结果只能说"明显高于 / 低于"某一档。
   - 中国象棋只有 Fairy-Stockfish，限节点数或深度造几档，当相对旋钮用，不报分数（P13）。
 - 引擎每步给固定时间或节点数（Maia `nodes 1`；Stockfish 限强每步 0.1–0.5 秒），写进 config。
-- **批量驱动**（第二批 0.5，`python3 -m llmchess.batch run|summary`，用法见模块说明）：一批 = `runs/<批>/`，一盘一个子目录 `<对手>-s<种子>-<w|b>`（种子同时是开局种子和随机走子种子，w / b 是「我方」执先走方还是黑方，同一开局两色各一盘）。我方默认 `claude:opus` xhigh stateless，`--player` 换成引擎就是引擎对引擎（B2 标定）；随机开局默认国际象棋 8、中国象棋 6 个半回合。我方设置记在 `batch.json`，再跑须一致，对手和种子可以追加。再跑同一条命令即续跑：下完的跳过、没下完的 resume。任一盘暂停，或收到 Ctrl-C / SIGTERM，驱动就在批次目录放 `.stop`，不再开新盘，在跑的盘在下一步之前停（play / resume 的 `--stop-file`）；第二次信号直接打断在跑的盘；都退出码 3。每盘各在自己的进程组里跑。`summary.md` / `.json` 按（批次，对手）分组：只算下完的盘；战绩、得分率与 Wilson 95% 区间；我方未分胜负、非开局步的大失误率（国际象棋 lichess Blunder，中国象棋亏损 ≥250）与 ACPL，全组合计；第 20 个半回合局面的两两重合与独立盘数。
+- **批量驱动**（第二批 0.5，`python3 -m llmchess.batch run|summary`，用法见模块说明）：一批 = `runs/<批>/`，一盘一个子目录 `<对手>-s<种子>-<w|b>`（种子同时是开局种子和随机走子种子，w / b 是「我方」执先走方还是黑方，同一开局两色各一盘）。我方默认 `claude:opus` xhigh stateless，`--player` 换成引擎就是引擎对引擎（B2 标定）；随机开局默认国际象棋 8、中国象棋 6 个半回合。我方设置记在 `batch.json`，再跑须一致，对手和种子可以追加。再跑同一条命令即续跑：下完的跳过、没下完的 resume。`--on-limit`（默认 wait）和 `--timeout` 透传给每盘的 play / resume：wait 时撞额度的盘在自己进程里等，驱动照常开新盘。停下只有一条路：任一盘暂停（含 pause 模式撞额度），或驱动收到 Ctrl-C / SIGTERM（驱动装的是和 play 同一套 `claude_cli` 停止处理），驱动置 STOP 不再开新盘、在批次目录放 `.stop`（在跑的盘在下一步之前停，play / resume 的 `--stop-file`），并给每个在跑的盘发一次 SIGTERM，叫醒它里面在等额度 / 等重试的调用写 pause；第二次信号向在跑的盘的进程组发 SIGINT 直接打断；都退出码 3，再跑同一条命令续跑。每盘各在自己的进程组里跑。`summary.md` / `.json` 按（批次，对手）分组：只算下完的盘；战绩、得分率与 Wilson 95% 区间；我方未分胜负、非开局步的大失误率（国际象棋 lichess Blunder，中国象棋亏损 ≥250）与 ACPL，全组合计；第 20 个半回合局面的两两重合与独立盘数。
 
 ## 六、实验建议（第一批）
 

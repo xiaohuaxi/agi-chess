@@ -17,7 +17,8 @@
   开局写进 config、续跑照记录重放；模型只在着法历史里看到这几步。--dry-run 打印的是开局走完后模型方第一步的提示。
 记录在 runs/<tag>/（不入库）：game.jsonl、record.txt，国际象棋另有 game.pgn。
 暂停（--on-limit pause 时撞额度、连续调不通、--stop-after、停止信号）退出码 3。
---timeout：单次 claude -p 调用的超时秒数（默认 3600），记进 config，resume 沿用；超时 / 调不通各记一条 call_fail。
+--timeout：单次 claude -p 调用的超时秒数（默认 3600），记进 config，resume 沿用（resume --timeout 只改这次续跑）；
+  超时 / 调不通各记一条 call_fail。
 --on-limit wait|pause：撞额度时在程序里等到解除接着下（默认，起止各记一条 limit_wait），或按旧行为暂停退出（退出码 3）。
   等待中 Ctrl-C / SIGTERM 马上写 pause 退出（退出码 3），resume 接着下；再按一次强退。
 """
@@ -185,7 +186,10 @@ def cmd_resume(a):
     ctx = runner.load(G, str(run_dir))
     if ctx['end']:
         raise SystemExit('这盘已经结束：%s' % json.dumps(ctx['end'], ensure_ascii=False))
-    runner.log(ctx, {'type': 'resume', 'ply': len(ctx['st']['moves']), 'commit': commit()})
+    rec = {'type': 'resume', 'ply': len(ctx['st']['moves']), 'commit': commit()}
+    if a.timeout is not None:                    # 只管这次续跑；下次不给就又沿用 config 里的值
+        ctx['cfg']['timeout'] = rec['timeout'] = a.timeout
+    runner.log(ctx, rec)
     print('接着下 %s：已走 %d 个半回合' % (cfg['tag'], len(ctx['st']['moves'])))
     return play_stoppable(ctx, a)
 
@@ -232,5 +236,6 @@ def main(argv=None):
     r.add_argument('--stop-after', dest='stop_after', type=int)
     r.add_argument('--stop-file', dest='stop_file', help=stop_help)
     r.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait', help=LIMIT_HELP)
+    r.add_argument('--timeout', type=int, help='这次续跑改用的 claude -p 超时秒数（记进 resume 记录），默认沿用 config')
     a = ap.parse_args(argv)
     return cmd_play(a) if a.cmd == 'play' else cmd_resume(a)

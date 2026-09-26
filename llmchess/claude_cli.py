@@ -25,18 +25,25 @@ def _wait(secs):
     return STOP.wait(secs)
 
 
-def install_stop_handlers():
+def install_stop_handlers(on_stop=None, on_force=None):
     """Ctrl-C / SIGTERM：第一次只置 STOP——在等额度或等重试的线程马上醒来，写 pause 收尾，已在跑的调用答完为止
     （Ctrl-C 会连带终止同一进程组里的 claude 子进程，那次调用按失败记，不扣重试）；第二次立刻强退。
+    on_stop()：第一次置 STOP 之后调（批量驱动用它把停止转告各盘子进程）；on_force()：给了就用它代替第二次的强退。
     只能在主线程调；返回一个恢复原处理函数的函数。"""
     STOP.clear()
     old = {}
 
     def handler(signum, frame):
         if STOP.is_set():
-            os._exit(128 + signum)
+            if on_force is None:
+                os._exit(128 + signum)
+            on_force()
+            return
         STOP.set()
-        print('\n收到停止信号：不再发起新调用，等额度的线程马上收尾；再来一次强制退出', flush=True)
+        if on_stop is None:
+            print('\n收到停止信号：不再发起新调用，等额度的线程马上收尾；再来一次强制退出', flush=True)
+        else:
+            on_stop()
     for sig in (signal.SIGINT, signal.SIGTERM):
         old[sig] = signal.signal(sig, handler)
 

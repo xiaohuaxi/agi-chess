@@ -274,6 +274,22 @@ class SessionCostIsCumulative(unittest.TestCase):
             sc = quiz.side_cfg(G, 'medium')
             self.assertIn('请用中文回答。', G.system_prompt('w', sc, 'x'))
 
+    def test_resume_timeout_overrides_this_resume_only(self):
+        out = os.path.join(self.tmp, 'runs')
+        rc = run_quiet(['play', '--game', 'chess', '--tag', 'c10', '--out', out, '--white', 'random', '--black', 'random',
+                        '--seed', '1', '--max-plies', '4', '--timeout', '900', '--stop-after', '1'])
+        self.assertEqual(rc, 3)
+        run_dir = os.path.join(out, 'c10')
+        seen = []
+        real = runner.play
+        with mock.patch.object(runner, 'play', lambda ctx, *x: seen.append(ctx['cfg']['timeout']) or real(ctx, *x)):
+            self.assertEqual(run_quiet(['resume', run_dir, '--timeout', '120', '--stop-after', '1']), 3)
+            self.assertEqual(run_quiet(['resume', run_dir]), 0)
+        self.assertEqual(seen, [120, 900])                 # 只改那一次续跑，config 里的值不动
+        recs = records.read(os.path.join(run_dir, 'game.jsonl'))
+        self.assertEqual([r.get('timeout') for r in recs if r['type'] == 'resume'], [120, None])
+        self.assertEqual(recs[0]['cfg']['timeout'], 900)
+
     def test_cost_delta_reset(self):
         self.assertEqual(records.cost_delta(0.5, None), 0.5)
         self.assertAlmostEqual(records.cost_delta(0.5, 0.2), 0.3)

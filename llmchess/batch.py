@@ -14,10 +14,14 @@ w / b 是「我方」（--player，默认 claude:opus）执先走的一方（红
 
 批次的我方设置记在 runs/<批>/batch.json，再跑同一批次时必须一致（对手、种子可以追加）。
 再跑同一条命令 = 续跑：下完的跳过、没下完的 resume、没开的开。
-任何一盘暂停（撞额度、连续调不通）就不再开新盘，并让在跑的盘停在两步之间（批次目录里放一个 .stop 文件），
-全部停下后退出码 3；额度恢复后同一条命令接着跑。有盘出错（非暂停）退出码 1，其余照跑。
-Ctrl-C / SIGTERM 同理：第一次只放 .stop，在跑的盘走完当前这步就停（xhigh 一步可能要几分钟）；再来一次就直接打断在跑的盘
-（打断的那一步重新问，已用掉的尝试照记录接上）。两种停法都退出码 3，再跑同一条命令续跑。
+撞额度：--on-limit（默认 wait，同 play）透传给每盘。wait 时撞了额度的盘在自己的进程里等到解除接着下，驱动照常开新盘
+（新盘也跟着等）；pause 时撞额度的盘写 pause 退出码 3，驱动就按下面的「停下」处理。--timeout 也透传给每盘的 play / resume。
+停下：任何一盘暂停（pause 模式撞额度、连续调不通、被拦次数超限），或驱动收到 Ctrl-C / SIGTERM，都走同一条路——
+驱动置 claude_cli.STOP（不再开新盘）、在批次目录放 .stop（在跑的盘在下一步之前看到就写 pause 停下），并给每个在跑的盘
+发一次 SIGTERM（它的 play 装了 claude_cli 的停止处理：正在等额度 / 等重试的调用马上醒来写 pause；已在跑的 claude -p
+答完为止，然后在下一步之前停）。xhigh 一步可能要几分钟。全部停下后退出码 3，再跑同一条命令接着跑。
+再来一次信号就直接打断在跑的盘（向它的进程组发 SIGINT；打断的那一步重新问，已用掉的尝试照记录接上），同样退出码 3。
+有盘出错（非暂停）退出码 1，其余照跑。
 每盘在自己的进程组里跑，终端的 Ctrl-C 只到驱动，由驱动转告。同一批次同时只能有一个驱动（.lock）。
 驱动被 kill -9 时在跑的盘不会跟着停（它们在自己的进程组里），要等它们下完或手动停掉，再跑同一条命令。
 每盘的输出在 <盘>/play.log。跑完（或停下）都会重写 runs/<批>/summary.md 和 summary.json。
@@ -30,7 +34,7 @@ Ctrl-C / SIGTERM 同理：第一次只放 .stop，在跑的盘走完当前这步
 """
 import argparse, concurrent.futures, json, math, os, re, signal, subprocess, sys, threading
 
-from . import analyze, cli, opening, records
+from . import analyze, claude_cli, cli, opening, records
 
 ROOT = cli.ROOT
 DEFAULT_OPENING = {'chess': 'random:8', 'xiangqi': 'random:6'}
@@ -151,44 +155,60 @@ def play_cmd(a, gdir, opp, seed, side):
     n = opening.parse_mode(a.opening)
     if n:
         cmd += ['--opening', 'random:%d' % n, '--opening-seed', str(seed)]
+    return cmd + pass_through(a)
+
+
+def resume_cmd(a, gdir):
+    cmd = [sys.executable, '-m', 'llmchess', 'resume', gdir, '--stop-file', os.path.join(os.path.dirname(gdir), STOP)]
+    return cmd + pass_through(a)
+
+
+def pass_through(a):
+    """每盘的 play / resume 都带上：撞额度怎么办（默认 wait）、claude -p 单次超时（给了才传；resume 不给就沿用 config）。"""
+    out = ['--on-limit', a.on_limit]
     if a.timeout is not None:
-        cmd += ['--timeout', str(a.timeout)]        # 透传给 play 的 claude -p 超时（块 0 的 0.2）
-    return cmd
-
-
-def resume_cmd(gdir):
-    return [sys.executable, '-m', 'llmchess', 'resume', gdir, '--stop-file', os.path.join(os.path.dirname(gdir), STOP)]
+        out += ['--timeout', str(a.timeout)]
+    return out
 
 
 class Driver:
     def __init__(self, a, bdir, jobs):
         self.a, self.bdir, self.jobs = a, bdir, jobs
-        self.stop = threading.Event()
-        self.lock = threading.RLock()            # 信号处理也在主线程里调 say，要可重入
+        self.lock = threading.RLock()            # 信号处理也在主线程里调 say / request_stop，要可重入
         self.result = {}
         self.procs = set()
-        self.signals = 0
+        self.stopping = False                    # 停止只转告一次；「停没停」本身看 claude_cli.STOP
 
     def say(self, msg):
         with self.lock:
             print(msg, flush=True)
 
     def request_stop(self, why):
-        """不再开新盘，在跑的盘走完当前这步就停（runner 每步之前看 .stop）。"""
-        with self.lock:
-            first = not self.stop.is_set()
-            self.stop.set()
-        if first:
+        """停下的唯一入口（某盘暂停、或第一次信号经 install_stop_handlers 转到这里）：置 STOP 不再开新盘；
+        放 .stop，在跑的盘在下一步之前停；再给每个在跑的盘发 SIGTERM，叫醒它里面正在等额度 / 等重试的调用。
+        .stop 和 SIGTERM 是同一个停止的两个送达方式：SIGTERM 叫醒等待，.stop 让不调模型的步（引擎、随机、开局）也停在两步之间。
+        刚起、还没装好停止处理的盘（建盘、生成开局那几秒）会被这个 SIGTERM 直接杀掉：驱动按暂停算，记录停在两步之间或还没有，
+        再跑同一条命令照样续跑或新开（有意接受，不值得为这几秒另搭一套握手）。"""
+        with self.lock:                          # 和 run_one 里「查 STOP → 起进程 → 登记」互斥，不会漏掉刚起的盘
+            claude_cli.STOP.set()
+            if self.stopping:
+                return
+            self.stopping = True
             open(os.path.join(self.bdir, STOP), 'w').close()
-            self.say('！%s：不再开新盘，在跑的盘走完当前这步就停' % why)
+            procs = list(self.procs)
+        self.say('！%s：不再开新盘，在跑的盘走完当前这步就停（在等额度的马上停）' % why)
+        for p in procs:
+            try:
+                p.send_signal(signal.SIGTERM)   # 只发给这盘的 play 进程本身，不连带它正在跑的 claude -p
+            except OSError:
+                pass
 
-    def on_signal(self, signum, frame):
-        self.signals += 1
-        if self.signals == 1:
-            self.request_stop('收到信号 %d（再来一次就直接打断在跑的盘）' % signum)
-            return
+    def interrupt(self):
+        """第二次信号：直接打断在跑的盘（向整个进程组发 SIGINT，连带 claude -p 和引擎）。"""
         self.say('！再次收到信号：打断在跑的盘')
-        for p in list(self.procs):
+        with self.lock:
+            procs = list(self.procs)
+        for p in procs:
             try:
                 os.killpg(p.pid, signal.SIGINT)
             except OSError:
@@ -200,24 +220,31 @@ class Driver:
         if state == 'done':
             self.result[name] = 'done'
             return self.after(name, gdir, fresh=False)
-        if self.stop.is_set():
+        if claude_cli.STOP.is_set():
             self.result[name] = 'not started'
             return
-        cmd = resume_cmd(gdir) if state == 'unfinished' else play_cmd(a, gdir, opp, seed, side)
+        cmd = resume_cmd(a, gdir) if state == 'unfinished' else play_cmd(a, gdir, opp, seed, side)
         if a.stop_after is not None:
             cmd += ['--stop-after', str(a.stop_after)]
         os.makedirs(gdir, exist_ok=True)
-        self.say('开始 %s（%s）' % (name, '续跑' if state == 'unfinished' else '新开'))
         with open(os.path.join(gdir, 'play.log'), 'a', encoding='utf-8') as out:
-            # 自己的进程组：终端 Ctrl-C 不直接打到这盘，由驱动决定是等它停在两步之间还是打断
-            p = subprocess.Popen(cmd, cwd=str(ROOT), stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT,
-                                 start_new_session=True)
-            self.procs.add(p)
+            with self.lock:
+                if claude_cli.STOP.is_set():         # 上面查过之后才停的：目录已建，但没有 game.jsonl，汇总不算它
+                    self.result[name] = 'not started'
+                    return
+                self.say('开始 %s（%s）' % (name, '续跑' if state == 'unfinished' else '新开'))
+                # 自己的进程组：终端 Ctrl-C 不直接打到这盘，由驱动决定是等它停在两步之间还是打断
+                p = self.spawn(cmd, out)
+                self.procs.add(p)
             try:
                 rc = p.wait()
             finally:
-                self.procs.discard(p)
-        if rc == 3 or (rc != 0 and self.signals > 1):
+                with self.lock:
+                    self.procs.discard(p)
+        if rc not in (0, 3) and claude_cli.STOP.is_set():
+            # 停下时被信号打断（第二次信号，或 SIGTERM 赶在这盘装好停止处理之前到）：下完了就算下完，否则按暂停
+            rc = 0 if game_state(gdir) == 'done' else 3
+        if rc == 3:
             self.result[name] = 'paused'
             self.request_stop('%s 暂停了' % name)
             self.say('停下 %s（见 %s）' % (name, os.path.join(gdir, 'play.log')))
@@ -228,6 +255,10 @@ class Driver:
             return
         self.result[name] = 'done'
         self.after(name, gdir, fresh=True)
+
+    def spawn(self, cmd, out):
+        return subprocess.Popen(cmd, cwd=str(ROOT), stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT,
+                                start_new_session=True)
 
     def after(self, name, gdir, fresh):
         if fresh:
@@ -294,12 +325,13 @@ def cmd_run(a):
             raise SystemExit('有两个对手的目录名撞了：%s' % names)
         print('批次 %s：%d 盘，%d 路并发' % (bdir, len(games), a.jobs), flush=True)
         drv = Driver(a, bdir, a.jobs)
-        old = {sig: signal.signal(sig, drv.on_signal) for sig in (signal.SIGINT, signal.SIGTERM)}
+        # 和 play 同一套停止处理：第一次信号置 STOP 并由 request_stop 转告各盘；第二次打断在跑的盘（不强退驱动自己）
+        restore = claude_cli.install_stop_handlers(
+            on_stop=lambda: drv.request_stop('收到停止信号（再来一次就直接打断在跑的盘）'), on_force=drv.interrupt)
         try:
             res = drv.run(games)
         finally:
-            for sig, h in old.items():
-                signal.signal(sig, h)
+            restore()
         if os.path.exists(stop):
             os.remove(stop)
     finally:
@@ -479,7 +511,10 @@ def main(argv=None):
     p.add_argument('--max-plies', dest='max_plies', type=int, default=200)
     p.add_argument('--retries', type=int, default=3)
     p.add_argument('--jobs', type=int, default=4, help='并发盘数')
-    p.add_argument('--timeout', type=int, help='透传给 play 的 --timeout（claude -p 单次调用的秒数）')
+    p.add_argument('--timeout', type=int, help='透传给每盘 play / resume 的 --timeout（claude -p 单次调用的秒数）；'
+                   '不给时新盘用 play 的默认 3600，续跑沿用该盘 config')
+    p.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait',
+                   help='透传给每盘：撞额度时 wait（默认）在该盘进程里等到解除接着下；pause 写 pause 退出码 3，驱动随即停下')
     p.add_argument('--no-analyze', dest='no_analyze', action='store_true', help='下完不做引擎分析（引擎标定用）')
     p.add_argument('--stop-after', dest='stop_after', type=int, help='每盘本次最多走几个半回合就暂停（测续跑用）')
     s = sub.add_parser('summary', help='只重出汇总，不跑盘')
