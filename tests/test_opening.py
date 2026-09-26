@@ -136,6 +136,12 @@ class PlayWithOpening(unittest.TestCase):
             self.assertIn('%s（%s）' % (text, mv), prompt)
         for leak in ('fsf', 'Fairy', 'multipv', 'MultiPV', 'depth', '引擎', '随机开局', 'score'):
             self.assertNotIn(leak, prompt)
+        # 模型执黑、开局走完轮到红方（随机）：先让红方走一步，打印的是黑方真正的第一步提示
+        rc, out = run_quiet(['play', '--game', 'xiangqi', '--red', 'random', '--seed', '1', '--opening', 'random:4',
+                             '--opening-seed', '9', '--dry-run'])
+        self.assertEqual(rc, 0)
+        self.assertIn('黑方第一步的用户提示', out)
+        self.assertIn('已走 5 个半回合', out.split('用户提示')[-1])
 
 
 class AnalyzeSkipsOpening(unittest.TestCase):

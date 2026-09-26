@@ -14,7 +14,7 @@
   effort medium|high|xhigh|max、memory stateless|notes|session、view（逗号分隔）、history（-1 全部 / 0 / N）、
   legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、notes_keep N、session_view full|move。
 随机开局 --opening random:N：前 N 个半回合由程序替双方走（引擎浅搜 MultiPV 3、分差 ≤50 厘兵的着法按 --opening-seed 抽），
-  开局写进 config、续跑照记录重放；模型只在着法历史里看到这几步。--dry-run 时打印开局走完后轮到的那一方的提示。
+  开局写进 config、续跑照记录重放；模型只在着法历史里看到这几步。--dry-run 打印的是开局走完后模型方第一步的提示。
 记录在 runs/<tag>/（不入库）：game.jsonl、record.txt，国际象棋另有 game.pgn。
 暂停（--on-limit pause 时撞额度、连续调不通、--stop-after、停止信号）退出码 3。
 --timeout：单次 claude -p 调用的超时秒数（默认 3600），记进 config，resume 沿用；超时 / 调不通各记一条 call_fail。
@@ -126,20 +126,41 @@ def add_opening(a, G, cfg):
     cfg['opening'] = opening.generate(G, a.game, n, seed)
 
 
+def dry_run_position(G, cfg, tmp):
+    """--dry-run：走完随机开局；轮到的若不是模型、另一方是模型，就让这一方（引擎 / 随机）真走一步，
+    好打印模型方真正的第一步提示。记录写在临时目录里，用完就删。返回 (要打印提示的那一方, ctx)。"""
+    ctx = runner.new_ctx(G, cfg, tmp)
+    st = ctx['st']
+    for mv in opening.moves_of(cfg):
+        G.push(st, mv)
+    side = G.turn(st)
+    kind = runner.player_kind(cfg['players'][side])
+    if kind != 'claude' and runner.player_kind(cfg['players'][runner.other(side)]) == 'claude' and G.ending(st) is None:
+        if kind == 'engine':
+            ctx['engines'][side] = runner.Engine(G.engine_spec(cfg['players'][side].split(':', 1)[1])).start()
+        try:
+            moves = G.legal(st)
+            mv = runner.TURNS[kind](ctx, side, moves, G.banned(st, moves))[0]
+        finally:
+            for eng in ctx['engines'].values():
+                eng.close()
+        G.push(st, mv)
+        side = runner.other(side)
+    return side, ctx
+
+
 def cmd_play(a):
     G, cfg = build_cfg(a)
     add_opening(a, G, cfg)
     if a.dry_run:
-        ctx = runner.new_ctx(G, cfg, '/nonexistent')
         for s in 'wb':
             print('== 系统提示（%s，%s）==\n%s\n' % (G.SIDES[s], cfg['players'][s], cfg['system'][s]))
-        for mv in opening.moves_of(cfg):
-            G.push(ctx['st'], mv)
-        side = G.turn(ctx['st'])
+        with tempfile.TemporaryDirectory() as tmp:
+            side, ctx = dry_run_position(G, cfg, tmp)
         sc = cfg['sides'][side]
-        what = '随机开局 %d 个半回合之后的' % len(cfg['opening']['moves']) if cfg.get('opening') else '第一步'
-        print('== %s用户提示（%s，%s）==\n%s' % (what, G.SIDES[side], cfg['players'][side],
-                                           G.render(ctx['st'], sc) + '\n\n' + memory.ask(sc)))
+        what = '随机开局 %d 个半回合之后' % len(cfg['opening']['moves']) if cfg.get('opening') else '开局'
+        print('== %s，%s第一步的用户提示（%s）==\n%s' % (what, G.SIDES[side], cfg['players'][side],
+                                               G.render(ctx['st'], sc) + '\n\n' + memory.ask(sc)))
         return 0
     if not a.tag:
         raise SystemExit('要 --tag')
