@@ -265,6 +265,57 @@ class Arms(unittest.TestCase):
         self.assertEqual(recs[0]['cfg']['timeout'], 120)
 
 
+class Excluded(unittest.TestCase):
+    """剔除的局面（x2-25）：run 不再出，旧记录照样能判。"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.out = os.path.join(self.tmp, 'batch')
+        self.pos = {p['id']: p for p in Q.load_positions(Q.positions_path('batch2', 'xiangqi'))}
+
+    def test_batch2_marks_only_x2_25(self):
+        self.assertEqual([i for i, p in self.pos.items() if p.get('excluded')], ['x2-25'])
+        active = Q.active_positions(list(self.pos.values()))
+        self.assertEqual(len(active), len(self.pos) - 1)
+        self.assertNotIn('x2-25', [p['id'] for p in active])
+        self.assertIn('x2-25', Q.merge_positions([Q._rel(Q.positions_path('batch2', 'xiangqi'))]))   # judge 用的全集
+
+    def run_ids(self, ids):
+        def call(cmd, prompt, cwd, **k):
+            pid = next(i for i in ids.split(',') if not self.pos[i].get('excluded'))
+            return fake_reply('着法: %s' % self.pos[pid]['prev_move']), 0.1
+        argv = ['run', '--game', 'xiangqi', '--batch', 'batch2', '--ids', ids, '--efforts', 'medium', '--reps', '1',
+                '--jobs', '1', '--out', self.out, '--arm', 'base']
+        with mock.patch.object(claude_cli, 'call', call), mock.patch.object(claude_cli, 'version', lambda: 'test'):
+            rc = quiet(Q.main, argv)
+        meta = Q.read_meta(Q.unit_dir(self.out, 'base', 'xiangqi'))
+        if meta:
+            self.addCleanup(shutil.rmtree, meta['claude_cwd'], ignore_errors=True)
+        return rc
+
+    def test_run_skips_excluded(self):
+        self.assertEqual(self.run_ids('x2-24,x2-25'), 0)
+        d = Q.unit_dir(self.out, 'base', 'xiangqi')
+        self.assertEqual(sorted(n for n in os.listdir(d) if n.startswith('x2-')), ['x2-24-medium-r1.jsonl'])
+        with self.assertRaises(SystemExit):
+            self.run_ids('x2-25')
+
+    def test_old_answer_to_excluded_still_judged(self):
+        d = Q.unit_dir(self.out, 'base', 'xiangqi')
+        os.makedirs(d)
+        Q.write_meta(d, {'arm': 'base', 'set': {}, 'positions': [Q._rel(Q.positions_path('batch2', 'xiangqi'))]})
+        p = self.pos['x2-25']
+        records.write(Q.answer_path(d, 'x2-25', 'medium', 1),
+                      {'type': 'result', 'pos': 'x2-25', 'game': 'xiangqi', 'effort': 'medium', 'rep': 1,
+                       'side': p['turn'], 'move': p['prev_move'], 'forfeit': False, 'gave_up': None, 'attempts': 1,
+                       'first_legal': True, 'first_think': 10, 'stat': records.new_stat()})
+        with mock.patch.object(Q, 'XQ_DEPTH', 6):
+            rows, _ = quiet(Q.judge_game, 'xiangqi', 'batch2', self.out, None, 'base')
+        self.assertEqual([(r['pos'], r['move']) for r in rows], [('x2-25', p['prev_move'])])
+        self.assertIn('loss', rows[0])
+
+
 class StopWhileWaiting(unittest.TestCase):
     """局面题多线程：两题都在等额度时收到停止信号，都醒来写 pause，退出码 3；再跑同一条接着答。"""
 

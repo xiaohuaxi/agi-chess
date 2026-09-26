@@ -41,6 +41,10 @@ runs/b1-{xq,ch}-*/game.jsonl + analysis.jsonl（第一批 B 块整盘，Fairy-St
   - group：同一件事去重后的分组号（1 起，两种棋各自编），group_note 说明是哪件事；related_to：同组的其它局面 id。
     算统计时同组的局面不独立。
 引擎只在选题时用，从不进模型提示。
+
+剔除：选完后才发现不成立的题，在 jsonl 里那一行加 excluded 字段（写剔除理由），不删行——quiz run / copy 跳过它，
+judge 仍按它判已有作答（旧记录要能照原样读、判）。目前只有 x2-25（无解的看杀局面，理由见该行）。重跑本脚本时，
+按 id 且局面没变的把旧文件里的 excluded 原样带过来（carry_excluded），剔除理由只在 jsonl 里写一份。
 """
 import argparse, ast, collections, concurrent.futures, csv, importlib.util, json, os, sys
 
@@ -446,6 +450,18 @@ def order_keys(r):
     return {**{k: r[k] for k in head if k in r}, **{k: v for k, v in r.items() if k not in head}}
 
 
+def carry_excluded(path, rows):
+    """旧文件里标了 excluded 的题，id 和局面（Q.pos_key）都没变的，把 excluded 带到新选出的同一题上。"""
+    old = {r['id']: r for r in jl(path)} if os.path.exists(path) else {}
+    out = []
+    for r in rows:
+        o = old.get(r['id'])
+        if o and o.get('excluded') and Q.pos_key(o) == Q.pos_key(r):
+            r = dict(r, excluded=o['excluded'])
+        out.append(r)
+    return out
+
+
 # ---------------------------------------------------------------- 只读检查
 def check():
     import chess
@@ -478,6 +494,9 @@ def check():
                 bad += 1
                 print('✗ %s %s：%s' % (game, p['id'], ex))
         c = collections.Counter(r['kind'] for r in rows)
+        ex = [r['id'] for r in rows if r.get('excluded')]
+        if ex:
+            print('%s：已剔除（仍在文件里，quiz run 跳过）%s' % (game, ', '.join(ex)))
         print('%s：%d 个，%s；分组 %d 个；类别 %s' % (game, len(rows), dict(c), len({r['group'] for r in rows}),
                                           dict(collections.Counter(r['category'] for r in rows))))
     print('检查完：%s' % ('全部通过' if not bad else '%d 个有问题' % bad))
@@ -494,6 +513,7 @@ def main():
         return check()
     rows = xiangqi(a.jobs) if a.what == 'xiangqi' else chess_rows()
     path = os.path.join(a.out, '%s.jsonl' % a.what)
+    rows = carry_excluded(path, rows)
     write_jsonl(path, rows)
     print('写了 %d 条到 %s' % (len(rows), path))
     return 0

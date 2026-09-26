@@ -24,7 +24,8 @@
   每次等待的起止在该题记录里各写一条 limit_wait；pause 恢复旧行为。等待中 Ctrl-C / SIGTERM：在等的线程马上醒来写 pause，
   退出码 3，再跑同一条命令接着来；再按一次强退。
 
-局面在 data/<batch>/<棋种>.jsonl（选取脚本同目录），或用 --positions 指定。记录在 runs/quiz-<batch>/[<档名>/]<棋种>/（不入库）：
+局面在 data/<batch>/<棋种>.jsonl（选取脚本同目录），或用 --positions 指定。标了 excluded（剔除理由）的局面 run / copy
+跳过，judge / report 照样判已有记录（目前只有 x2-25）。记录在 runs/quiz-<batch>/[<档名>/]<棋种>/（不入库）：
   每次作答一个文件 <局面id>-<effort>-r<遍>.jsonl：config、attempt（和整盘同一格式，由 runner.model_turn 写）、
   call_fail（超时 / 调不通）、limit_wait（撞额度等解除的起止）、pause（暂停）、最后一行 result。有 result 的就算答完，再跑时跳过；只有 attempt 没 result 的
   （中途撞额度），续跑时接上已用掉的尝试次数（runner.pending_ply），和整盘续跑一样。
@@ -66,8 +67,15 @@ def positions_path(batch, game):
 
 
 def load_positions(path):
+    """局面文件里的全部局面，含标了 excluded 的（judge 要能判剔除前已答的记录）。"""
     with open(path, encoding='utf-8') as f:
         return [json.loads(l) for l in f if l.strip()]
+
+
+def active_positions(ps):
+    """去掉标了 excluded 的局面（剔除理由写在局面文件那一行里，如 x2-25）。只有 run / copy 用：剔除不删行，
+    judge / report 照样按全部局面判已有记录。"""
+    return [p for p in ps if not p.get('excluded')]
 
 
 class QuizChess:
@@ -404,6 +412,12 @@ def cmd_run(a):
         pos_all = [p for p in pos_all if p['id'] in want]
         if not pos_all:
             raise SystemExit('一个 id 都没对上：%s' % a.ids)
+    skip = [p['id'] for p in pos_all if p.get('excluded')]
+    pos_all = active_positions(pos_all)
+    if skip:
+        print('跳过已剔除的局面：%s（理由见局面文件里的 excluded）' % ', '.join(skip), flush=True)
+    if not pos_all:
+        raise SystemExit('没有可答的局面（给的 id 都已剔除）')
     efforts = a.efforts.split(',')
     for e in efforts:
         if e not in EFFORTS:
@@ -516,7 +530,7 @@ def cmd_copy(a):
             dmeta['positions'] = files + [_rel(pos_file)]
     write_meta(dst, dmeta)
     copied, skipped = 0, []
-    for p in load_positions(pos_file):
+    for p in active_positions(load_positions(pos_file)):
         q = src_by.get(pos_key(p))
         if q is None:
             continue
