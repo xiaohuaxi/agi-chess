@@ -140,8 +140,12 @@ def model_turn(ctx, side, moves, ban):
             # 超时 / 调不通落进这盘（这题）自己的记录；ctx['tags'] 是局面题的题号 / 档 / 遍
             log(ctx, dict({'type': 'call_fail', 'ply': ply, 'side': side, 'attempt': k + 1}, **ctx.get('tags', {}),
                           **info))
+        def on_wait(info, k=k):
+            # 撞额度在程序里等解除：开始、结束各一条，同样落进这盘（这题）自己的记录
+            log(ctx, dict({'type': 'limit_wait', 'ply': ply, 'side': side, 'attempt': k + 1}, **ctx.get('tags', {}),
+                          **info))
         d, dt = claude_cli.call(cmd, prompt, ctx['cwd'], rebuild=rebuild,
-                                timeout=cfg.get('timeout') or claude_cli.TIMEOUT, on_fail=on_fail)
+                                timeout=cfg.get('timeout') or claude_cli.TIMEOUT, on_fail=on_fail, on_wait=on_wait)
         if mem == 'session':
             sid = ctx['sessions'][side] = d.get('session_id') or sid
         reply = d.get('result') or ''

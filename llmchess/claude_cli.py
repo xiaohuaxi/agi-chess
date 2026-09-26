@@ -1,4 +1,4 @@
-"""调 `claude -p`：拼命令、调不通重试、撞额度抛暂停、用量展开、安全分类器拦截识别。
+"""调 `claude -p`：拼命令、调不通重试、撞额度等解除（或抛暂停）、用量展开、安全分类器拦截识别。
 
 命令（design.md P1、P7）：
   CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 claude -p --model M --effort E --tools "" --strict-mcp-config
@@ -6,14 +6,48 @@
       （stateless / notes 加 --no-session-persistence；session 第一步 --session-id，之后 --resume）
 stdin 接 /dev/null（否则 claude 会等 3 秒并打警告）。思考深度每次显式传。
 """
-import json, os, pathlib, re, subprocess, time
+import datetime, json, os, pathlib, re, signal, subprocess, threading, time
 
 FLAG_TEXT = 'safeguards flagged'
 TIMEOUT = 3600          # 单次调用的默认超时（秒）；第一批写死 1800，max 档撞了 7/120 次
 
+# 撞额度时怎么办（design.md 第四节 limit_wait）。真正会卡的是 5 小时额度：agent 会被平台自动续跑，claude -p 子进程不会。
+LIMIT_MODE = 'wait'           # 'wait'：在程序里等到解除再接着调（默认）；'pause'：旧行为，抛 Paused，退出码 3
+LIMIT_BACKOFF = (600, 1800)   # 读不出解除时间时：首次等 10 分钟，之后每次翻倍，最多 30 分钟
+LIMIT_MARGIN = 120            # 读出了解除时间时多等的余量（秒）
+LIMIT_HORIZON = 8 * 86400     # 读出的解除时间离现在超过 8 天（或早于 5 分钟前）就当读错，按退避等
+STOP = threading.Event()      # 停止信号：置位后在等的线程立刻醒来抛 Paused，也不再发起新调用
+_now = time.time              # 测试里换成假时钟
+
+
+def _wait(secs):
+    """可被停止信号打断的等待；返回 True 表示被打断。测试里换成假的。"""
+    return STOP.wait(secs)
+
+
+def install_stop_handlers():
+    """Ctrl-C / SIGTERM：第一次只置 STOP——在等额度或等重试的线程马上醒来，写 pause 收尾，已在跑的调用答完为止
+    （Ctrl-C 会连带终止同一进程组里的 claude 子进程，那次调用按失败记，不扣重试）；第二次立刻强退。
+    只能在主线程调；返回一个恢复原处理函数的函数。"""
+    STOP.clear()
+    old = {}
+
+    def handler(signum, frame):
+        if STOP.is_set():
+            os._exit(128 + signum)
+        STOP.set()
+        print('\n收到停止信号：不再发起新调用，等额度的线程马上收尾；再来一次强制退出', flush=True)
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        old[sig] = signal.signal(sig, handler)
+
+    def restore():
+        for sig, h in old.items():
+            signal.signal(sig, h)
+    return restore
+
 
 class Paused(Exception):
-    """撞额度或连续调不通：停在两步之间，写 pause 后退出，之后用 resume 接着下。"""
+    """撞额度（--on-limit pause）、连续调不通或收到停止信号：停在两步之间，写 pause 后退出，之后用 resume 接着下。"""
 
 
 def command(model, effort, system, session=None, new_session=False):
@@ -54,19 +88,112 @@ def flagged(d):
     return d.get('stop_reason') == 'refusal' or FLAG_TEXT in (d.get('result') or '')
 
 
-def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, on_fail=None):
-    """跑一次 claude -p。返回 (解析后的 JSON, 用时秒)。调不通按 waits 重试；撞额度抛 Paused。
+_MONTHS = {m: i + 1 for i, m in enumerate(('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'))}
+_EPOCH = re.compile(r'(?<!\d)(1\d{9})(?!\d)')
+_ISO = re.compile(r'(\d{4}-\d{2}-\d{2})[T ](\d{1,2}:\d{2}(?::\d{2})?)(?:\.\d+)?\s*(Z|[+-]\d{2}:?\d{2})?')
+_IN = re.compile(r'resets?\s+in\s+(?:(\d+)\s*(?:h|hr|hrs|hours?)\b)?\s*(?:(\d+)\s*(?:m|min|mins|minutes?)\b)?', re.I)
+_AT = re.compile(r'resets?\s+(?:at\s+|on\s+)?(?:([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(?:at\s+)?)?'
+                 r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b\s*(?:\(([^)]+)\))?', re.I)
+
+
+def _tz(name):
+    if name:
+        try:
+            from zoneinfo import ZoneInfo
+            return ZoneInfo(name.strip())
+        except Exception:
+            pass
+    return datetime.datetime.now().astimezone().tzinfo      # 没写时区或认不出：按本机时区
+
+
+def reset_time(text, now=None):
+    """从撞额度的报错里读出解除时间（epoch 秒）；读不出、或读出的时间离谱，返回 None（调用方退回固定退避），从不抛错。
+    认的写法（claude 的报错文字没有公开格式，这里尽量宽松）：10 位 epoch 秒（旧版「...limit reached|1727400000」）、
+    ISO 时间（带或不带时区）、「resets in 2h 30m」、「resets 5am」「resets 5:30pm (Asia/Shanghai)」「resets Sep 27, 5am」
+    「resets at 17:00」。只有钟点没有日期时，取今天这个钟点，已经过了就取明天。"""
+    now = _now() if now is None else now
+    try:
+        t = None
+        m = _EPOCH.search(text or '')
+        if m:
+            t = float(m[1])
+        if t is None:
+            m = _ISO.search(text or '')
+            if m:
+                tz = m[3]
+                s = '%sT%s%s' % (m[1], m[2], '' if not tz else '+00:00' if tz == 'Z' else
+                                 (tz if ':' in tz else tz[:3] + ':' + tz[3:]))
+                d = datetime.datetime.fromisoformat(s)
+                if d.tzinfo is None:
+                    d = d.replace(tzinfo=_tz(None))
+                t = d.timestamp()
+        if t is None:
+            m = _IN.search(text or '')
+            if m and (m[1] or m[2]):
+                t = now + int(m[1] or 0) * 3600 + int(m[2] or 0) * 60
+        if t is None:
+            m = _AT.search(text or '')
+            if m and (m[5] or m[4] is not None or m[1]):       # 光一个数字不算（免得把「resets 3 times」之类当钟点）
+                tz = _tz(m[6])
+                base = datetime.datetime.fromtimestamp(now, tz)
+                hour, minute = int(m[3]), int(m[4] or 0)
+                if m[5]:
+                    hour = hour % 12 + (12 if m[5].lower() == 'pm' else 0)
+                if not (0 <= hour < 24 and 0 <= minute < 60):
+                    return None
+                if m[1]:
+                    mon = _MONTHS.get(m[1].lower())
+                    if mon is None:
+                        return None
+                    d = base.replace(month=mon, day=int(m[2]), hour=hour, minute=minute, second=0, microsecond=0)
+                    if d.timestamp() < now - 86400:
+                        d = d.replace(year=d.year + 1)
+                else:
+                    d = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                    if d.timestamp() < now - 60:
+                        d += datetime.timedelta(days=1)
+                t = d.timestamp()
+        if t is None or not (now - 300 <= t <= now + LIMIT_HORIZON):
+            return None
+        return t
+    except Exception:
+        return None
+
+
+def _iso(t):
+    return datetime.datetime.fromtimestamp(t).astimezone().isoformat(timespec='seconds')
+
+
+def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, on_fail=None, on_wait=None):
+    """跑一次 claude -p。返回 (解析后的 JSON, 用时秒)。调不通按 waits 重试；撞额度见下。
     rebuild：每次重试前重新拼命令（新会话第一次调用超时时，会话可能已经建好，重试要改用 --resume）。
     timeout：单次调用的超时秒数。
     on_fail(info)：每次调用失败（超时、非零退出、回的不是 JSON）后、重试或抛 Paused 之前调一次，调用方用它把失败写进
-    自己那盘 / 那题的记录。info = {try（第几次调用，从 1 起）, timeout（是否超时）, rc, elapsed, stderr, stdout（各留末尾
-    500 字）, next_wait（下次重试前等几秒，None 表示不再重试）}。撞额度不走这里（直接抛 Paused，由调用方记 pause）。
-    on_fail 自己出错只打一行，不影响重试。"""
+    自己那盘 / 那题的记录。info = {try（第几次失败的调用，从 1 起）, timeout（是否超时）, rc, elapsed, stderr, stdout（各留末尾
+    500 字）, next_wait（下次重试前等几秒，None 表示不再重试）}。
+    撞额度：LIMIT_MODE 为 'pause' 时直接抛 Paused（旧行为）；默认 'wait'：从报错里读解除时间（reset_time），读得出就等到那时
+    再加 LIMIT_MARGIN，读不出按 LIMIT_BACKOFF 退避，等完接着调同一次。这种等待不占 waits 里的重试次数，调用方的着法重试也
+    不受影响（这一次调用还没返回）。每次等待前后各调一次 on_wait(info)：开始 {phase:'start', start, reset_at（读出的解除
+    时间或 None）, planned（打算等几秒）, n（这次调用里第几次等）, reason（报错末尾）}；结束再加 {phase:'end', end, waited,
+    stopped}。等待中收到停止信号（STOP）立刻醒来抛 Paused，和旧的撞额度暂停一样可以续跑。
+    on_fail / on_wait 自己出错只打一行，不影响调用。"""
     env = dict(os.environ, CLAUDE_CODE_DISABLE_CLAUDE_MDS='1')
     last = None
-    for n, wait in enumerate(tuple(waits) + (None,)):
-        if n and rebuild:
+    n = lim = calls = 0                        # n：失败次数（占 waits）；lim：撞额度等了几次；calls：总共调了几次
+    waits = tuple(waits) + (None,)
+
+    def notify(fn, info):
+        if fn:
+            try:
+                fn(info)
+            except Exception as e:               # 记录失败不能拖垮调用本身
+                print('  （写记录时出错：%s）' % e, flush=True)
+    while True:
+        if STOP.is_set():
+            raise Paused('收到停止信号，不再发起新调用')
+        if calls and rebuild:
             cmd = rebuild()
+        calls += 1
         t0 = time.time()
         timed_out = False
         try:
@@ -83,18 +210,38 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, 
         if d is not None and ((rc == 0 and not d.get('is_error')) or flagged(d)):
             return d, dt
         last = {'rc': rc, 'stdout': out[-2000:], 'stderr': err[-2000:]}
-        if limit_hit(err + ((d.get('result') or '') if d else out)) or (d and d.get('api_error_status') == 429):
-            raise Paused('额度限制：%s' % (out + err)[-500:])
-        if on_fail:
-            try:
-                on_fail({'try': n + 1, 'timeout': timed_out, 'rc': rc, 'elapsed': round(dt, 1),
+        text = err + ((d.get('result') or '') if d else out)
+        if limit_hit(text) or (d and d.get('api_error_status') == 429):
+            if LIMIT_MODE == 'pause':
+                raise Paused('额度限制：%s' % (out + err)[-500:])
+            now = _now()
+            until = reset_time(text, now)
+            planned = max(0.0, until - now) + LIMIT_MARGIN if until else \
+                min(LIMIT_BACKOFF[0] * 2 ** lim, LIMIT_BACKOFF[1])
+            lim += 1
+            info = {'phase': 'start', 'start': _iso(now), 'reset_at': _iso(until) if until else None,
+                    'planned': round(planned), 'n': lim, 'reason': text[-300:]}
+            notify(on_wait, info)
+            print('  撞额度，%s；等 %d 秒（到 %s）再接着调' % (
+                '解除时间 %s' % info['reset_at'] if until else '读不出解除时间，按退避', planned, _iso(now + planned)),
+                flush=True)
+            stopped = _wait(planned)
+            end = _now()
+            notify(on_wait, dict(info, phase='end', end=_iso(end), waited=round(end - now), stopped=bool(stopped)))
+            if stopped:
+                raise Paused('等额度解除时收到停止信号（撞额度：%s）' % text[-300:])
+            continue
+        wait = waits[n]
+        n += 1
+        notify(on_fail, {'try': n, 'timeout': timed_out, 'rc': rc, 'elapsed': round(dt, 1),
                          'stderr': err[-500:], 'stdout': out[-500:], 'next_wait': wait})
-            except Exception as e:               # 记录失败不能拖垮调用本身
-                print('  （记录调用失败时出错：%s）' % e, flush=True)
-        if wait is None:
+        if wait is None or STOP.is_set():
             break
         print('  调用失败（rc=%s），%d 秒后重试：%s' % (rc, wait, (err or out)[-200:].strip()), flush=True)
-        time.sleep(wait)
+        if _wait(wait):
+            break
+    if STOP.is_set():
+        raise Paused('收到停止信号（最后一次调用失败：%s）' % json.dumps(last, ensure_ascii=False)[-300:])
     raise Paused('连续调不通：%s' % json.dumps(last, ensure_ascii=False)[-800:])
 
 

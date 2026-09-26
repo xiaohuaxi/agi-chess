@@ -13,8 +13,10 @@
   effort medium|high|xhigh|max、memory stateless|notes|session、view（逗号分隔）、history（-1 全部 / 0 / N）、
   legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、notes_keep N、session_view full|move。
 记录在 runs/<tag>/（不入库）：game.jsonl、record.txt，国际象棋另有 game.pgn。
-暂停（撞额度、连续调不通、--stop-after）退出码 3。
+暂停（--on-limit pause 时撞额度、连续调不通、--stop-after、停止信号）退出码 3。
 --timeout：单次 claude -p 调用的超时秒数（默认 3600），记进 config，resume 沿用；超时 / 调不通各记一条 call_fail。
+--on-limit wait|pause：撞额度时在程序里等到解除接着下（默认，起止各记一条 limit_wait），或按旧行为暂停退出（退出码 3）。
+  等待中 Ctrl-C / SIGTERM 马上写 pause 退出（退出码 3），resume 接着下；再按一次强退。
 """
 import argparse, importlib, json, os, pathlib, random, subprocess, sys, tempfile, uuid
 
@@ -97,6 +99,16 @@ def build_cfg(a):
     return G, cfg
 
 
+def play_stoppable(ctx, a):
+    """下一盘：按 --on-limit 设撞额度的行为，装停止信号处理（等额度时 Ctrl-C / SIGTERM 能马上停下写 pause）。"""
+    claude_cli.LIMIT_MODE = a.on_limit
+    restore = claude_cli.install_stop_handlers()
+    try:
+        return 0 if runner.play(ctx, a.stop_after) else 3
+    finally:
+        restore()
+
+
 def cmd_play(a):
     G, cfg = build_cfg(a)
     if a.dry_run:
@@ -119,7 +131,7 @@ def cmd_play(a):
                                      '%s-%s' % (a.tag, uuid.uuid4().hex[:8]))
     ctx = runner.new_ctx(G, cfg, str(run_dir))
     runner.log(ctx, {'type': 'config', 'cfg': cfg})
-    return 0 if runner.play(ctx, a.stop_after) else 3
+    return play_stoppable(ctx, a)
 
 
 def cmd_resume(a):
@@ -131,7 +143,11 @@ def cmd_resume(a):
         raise SystemExit('这盘已经结束：%s' % json.dumps(ctx['end'], ensure_ascii=False))
     runner.log(ctx, {'type': 'resume', 'ply': len(ctx['st']['moves']), 'commit': commit()})
     print('接着下 %s：已走 %d 个半回合' % (cfg['tag'], len(ctx['st']['moves'])))
-    return 0 if runner.play(ctx, a.stop_after) else 3
+    return play_stoppable(ctx, a)
+
+
+LIMIT_HELP = ('撞额度时：wait（默认）在程序里等到解除再接着下，每次等待的起止记 limit_wait；'
+              'pause 是旧行为，写 pause 后退出码 3')
 
 
 def main(argv=None):
@@ -161,9 +177,11 @@ def main(argv=None):
     p.add_argument('--seed', type=int, help='随机走子的种子，默认随机取一个并记进 config')
     p.add_argument('--stop-after', dest='stop_after', type=int, help='本次最多走几个半回合就暂停（测续跑用）')
     p.add_argument('--timeout', type=int, default=claude_cli.TIMEOUT, help='单次 claude -p 调用的超时秒数，默认 3600')
+    p.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait', help=LIMIT_HELP)
     p.add_argument('--dry-run', action='store_true', help='只打印系统提示和第一步提示，不调模型')
     r = sub.add_parser('resume', help='按记录接着下')
     r.add_argument('dir')
     r.add_argument('--stop-after', dest='stop_after', type=int)
+    r.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait', help=LIMIT_HELP)
     a = ap.parse_args(argv)
     return cmd_play(a) if a.cmd == 'play' else cmd_resume(a)

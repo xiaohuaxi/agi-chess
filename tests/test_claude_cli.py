@@ -142,7 +142,8 @@ class CallTimeout(unittest.TestCase):
             if len(seen) == 1:
                 raise subprocess.TimeoutExpired(cmd, k['timeout'])
             return good
-        with mock.patch.object(CL.subprocess, 'run', run), mock.patch.object(CL.time, 'sleep', lambda s: None):
+        with mock.patch.object(CL.subprocess, 'run', run), mock.patch.object(CL, '_wait', lambda s: False), \
+                mock.patch('builtins.print'):
             d, _ = CL.call(['claude'], 'p', '/tmp', waits=(5,), timeout=77, on_fail=fails.append)
         self.assertEqual(d['result'], '着法: e2e4')
         self.assertEqual(seen, [77, 77])
@@ -160,12 +161,129 @@ class CallTimeout(unittest.TestCase):
 
         def broken(info):
             raise RuntimeError('记录坏了')
-        with mock.patch.object(CL.subprocess, 'run', run), mock.patch.object(CL.time, 'sleep', lambda s: None), \
+        with mock.patch.object(CL.subprocess, 'run', run), mock.patch.object(CL, '_wait', lambda s: False), \
                 mock.patch('builtins.print'):
             with self.assertRaises(CL.Paused):          # 回调出错不影响重试，最后照常抛「连续调不通」
                 CL.call(['claude'], 'p', '/tmp', waits=(0,), on_fail=broken)
         self.assertEqual(seen, [CL.TIMEOUT, CL.TIMEOUT])
         self.assertEqual(CL.TIMEOUT, 3600)
+
+
+NOW = 1790000000.0          # 假时钟：2026-09-21 前后，只要固定就行
+
+
+def limit_out(text):
+    return subprocess.CompletedProcess([], 1, stdout=json.dumps({'is_error': True, 'result': text}), stderr='')
+
+
+class ResetTime(unittest.TestCase):
+    def test_parses_known_shapes(self):
+        self.assertEqual(CL.reset_time('Claude AI usage limit reached|%d' % (NOW + 3600), NOW), NOW + 3600)
+        import datetime
+        iso = datetime.datetime.fromtimestamp(NOW + 7200, datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        self.assertEqual(CL.reset_time('limit reached, resets at %s' % iso, NOW), NOW + 7200)
+        self.assertEqual(CL.reset_time('5-hour limit reached ∙ resets in 2h 30m', NOW), NOW + 9000)
+        utc = datetime.datetime.fromtimestamp(NOW, datetime.timezone.utc)
+        want = utc.replace(hour=5, minute=0, second=0, microsecond=0)
+        if want.timestamp() < NOW - 60:
+            want += datetime.timedelta(days=1)
+        self.assertEqual(CL.reset_time("You've hit your limit · resets 5am (UTC)", NOW), want.timestamp())
+        t = CL.reset_time('limit reached · resets 5:30pm (Asia/Shanghai)', NOW)
+        d = datetime.datetime.fromtimestamp(t, datetime.timezone(datetime.timedelta(hours=8)))
+        self.assertEqual((d.hour, d.minute), (17, 30))
+        self.assertTrue(NOW - 60 <= t <= NOW + 86400)
+        t2 = CL.reset_time('Weekly limit reached ∙ resets Sep 22, 5am (UTC)', NOW)
+        self.assertEqual(datetime.datetime.fromtimestamp(t2, datetime.timezone.utc).strftime('%m-%d %H:%M'), '09-22 05:00')
+
+    def test_unparseable_or_absurd_returns_none(self):
+        for text in ('usage limit reached', 'rate limit hit 429', 'limit reached|%d' % (NOW + 40 * 86400),
+                     'limit reached resets Foo 99, 5am', 'limit reached resets 3', None):
+            self.assertIsNone(CL.reset_time(text, NOW), text)
+
+
+class LimitWait(unittest.TestCase):
+    """撞额度等解除：不占重试、记起止、能被停止信号打断。时钟和等待都是假的，不真睡。"""
+
+    def setUp(self):
+        CL.STOP.clear()
+        self.addCleanup(CL.STOP.clear)
+        self.clock = [NOW]
+        self.slept = []
+
+        def fake_wait(secs):
+            self.slept.append(secs)
+            self.clock[0] += secs
+            return False
+        for name, val in (('_now', lambda: self.clock[0]), ('_wait', fake_wait), ('LIMIT_MODE', 'wait')):
+            patcher = mock.patch.object(CL, name, val)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        patcher = mock.patch('builtins.print')
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def run_seq(self, outs, **k):
+        it = iter(outs)
+        with mock.patch.object(CL.subprocess, 'run', lambda cmd, **kw: next(it)):
+            return CL.call(['claude'], 'p', '/tmp', **k)
+
+    def test_waits_do_not_use_retries_and_are_recorded(self):
+        good = subprocess.CompletedProcess([], 0, stdout=json.dumps({'result': '着法: e2e4'}), stderr='')
+        bad = subprocess.CompletedProcess([], 1, stdout='oops', stderr='boom')
+        waits, fails = [], []
+        d, _ = self.run_seq([limit_out('usage limit reached|%d' % (NOW + 1000)), limit_out('usage limit reached'),
+                             bad, good], waits=(7,), on_wait=waits.append, on_fail=fails.append)
+        self.assertEqual(d['result'], '着法: e2e4')
+        self.assertEqual(self.slept, [1000 + CL.LIMIT_MARGIN, CL.LIMIT_BACKOFF[0] * 2, 7])
+        self.assertEqual([w['phase'] for w in waits], ['start', 'end', 'start', 'end'])
+        self.assertIsNotNone(waits[0]['reset_at'])
+        self.assertIsNone(waits[2]['reset_at'])
+        self.assertEqual(waits[1]['waited'], 1000 + CL.LIMIT_MARGIN)
+        self.assertFalse(waits[1]['stopped'])
+        self.assertTrue(waits[1]['end'] > waits[1]['start'])
+        self.assertEqual(len(fails), 1)              # 只有真正调不通那次占了重试
+
+    def test_backoff_capped(self):
+        good = subprocess.CompletedProcess([], 0, stdout=json.dumps({'result': 'ok'}), stderr='')
+        self.run_seq([limit_out('usage limit reached')] * 4 + [good], waits=())
+        b0, b1 = CL.LIMIT_BACKOFF
+        self.assertEqual(self.slept, [b0, min(2 * b0, b1), min(4 * b0, b1), min(8 * b0, b1)])
+
+    def test_stop_during_wait_raises_paused(self):
+        waits = []
+        with mock.patch.object(CL, '_wait', lambda secs: True):
+            with self.assertRaises(CL.Paused):
+                self.run_seq([limit_out('usage limit reached')], on_wait=waits.append)
+        self.assertTrue(waits[-1]['stopped'])
+
+    def test_pause_mode_and_preset_stop(self):
+        with mock.patch.object(CL, 'LIMIT_MODE', 'pause'):
+            with self.assertRaises(CL.Paused) as cm:
+                self.run_seq([limit_out('usage limit reached')])
+        self.assertIn('额度限制', str(cm.exception))
+        CL.STOP.set()
+        with self.assertRaises(CL.Paused):
+            self.run_seq([])                          # 不再发起调用
+
+    def test_real_event_wakes_up_promptly(self):
+        import threading, time as T
+        t0 = T.time()
+        threading.Timer(0.2, CL.STOP.set).start()
+        with mock.patch.object(CL, '_wait', lambda secs: CL.STOP.wait(secs)):
+            with self.assertRaises(CL.Paused):
+                self.run_seq([limit_out('usage limit reached')])      # 打算等 600 秒
+        self.assertLess(T.time() - t0, 5)
+
+    def test_signal_handler_sets_stop_and_restores(self):
+        import signal
+        before = signal.getsignal(signal.SIGTERM)
+        restore = CL.install_stop_handlers()
+        try:
+            signal.getsignal(signal.SIGTERM)(signal.SIGTERM, None)
+            self.assertTrue(CL.STOP.is_set())
+        finally:
+            restore()
+        self.assertIs(signal.getsignal(signal.SIGTERM), before)
 
 
 class Flagged(unittest.TestCase):

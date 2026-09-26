@@ -20,10 +20,13 @@
     帮忙」，**待用户拍板，未批不准跑**：run 遇到它除非同时给 --allow-attackmap 否则直接退出；--dry-run 看提示不受限。
   同一个档名下 --set 的值、局面（同一 id 的局面内容）和已有记录不一致时报错，不混写。不给 --arm 时不许 --set，布局同第一批。
 --timeout：单次 claude -p 调用的超时秒数（默认 3600）。每次超时或调不通在该题自己的记录里写一条 call_fail（带题号 / 档 / 遍）。
+--on-limit wait|pause：撞额度时默认在程序里等到解除（读出解除时间就等到那时，读不出按 10 分钟起翻倍、最多 30 分钟退避），
+  每次等待的起止在该题记录里各写一条 limit_wait；pause 恢复旧行为。等待中 Ctrl-C / SIGTERM：在等的线程马上醒来写 pause，
+  退出码 3，再跑同一条命令接着来；再按一次强退。
 
 局面在 data/<batch>/<棋种>.jsonl（选取脚本同目录），或用 --positions 指定。记录在 runs/quiz-<batch>/[<档名>/]<棋种>/（不入库）：
   每次作答一个文件 <局面id>-<effort>-r<遍>.jsonl：config、attempt（和整盘同一格式，由 runner.model_turn 写）、
-  call_fail（超时 / 调不通）、pause（撞额度）、最后一行 result。有 result 的就算答完，再跑时跳过；只有 attempt 没 result 的
+  call_fail（超时 / 调不通）、limit_wait（撞额度等解除的起止）、pause（暂停）、最后一行 result。有 result 的就算答完，再跑时跳过；只有 attempt 没 result 的
   （中途撞额度），续跑时接上已用掉的尝试次数（runner.pending_ply），和整盘续跑一样。
   batch.json 记 claude 运行目录、档名、--set 值、用过的局面文件；judge 按它找局面。
   judge 在每个 <棋种> 目录写 judged.jsonl，report 在 runs/quiz-<batch>/ 下写 report.txt。
@@ -33,7 +36,8 @@
 中国象棋的状态里带着从开局起的全部着法，禁着（长将 / 长捉）照样按完整历史判；只是提示里不给历史。
 国际象棋谜题没有开局到这步的着法，状态从谜题 FEN 起、走完对手那一步；回合数改用 FEN 里的真实回合数（见 QuizChess）。
 
-撞额度（claude_cli 抛 Paused）时：不再开新题，已经在跑的等它们答完，退出码 3，下次跑同一条命令接着来。
+整批停下（--on-limit pause 时撞额度、连续调不通、停止信号；claude_cli 抛 Paused）时：不再开新题，已经在跑的等它们答完，
+退出码 3，下次跑同一条命令接着来。
 一次作答里被安全分类器拦或空回复超过 runner.MAX_FLAGS 次，整盘模式会暂停交给人看；局面题里只把这一题记成
 「放弃（拦截 / 空回复）」，不拖停整批。
 
@@ -445,6 +449,9 @@ def cmd_run(a):
 
     def work(t):
         p, e, r = t
+        if claude_cli.STOP.is_set() and not stop.is_set():       # 收到停止信号：不再开新题
+            stop.set()
+            why.append('收到停止信号')
         if stop.is_set():
             return None
         print('→ %s %s r%d 开始' % (p['id'], e, r), flush=True)
@@ -462,8 +469,15 @@ def cmd_run(a):
                                        if th else ''), flush=True)
         return res
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=a.jobs) as ex:
-        list(ex.map(work, todo))
+    # 撞额度默认在 claude_cli.call 里等到解除（--on-limit pause 恢复旧行为：整批停、退出码 3）；
+    # 等待中 Ctrl-C / SIGTERM 让所有在等的线程马上醒来收尾，和撞额度暂停一样，再跑同一条命令接着来
+    claude_cli.LIMIT_MODE = a.on_limit
+    restore = claude_cli.install_stop_handlers()
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=a.jobs) as ex:
+            list(ex.map(work, todo))
+    finally:
+        restore()
     left = sum(1 for t in tasks if not result_of(answer_path(out, t[0]['id'], t[1], t[2])))
     if stop.is_set():
         print('停下了（%s）。还剩 %d 题，接着跑同一条命令即可。' % (why[0][:300], left))
@@ -1033,6 +1047,8 @@ def main(argv=None):
     r.add_argument('--allow-attackmap', dest='allow_attackmap', action='store_true',
                    help='attackmap=on 真跑的开关。待用户拍板，未批不准用')
     r.add_argument('--timeout', type=int, default=claude_cli.TIMEOUT, help='单次 claude -p 调用的超时秒数，默认 3600')
+    r.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait',
+                   help='撞额度时：wait（默认）在程序里等到解除接着答，起止记 limit_wait；pause 是旧行为，整批停、退出码 3')
     r.add_argument('--dry-run', action='store_true', help='只打印第一个局面的系统提示和用户提示')
     c = sub.add_parser('copy', help='把另一个档里同一局面、同一提示的已答记录复制成本档的样本')
     c.add_argument('--game', required=True, choices=GAMES)

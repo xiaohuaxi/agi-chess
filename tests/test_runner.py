@@ -251,6 +251,19 @@ class SessionCostIsCumulative(unittest.TestCase):
         self.assertEqual(len(fails), 1)
         self.assertEqual((fails[0]['ply'], fails[0]['side'], fails[0]['attempt'], fails[0]['timeout']), (1, 'w', 1, True))
 
+    def test_limit_wait_logged_with_ply(self):
+        ctx = self.make_ctx('stateless')
+
+        def call(cmd, prompt, cwd, **k):
+            k['on_wait']({'phase': 'start', 'start': 'a', 'reset_at': None, 'planned': 600, 'n': 1, 'reason': 'limit'})
+            k['on_wait']({'phase': 'end', 'start': 'a', 'end': 'b', 'waited': 600, 'stopped': False})
+            return {'result': '着法: e2e4', 'stop_reason': 'end_turn', 'usage': {}}, 1.0
+        with mock.patch.object(claude_cli, 'call', call):
+            mv, stat, _ = self.turn(ctx)
+        self.assertEqual((mv, stat['illegal']), ('e2e4', 0))
+        waits = [r for r in records.read(ctx['log']) if r['type'] == 'limit_wait']
+        self.assertEqual([(w['phase'], w['ply'], w['side']) for w in waits], [('start', 1, 'w'), ('end', 1, 'w')])
+
     def test_play_records_timeout_and_chinese_prompt(self):
         out = os.path.join(self.tmp, 'runs')
         run_quiet(['play', '--game', 'chess', '--tag', 'c9', '--out', out, '--white', 'random', '--black', 'random',

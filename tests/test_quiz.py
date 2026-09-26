@@ -265,6 +265,45 @@ class Arms(unittest.TestCase):
         self.assertEqual(recs[0]['cfg']['timeout'], 120)
 
 
+class StopWhileWaiting(unittest.TestCase):
+    """局面题多线程：两题都在等额度时收到停止信号，都醒来写 pause，退出码 3；再跑同一条接着答。"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.addCleanup(claude_cli.STOP.clear)
+
+    def test_stop_wakes_all_waiters(self):
+        import threading
+        out = os.path.join(self.tmp, 'b')
+        argv = ['run', '--game', 'chess', '--ids', 'c01,c02,c03', '--efforts', 'medium', '--reps', '1', '--jobs', '2',
+                '--out', out, '--arm', 'w']
+        started = []
+
+        def waiting(cmd, prompt, cwd, **k):
+            k['on_wait']({'phase': 'start', 'planned': 600})
+            started.append(1)
+            if len(started) == 2:
+                threading.Timer(0.2, claude_cli.STOP.set).start()
+            stopped = claude_cli.STOP.wait(30)
+            k['on_wait']({'phase': 'end', 'stopped': stopped})
+            raise Paused('等额度解除时收到停止信号')
+        with mock.patch.object(claude_cli, 'call', waiting), mock.patch.object(claude_cli, 'version', lambda: 'test'):
+            self.assertEqual(quiet(Q.main, argv), 3)
+        d = os.path.join(out, 'w', 'chess')
+        self.addCleanup(shutil.rmtree, Q.read_meta(d)['claude_cwd'], ignore_errors=True)
+        self.assertEqual(len(started), 2)                  # 第三题没开
+        for pid in ('c01', 'c02'):
+            recs = records.read(Q.answer_path(d, pid, 'medium', 1))
+            types = [r['type'] for r in recs]
+            self.assertIn('pause', types)
+            waits = [r for r in recs if r['type'] == 'limit_wait']
+            self.assertEqual([w['phase'] for w in waits], ['start', 'end'])
+            self.assertEqual((waits[0]['pos'], waits[0]['arm'], waits[1]['stopped']), (pid, 'w', True))
+        with mock.patch.object(claude_cli, 'call', legal_reply), mock.patch.object(claude_cli, 'version', lambda: 'test'):
+            self.assertEqual(quiet(Q.main, argv), 0)
+
+
 class Threats(unittest.TestCase):
     def test_extract(self):
         self.assertIsNone(Q.extract_threats('思路……\n着法: e2e4'))
