@@ -526,9 +526,51 @@ def render(st, sc):
         moves = legal_fen(fen)
         parts.append('你的全部合法着法（共 %d 个）：%s' % (
             len(moves), '、'.join('%s(%s)' % (notation(fen, m), m) for m in moves)))
+    if sc.get('attackmap') == 'on':
+        parts.append(attack_map(fen))
     if sc['recite'] == 'on':
         parts.append(RECITE_ASK)
     return '\n\n'.join(parts)
+
+
+def _flip(fen):
+    f = fen.split()
+    f[1] = other(f[1])
+    return ' '.join(f)
+
+
+def attack_map(fen):
+    """局面题 attackmap 档（诊断用，待用户拍板，见 design.md）：对方每个子现在能吃到我哪些子、我哪些子没有保护。
+    能吃到：把行棋方换成对方后，pyffish 给出的合法吃子着法（炮架、马腿、象眼、照面都由 pyffish 判）。
+    有保护：假设对方一个车站到这个格上，我方有合法着法能吃回来。帅（将）不列。"""
+    board, stm = board_of(fen)
+    me_red = stm == 'w'
+    lines = ['攻击关系（程序按规则算出，只列事实）：', '对方现在能吃到你的子：']
+    caps = {}
+    for mv in legal_fen(_flip(fen)):
+        tgt = board.get(mv[2:4])
+        if tgt and is_red(tgt) == me_red and tgt.lower() != 'k':
+            caps.setdefault(mv[:2], []).append(mv)
+    for fr in sorted(caps):
+        lines.append('- %s %s 能吃：%s' % (_label(board[fr]), fr, '、'.join(
+            '%s %s（%s）' % (_label(board[m[2:4]]), m[2:4], m) for m in sorted(caps[fr]))))
+    if not caps:
+        lines.append('- 无')
+    loose = []
+    for sq, p in sorted(board.items()):
+        if is_red(p) != me_red or p.lower() == 'k':
+            continue
+        b2 = dict(board)
+        b2[sq] = 'r' if me_red else 'R'
+        f2 = '%s %s - - 0 1' % (board_fen(b2), stm)
+        try:
+            ok = any(m[2:4] == sq for m in legal_fen(f2))
+        except Exception:
+            ok = False
+        if not ok:
+            loose.append('%s %s' % (_label(p), sq))
+    lines.append('你没有保护的子：' + ('、'.join(loose) if loose else '无'))
+    return '\n'.join(lines)
 
 
 def last_move_text(st):
@@ -553,7 +595,16 @@ def system_prompt(side, sc, memory_text):
         s.append(SELFCHECK)
     s.append('回答格式：请用中文回答。可以先写简短的思路，最后一行只写「着法: 」加着法，用 ICCS 坐标（例如 着法: h2e2），'
              '也可以用中文记谱（例如 着法: 炮二平五）。')
+    if sc.get('threats') == 'on':
+        s.append(THREATS_ASK)
     return '\n\n'.join(s)
+
+
+# 局面题 threats 档（plan-batch2 块 A）：先列走后对方的吃子 / 将军着法，程序事后按真实局面打分（quiz.threat_score），不回灌
+THREATS_HEAD = '走后威胁'
+THREATS_ASK = ('在最后一行「着法: 」之前，先写一个以「%s:」开头的清单：假设你打算走的这步已经走了，列出对方下一步所有能吃掉你的子的着法、'
+               '所有能将你的着法，每行一着，用 ICCS 坐标写对方那步的起点加终点（例如 b7b0），后面可以用括号注明吃什么或将军；'
+               '一着都没有就只写一行「无」。清单写完，最后一行照常写「着法: 」加你的着法。' % THREATS_HEAD)
 
 
 # ---------------------------------------------------------------- 复述打分（llm_duel.py）

@@ -150,6 +150,195 @@ class Answering(unittest.TestCase):
             self.assertEqual(quiet(Q.main, argv), 0)
 
 
+def legal_reply(cmd, prompt, cwd, **k):
+    """假 claude：从提示里的 FEN 取第一步合法着法作答（只用于国际象棋）。"""
+    b = chess.Board(' '.join(prompt.split('FEN：')[1].split()[0:6]))
+    return fake_reply('着法: %s' % next(iter(b.legal_moves)).uci()), 0.1
+
+
+class Arms(unittest.TestCase):
+    """分档：路径、--set 冲突、局面冲突、旧布局兼容、attackmap 开关、超时记录带题号。"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.out = os.path.join(self.tmp, 'batch')
+
+    def main(self, *extra, call=legal_reply):
+        argv = ['run', '--game', 'chess', '--ids', 'c01', '--efforts', 'medium', '--reps', '1', '--jobs', '1',
+                '--out', self.out] + list(extra)
+        with mock.patch.object(claude_cli, 'call', call), mock.patch.object(claude_cli, 'version', lambda: 'test'):
+            rc = quiet(Q.main, argv)
+        for d in Q.judge_units(self.out):
+            meta = Q.read_meta(Q.unit_dir(self.out, *d))
+            if meta:
+                self.addCleanup(shutil.rmtree, meta['claude_cwd'], ignore_errors=True)
+        return rc
+
+    def test_arm_layout_and_set_conflict(self):
+        self.assertEqual(self.main('--arm', 'sc', '--set', 'selfcheck=on'), 0)
+        d = os.path.join(self.out, 'sc', 'chess')
+        self.assertTrue(os.path.exists(Q.answer_path(d, 'c01', 'medium', 1)))
+        recs = records.read(Q.answer_path(d, 'c01', 'medium', 1))
+        self.assertEqual(recs[0]['arm'], 'sc')
+        self.assertIn('每步落子前先自查', recs[0]['cfg']['system']['b'])
+        self.assertEqual(Q.read_meta(d)['set'], {'selfcheck': 'on'})
+        self.assertEqual(self.main('--arm', 'sc', '--set', 'selfcheck=on'), 0)       # 同设置续跑：不再调
+        with self.assertRaises(SystemExit):
+            self.main('--arm', 'sc', '--set', 'legal=list')
+        with self.assertRaises(SystemExit):
+            self.main('--set', 'legal=list')                                        # --set 要带 --arm
+        with self.assertRaises(SystemExit):
+            self.main('--arm', 'x', '--set', 'recite=on')                           # 国际象棋没有复述
+        with self.assertRaises(SystemExit):
+            self.main('--arm', 'chess')
+        self.assertEqual(Q.judge_units(self.out), [('sc', 'chess')])
+
+    def test_positions_conflict_in_same_arm(self):
+        self.assertEqual(self.main('--arm', 'b'), 0)
+        other = os.path.join(self.tmp, 'other.jsonl')
+        p = dict(positions('chess')[1], id='c01')                 # 同名 id、不同局面
+        with open(other, 'w', encoding='utf-8') as f:
+            f.write(json.dumps(p) + '\n')
+        with self.assertRaises(SystemExit):
+            self.main('--arm', 'b', '--positions', other)
+        same = os.path.join(self.tmp, 'same.jsonl')                # 同一局面换个文件：允许，记进 batch.json
+        with open(same, 'w', encoding='utf-8') as f:
+            f.write(json.dumps(positions('chess')[0]) + '\n')
+        self.assertEqual(self.main('--arm', 'b', '--positions', same), 0)
+        self.assertEqual(len(Q.read_meta(os.path.join(self.out, 'b', 'chess'))['positions']), 2)
+
+    def test_legacy_layout_unchanged(self):
+        self.assertEqual(self.main(), 0)
+        self.assertTrue(os.path.exists(Q.answer_path(os.path.join(self.out, 'chess'), 'c01', 'medium', 1)))
+        self.assertEqual(self.main('--arm', 'zh'), 0)
+        self.assertEqual(Q.judge_units(self.out), [(None, 'chess'), ('zh', 'chess')])
+        self.assertEqual(Q.judge_units(self.out, 'zh'), [('zh', 'chess')])
+        self.assertEqual(Q.meta_positions(Q.read_meta(os.path.join(self.out, 'chess')), 'batch1', 'chess'),
+                         ['data/batch1/chess.jsonl'])
+
+    def test_copy_same_position_between_arms(self):
+        self.assertEqual(self.main('--arm', 'zh'), 0)
+        newpos = os.path.join(self.tmp, 'b2.jsonl')
+        with open(newpos, 'w', encoding='utf-8') as f:
+            f.write(json.dumps(dict(positions('chess')[0], id='c2-99')) + '\n')     # 同一局面、新 id
+            f.write(json.dumps(dict(positions('chess')[1], id='c2-98')) + '\n')     # 来源里没答过
+        quiet(Q.main, ['copy', '--game', 'chess', '--out', self.out, '--from-arm', 'zh', '--arm', 'base',
+                       '--positions', newpos])
+        d = os.path.join(self.out, 'base', 'chess')
+        res = Q.result_of(Q.answer_path(d, 'c2-99', 'medium', 1))
+        self.assertEqual((res['pos'], res['arm']), ('c2-99', 'base'))
+        self.assertIn('copied_from', res)
+        self.assertEqual(sorted(os.listdir(d)), ['batch.json', 'c2-99-medium-r1.jsonl'])
+        with mock.patch.object(claude_cli, 'call', side_effect=AssertionError('不该再调')):
+            self.assertEqual(self.main('--arm', 'base', '--positions', newpos, '--ids', 'c2-99'), 0)
+        with self.assertRaises(SystemExit):                                      # 目标档设置不同：不复制
+            self.main('--arm', 'sc', '--set', 'selfcheck=on')
+            quiet(Q.main, ['copy', '--game', 'chess', '--out', self.out, '--from-arm', 'zh', '--arm', 'sc',
+                           '--positions', newpos])
+
+    def test_attackmap_gate(self):
+        with self.assertRaises(SystemExit) as cm:
+            self.main('--arm', 'am', '--set', 'attackmap=on')
+        self.assertIn('待用户拍板', str(cm.exception))
+        self.assertFalse(os.path.exists(self.out))
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            Q.main(['run', '--game', 'xiangqi', '--ids', 'x01', '--arm', 'am', '--set', 'attackmap=on', '--dry-run'])
+        self.assertIn('对方现在能吃到你的子', buf.getvalue())
+        self.assertIn('黑马 g2 能吃', buf.getvalue())
+
+    def test_call_fail_tagged_in_answer_file(self):
+        def call(cmd, prompt, cwd, **k):
+            self.assertEqual(k['timeout'], 120)
+            k['on_fail']({'try': 1, 'timeout': True, 'rc': -1, 'elapsed': 120.0, 'stderr': 'timeout 120s', 'stdout': '',
+                          'next_wait': 30})
+            return legal_reply(cmd, prompt, cwd)
+        self.assertEqual(self.main('--arm', 't', '--timeout', '120', call=call), 0)
+        path = Q.answer_path(os.path.join(self.out, 't', 'chess'), 'c01', 'medium', 1)
+        recs = records.read(path)
+        f = [r for r in recs if r['type'] == 'call_fail'][0]
+        self.assertEqual((f['pos'], f['effort'], f['rep'], f['arm'], f['ply'], f['timeout']),
+                         ('c01', 'medium', 1, 't', 2, True))          # 谜题状态里已有对手那一步
+        res = Q.result_of(path)
+        self.assertEqual((res['call_fails'], res['timeouts']), (1, 1))
+        self.assertEqual(recs[0]['cfg']['timeout'], 120)
+
+
+class Threats(unittest.TestCase):
+    def test_extract(self):
+        self.assertIsNone(Q.extract_threats('思路……\n着法: e2e4'))
+        self.assertEqual(Q.extract_threats('走后威胁：无\n着法: e2e4'), [])
+        self.assertEqual(Q.extract_threats('先想想走后威胁: 待会列\n\n**走后威胁：**\n1. b7i7（砲吃车）\n- g2e3\n\n'
+                                           '再说几句\n着法: i6i7'), ['b7i7（砲吃车）', 'g2e3'])
+        self.assertEqual(Q.extract_threats('走后威胁:\n- d5b5\n着法: b1b5'), ['d5b5'])
+
+    def test_xiangqi_cannon_screen(self):
+        p = positions('xiangqi')[0]                  # x01：车一进一（i6i7），黑砲 b7 借 c7 马做炮架打车
+        st = Q.build_state(p)
+        fen = st['fens'][-1]
+        f1, caps, checks = Q.threat_truth('xiangqi', fen, 'i6i7')
+        self.assertIn('b7i7', caps)
+        cn = Q.X.notation(f1, 'b7i7')
+        reply = '走后威胁:\n- g2e3（马吃兵）\n- %s（吃车）\n- a9a8\n- z9z9\n\n着法: i6i7' % cn
+        sc = Q.threat_score('xiangqi', fen, 'i6i7', reply)
+        self.assertTrue(sc['found'])
+        self.assertIn('b7i7', sc['listed'])          # 中文记谱读成 b7i7
+        self.assertEqual(sc['hit'], 2)
+        self.assertEqual(sc['miss'], len(sc['true']) - 2)
+        self.assertEqual(sc['wrong'], 2)            # a9a8 合法但不是吃子 / 将军；z9z9 读不出坐标、当中文也对不上
+        self.assertEqual(sc['unparsed'], 1)
+
+    def test_chess_captures_checks_and_san(self):
+        fen = '4k3/8/8/3q4/8/8/P7/1Q2K3 w - - 0 1'
+        _, caps, checks = Q.threat_truth('chess', fen, 'b1b3')
+        self.assertIn('d5b3', caps)
+        self.assertIn('d5d1', checks)
+        sc = Q.threat_score('chess', fen, 'b1b3', '走后威胁：\n- d5b3（吃后）\n- Qd1+\n- a2a3\n着法: b1b3')
+        self.assertEqual((sc['hit'], sc['wrong'], sc['unparsed']), (2, 1, 1))
+        self.assertEqual(sc['miss'], len(sc['true']) - 2)
+        none = Q.threat_score('chess', '4k3/8/8/8/8/8/P7/4K3 w - - 0 1', 'a2a3', '走后威胁: 无\n着法: a2a3')
+        self.assertEqual((none['none'], none['true'], none['wrong']), (True, [], 0))
+
+    def test_answer_scores_final_attempt_only(self):
+        tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        p = positions('chess')[0]
+        replies = iter([fake_reply('走后威胁:\n- a1a2\n着法: a1a1'),
+                        fake_reply('走后威胁: 无\n着法: %s' % p['solution_san'])])
+        with mock.patch.object(claude_cli, 'call', lambda *a, **k: (next(replies), 1.0)):
+            res = quiet(Q.answer_one, p, 'xhigh', 1, tmp, 'opus', tmp, {}, {'threats': 'on'}, 'th')
+        self.assertEqual(res['arm'], 'th')
+        self.assertTrue(res['threats']['none'])
+        self.assertEqual(res['threats']['wrong'], 0)
+        cfg = records.read(Q.answer_path(tmp, p['id'], 'xhigh', 1))[0]['cfg']
+        self.assertIn('走后威胁', cfg['system'][p['turn']])
+
+    def test_class_and_report_by_arm(self):
+        th = {'found': True, 'none': False, 'true': ['a', 'b'], 'listed': ['a'], 'hit': 1, 'miss': 1, 'wrong': 0}
+        self.assertEqual(Q.threat_class({'threats': th, 'refute': 'a'}), 'listed')
+        self.assertEqual(Q.threat_class({'threats': th, 'refute': 'b'}), 'unlisted')
+        self.assertEqual(Q.threat_class({'threats': th, 'refute': 'c'}), 'quiet')
+        self.assertEqual(Q.threat_class({'threats': dict(th, found=False), 'refute': 'a'}), 'no_list')
+        tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        base = {'game': 'chess', 'effort': 'xhigh', 'move': 'e2e4', 'first_legal': True, 'loss': 400, 'blunder': True,
+                'mistake': False, 'best_match': False, 'solved': False, 'hang': True, 'missed_capture': False,
+                'missed_mate': False, 'allows_mate': False, 'stat': dict(records.new_stat(), elapsed=10), 'refute': 'b'}
+        for arm, extra in ((None, {}), ('base', {}), ('threats', {'threats': th, 'threat_class': 'unlisted'})):
+            d = Q.unit_dir(tmp, arm, 'chess')
+            os.makedirs(d)
+            with open(os.path.join(d, 'judged.jsonl'), 'w', encoding='utf-8') as f:
+                f.write(json.dumps(dict(base, **extra)) + '\n')
+        self.assertEqual(quiet(Q.main, ['report', '--out', tmp]), 0)
+        with open(os.path.join(tmp, 'report.txt'), encoding='utf-8') as f:
+            text = f.read()
+        self.assertIn('| 棋种 | 档 | 档位 |', text)
+        self.assertIn('| chess | - | xhigh |', text)
+        self.assertIn('| chess | base | xhigh |', text)
+        self.assertIn('| chess | threats | xhigh | 1 | 1 | 0 | 2 | 1 | 50% | 0 | 0 | 1 | 0 | 1 | 0 | 0 |', text)
+
+
 class StaticLabels(unittest.TestCase):
     def test_xiangqi_reproduces_last_round_flags(self):
         R = Q.rules_for('xiangqi')

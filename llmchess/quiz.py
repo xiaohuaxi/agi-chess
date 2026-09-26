@@ -1,4 +1,4 @@
-"""局面题模式（design.md 第六节组 1）：固定局面、stateless，每次只让模型走一步，引擎事后判这步好坏。
+"""局面题模式（design.md 第六节组 1、第八节）：固定局面、stateless，每次只让模型走一步，引擎事后判这步好坏。
 
     python3 -m llmchess.quiz run --game xiangqi                 # 30 局面 × 四档 × 2 遍；断点续跑就是再跑一次同一条
     python3 -m llmchess.quiz run --game chess --jobs 4 --efforts medium,high,xhigh,max --reps 2
@@ -6,12 +6,27 @@
     python3 -m llmchess.quiz run --game xiangqi --ids x01 --dry-run                   # 只打印提示，不调模型
     python3 -m llmchess.quiz judge --game chess                 # 引擎事后判，写 judged.jsonl
     python3 -m llmchess.quiz report                             # 两种棋 × 档位的汇总表
+    # 分档（第二批块 A）：--arm 起名，--set 改变量（可重复），记录放 runs/quiz-<batch>/<档名>/<棋种>/
+    python3 -m llmchess.quiz run --game xiangqi --batch batch2 --arm threats --set threats=on --efforts xhigh --reps 3
+    python3 -m llmchess.quiz run --game chess --batch batch2 --arm legal --set legal=list --efforts xhigh --reps 2
+    python3 -m llmchess.quiz copy --game xiangqi --batch batch2 --from-arm zh --arm base   # 同局面同提示的旧作答复用过来
+    python3 -m llmchess.quiz judge --batch batch2 [--arm threats]   # 不给 --arm 就判全部档
+    python3 -m llmchess.quiz report --batch batch2                  # 按档分组出表；threats 档另出一张清单打分表
 
-局面在 data/<batch>/<棋种>.jsonl（选取脚本同目录）。记录在 runs/quiz-<batch>/<棋种>/（不入库）：
-  每次作答一个文件 <局面id>-<档>-r<遍>.jsonl：config、attempt（和整盘同一格式，由 runner.model_turn 写）、
-  pause（撞额度）、最后一行 result。有 result 的就算答完，再跑时跳过；只有 attempt 没 result 的（中途撞额度），
-  续跑时接上已用掉的尝试次数（runner.pending_ply），和整盘续跑一样。
-  judge 写 judged.jsonl，report 写 report.txt（两种棋都在 runs/quiz-<batch>/ 下）。
+--set 可改的变量：view、legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、threats on|off、attackmap on|off。
+  threats=on：要求回答里在「着法:」之前先列「走后威胁:」清单（走完这步后对方所有吃子、将军着法），程序按走后真实局面
+    打分（列中 / 漏列 / 错列），分数只写进记录，不回灌给模型。
+  attackmap=on：局面后附程序算出的攻击关系（对方能吃到我哪些子、我哪些子没保护）。它碰到 AGENTS.md 硬约束「棋手不准用规则库
+    帮忙」，**待用户拍板，未批不准跑**：run 遇到它除非同时给 --allow-attackmap 否则直接退出；--dry-run 看提示不受限。
+  同一个档名下 --set 的值、局面（同一 id 的局面内容）和已有记录不一致时报错，不混写。不给 --arm 时不许 --set，布局同第一批。
+--timeout：单次 claude -p 调用的超时秒数（默认 3600）。每次超时或调不通在该题自己的记录里写一条 call_fail（带题号 / 档 / 遍）。
+
+局面在 data/<batch>/<棋种>.jsonl（选取脚本同目录），或用 --positions 指定。记录在 runs/quiz-<batch>/[<档名>/]<棋种>/（不入库）：
+  每次作答一个文件 <局面id>-<effort>-r<遍>.jsonl：config、attempt（和整盘同一格式，由 runner.model_turn 写）、
+  call_fail（超时 / 调不通）、pause（撞额度）、最后一行 result。有 result 的就算答完，再跑时跳过；只有 attempt 没 result 的
+  （中途撞额度），续跑时接上已用掉的尝试次数（runner.pending_ply），和整盘续跑一样。
+  batch.json 记 claude 运行目录、档名、--set 值、用过的局面文件；judge 按它找局面。
+  judge 在每个 <棋种> 目录写 judged.jsonl，report 在 runs/quiz-<batch>/ 下写 report.txt。
 
 提示和整盘对局给模型的完全一样：同一个系统提示（里面「满 200 个半回合判和」之类的整盘规则文字原样保留，没有为局面题改写，
 免得两种模式的提示不一样）、该棋种默认 view、history=0（只给当前局面，不附着法历史；「对方刚走」那句保留）。
@@ -83,22 +98,148 @@ def build_state(pos):
     return st
 
 
-def side_cfg(G, effort):
-    """和 cli.side_cfg 默认值一致，只把 history 设成 0、effort 按档位。max_plies 只用来拼系统提示里那句整盘规则。"""
-    return {'effort': effort, 'memory': 'stateless', 'view': G.DEFAULT_VIEW.split(','), 'history': 0, 'legal': 'none',
-            'selfcheck': 'off', 'recite': 'off', 'notes_keep': 1, 'session_view': 'full', 'max_plies': 200}
+SET_KEYS = {'view': None, 'legal': ('none', 'list'), 'selfcheck': ('on', 'off'), 'recite': ('on', 'off'),
+            'threats': ('on', 'off'), 'attackmap': ('on', 'off')}
 
 
-def quiz_cfg(G, game, side, effort, model, cwd):
-    sc = side_cfg(G, effort)
+def parse_sets(G, items):
+    """--set 变量=值 → {变量: 值}（值是字符串，view 保持逗号分隔），不合法就退出。"""
+    out = {}
+    for item in items or []:
+        k, sep, v = item.partition('=')
+        if not sep or k not in SET_KEYS:
+            raise SystemExit('--set 写成 变量=值，变量是 %s 之一：%r' % ('/'.join(SET_KEYS), item))
+        if k == 'view':
+            bad = [x for x in v.split(',') if x not in G.VIEWS]
+            if bad:
+                raise SystemExit('不认识的 view：%s（可选 %s）' % (','.join(bad), ','.join(G.VIEWS)))
+        elif v not in SET_KEYS[k]:
+            raise SystemExit('%s 只能是 %s，收到 %r' % (k, '/'.join(SET_KEYS[k]), v))
+        if k == 'recite' and v == 'on' and not G.RECITE:
+            raise SystemExit('这种棋还没有复述打分，recite 只能 off')
+        out[k] = v
+    return out
+
+
+def side_cfg(G, effort, sets=None):
+    """和 cli.side_cfg 默认值一致，只把 history 设成 0、effort 按档位；sets 是分档的覆盖值（parse_sets 的结果）。
+    max_plies 只用来拼系统提示里那句整盘规则。threats / attackmap 只有局面题有。"""
+    sc = {'effort': effort, 'memory': 'stateless', 'view': G.DEFAULT_VIEW.split(','), 'history': 0, 'legal': 'none',
+          'selfcheck': 'off', 'recite': 'off', 'threats': 'off', 'attackmap': 'off', 'notes_keep': 1,
+          'session_view': 'full', 'max_plies': 200}
+    for k, v in (sets or {}).items():
+        sc[k] = v.split(',') if k == 'view' else v
+    return sc
+
+
+def quiz_cfg(G, game, side, effort, model, cwd, sets=None, timeout=None):
+    sc = side_cfg(G, effort, sets)
     player = 'claude:%s' % model
     return {'game': game, 'players': {side: player}, 'sides': {side: sc}, 'retries': 3, 'max_plies': 200,
             'system': {side: G.system_prompt(side, sc, memory.system_text(sc))},
-            'commands': {side: claude_cli.shown(claude_cli.command(model, effort, '-'))}, 'claude_cwd': cwd}
+            'commands': {side: claude_cli.shown(claude_cli.command(model, effort, '-'))}, 'claude_cwd': cwd,
+            'timeout': timeout or claude_cli.TIMEOUT}
 
 
 def prompt_of(G, st, sc):
     return G.render(st, sc) + '\n\n' + memory.ask(sc)
+
+
+# ---------------------------------------------------------------- threats 档：清单解析与打分
+# 模型按 THREATS_ASK（xiangqi.py / chess_.py）写「走后威胁:」清单，每行一着。这里取回复里最后一个清单，
+# 把每行解析成对方着法，和「走完这步之后的真实局面」里对方的全部吃子着法、将军着法比。走子规则全交给 pyffish /
+# python-chess（炮架、蹩马腿、塞象眼、牵制都由它们判），这里不写走子规则。分数只写进记录，不回灌给模型。
+_TH_HEAD = re.compile(r'走后威胁[\s*`]*[:：]')
+_TH_MOVE_LINE = re.compile(r'^[\s>*`#\-]*着法\s*[:：]')
+_TH_BULLET = re.compile(r'^[\s>*`•·\-–—]*(?:\d+\s*[.、)）]\s*)?')
+_TH_NONE = re.compile(r'^(无|没有)(\W.*)?$')
+_XQ_MV = re.compile(r'(?<![a-z])([a-i])(\d)(?:\s*[-–—>→]\s*)?([a-i])(\d)(?!\d)')
+_CH_MV = re.compile(r'(?<![A-Za-z])([a-h][1-8])(?:\s*[-–—x:>→]\s*)?([a-h][1-8])([qrbnQRBN])?(?![0-9])')
+
+
+def extract_threats(reply):
+    """回复里最后一个「走后威胁:」清单。没写清单返回 None；写了「无」返回 []；否则返回每行原文（去掉项目符号）。
+    清单到「着法:」那行或清单后第一个空行为止；标题同一行后面的内容算第一行。"""
+    hits = list(_TH_HEAD.finditer(reply or ''))
+    if not hits:
+        return None
+    items = []
+    for i, line in enumerate(reply[hits[-1].end():].split('\n')):
+        if _TH_MOVE_LINE.match(line):
+            break
+        t = _TH_BULLET.sub('', line).strip().strip('*`').strip()
+        if not t:
+            if items:
+                break
+            continue
+        items.append(t)
+    return [t for t in items if not _TH_NONE.match(t)][:60]
+
+
+def threat_truth(game, fen, mv):
+    """走完 mv 之后对方的合法吃子着法、将军着法（同作答一种写法：中国象棋 ICCS，国际象棋 UCI）。"""
+    if game == 'xiangqi':
+        f1 = sf.get_fen(X.XQ, fen, [X.to_fsf(mv)])
+        board = X.board_of(f1)[0]
+        replies = X.legal_fen(f1)
+        caps = [r for r in replies if board.get(r[2:4])]
+        checks = [r for r in replies if X.in_check_fen(sf.get_fen(X.XQ, f1, [X.to_fsf(r)]))]
+        return f1, caps, checks
+    b = chess.Board(fen)
+    b.push(chess.Move.from_uci(mv))
+    ms = sorted(b.legal_moves, key=lambda m: m.uci())
+    return b.fen(), [m.uci() for m in ms if b.is_capture(m)], [m.uci() for m in ms if b.gives_check(m)]
+
+
+def resolve_threats(game, f1, items):
+    """清单每行 → [(原文, 着法或 None)]。一行里写了几个坐标就算几着；没有坐标时中国象棋试中文记谱、国际象棋试 SAN。
+    着法只要在走后局面里合法就给出（是不是吃子 / 将军由打分判）；不合法、读不出的给 None。"""
+    out = []
+    if game == 'xiangqi':
+        legal = set(X.legal_fen(f1))
+        for t in items:
+            ms = ['%s%s%s%s' % m for m in _XQ_MV.findall(t.lower())]
+            if ms:
+                out += [(t, m if m in legal else None) for m in ms]
+                continue
+            mv, why = X.resolve(f1, t)
+            out.append((t, mv if mv and not why and mv in legal else None))
+        return out
+    b = chess.Board(f1)
+    legal = {m.uci() for m in b.legal_moves}
+    for t in items:
+        ms = [(a + c + (p or '')).lower() for a, c, p in _CH_MV.findall(t)]
+        if ms:
+            out += [(t, m if m in legal else None) for m in ms]
+            continue
+        got = []
+        for tok in re.split(r'[\s、,，;；/（）()]+', t):
+            tok = re.sub(r'[+#!?.。]+$', '', tok)
+            if not tok or not C._SAN.match(tok) and not tok.startswith('O-O'):
+                continue
+            try:
+                got.append(b.parse_san(tok).uci())
+            except ValueError:
+                pass
+        out += [(t, m) for m in got] if got else [(t, None)]
+    return out
+
+
+def threat_score(game, fen, mv, reply):
+    """threats 档的打分（写进 result，judge 抄进 judged.jsonl）：
+    true 走后对方全部吃子 / 将军着法；listed 清单里读出的合法着法；hit 列中，miss 漏列，wrong 错列（列了但不是吃子
+    或将军的合法着法、不合法或读不出的行）；unparsed 其中读不出 / 不合法的行数；found 是否写了清单，none 是否写的「无」。"""
+    f1, caps, checks = threat_truth(game, fen, mv)
+    true = sorted(set(caps) | set(checks))
+    items = extract_threats(reply)
+    rec = {'found': items is not None, 'none': items == [], 'items': items, 'captures': caps, 'checks': checks,
+           'true': true}
+    pairs = resolve_threats(game, f1, items or [])
+    listed = sorted({m for _, m in pairs if m})
+    unparsed = sum(1 for _, m in pairs if m is None)
+    rec.update(listed=listed, hit=len(set(listed) & set(true)), miss=len(set(true) - set(listed)),
+               wrong=len(set(listed) - set(true)) + unparsed, unparsed=unparsed)
+    return rec
 
 
 # ---------------------------------------------------------------- 作答
@@ -117,15 +258,17 @@ def summarize_attempts(recs, ply):
     atts = [r for r in recs if r['type'] == 'attempt' and r.get('ply') == ply]
     real = [r for r in atts if not r.get('flagged') and not r.get('empty')]
     first = real[0] if real else None
+    fails = [r for r in recs if r['type'] == 'call_fail' and r.get('ply') == ply]
     return {'attempts': len(atts), 'first_legal': first.get('legal') if first else None,
             'first_move_text': first.get('move_text') if first else None,
             'first_think': (first.get('usage') or {}).get('think') if first else None,
             'first_elapsed': first.get('elapsed') if first else None,
-            'illegal_reasons': [r.get('reason') for r in real if not r.get('legal')]}
+            'illegal_reasons': [r.get('reason') for r in real if not r.get('legal')],
+            'call_fails': len(fails), 'timeouts': sum(1 for r in fails if r.get('timeout'))}
 
 
-def answer_one(pos, effort, rep, out, model, cwd, batch_meta):
-    """答一题。返回 result；撞额度（非拦截原因的 Paused）照样抛出去。"""
+def answer_one(pos, effort, rep, out, model, cwd, batch_meta, sets=None, arm=None, timeout=None):
+    """答一题。返回 result；撞额度（非拦截原因的 Paused）照样抛出去。sets / arm：分档的覆盖值和档名。"""
     path = answer_path(out, pos['id'], effort, rep)
     done = result_of(path)
     if done:
@@ -134,16 +277,17 @@ def answer_one(pos, effort, rep, out, model, cwd, batch_meta):
     st = build_state(pos)
     side = G.turn(st)
     ply = len(st['moves']) + 1
-    cfg = quiz_cfg(G, pos['game'], side, effort, model, cwd)
+    cfg = quiz_cfg(G, pos['game'], side, effort, model, cwd, sets, timeout)
     ctx = runner.new_ctx(G, cfg, out)
     ctx['st'], ctx['log'] = st, path
+    ctx['tags'] = {'pos': pos['id'], 'effort': effort, 'rep': rep, 'arm': arm}
     if os.path.exists(path):
         recs = records.read(path)
         ctx['pending'] = runner.pending_ply(recs, ply)
         runner.log(ctx, {'type': 'resume', 'ply': ply})
     else:
-        runner.log(ctx, {'type': 'config', 'cfg': cfg, 'pos': pos['id'], 'effort': effort, 'rep': rep,
-                         'fen': st['fens'][-1], **batch_meta})
+        runner.log(ctx, {'type': 'config', 'cfg': cfg, 'pos': pos['id'], 'effort': effort, 'rep': rep, 'arm': arm,
+                         'set': sets or {}, 'fen': st['fens'][-1], **batch_meta})
     moves = G.legal(st)
     ban = G.banned(st, moves)
     gave_up = None
@@ -158,8 +302,8 @@ def answer_one(pos, effort, rep, out, model, cwd, batch_meta):
             raise                                    # 撞额度 / 连续调不通：整批停
         mv, stat, gave_up = None, None, 'flags'     # 拦截 / 空回复太多：这一题记成放弃，不拖停整批
     recs = records.read(path)
-    res = {'type': 'result', 'pos': pos['id'], 'game': pos['game'], 'effort': effort, 'rep': rep, 'side': side,
-           'move': mv, 'forfeit': mv is None and gave_up is None, 'gave_up': gave_up}
+    res = {'type': 'result', 'pos': pos['id'], 'game': pos['game'], 'effort': effort, 'rep': rep, 'arm': arm,
+           'side': side, 'move': mv, 'forfeit': mv is None and gave_up is None, 'gave_up': gave_up}
     res.update(summarize_attempts(recs, ply))
     agg = records.new_stat()
     for r in recs:
@@ -169,14 +313,88 @@ def answer_one(pos, effort, rep, out, model, cwd, batch_meta):
             agg['empty'] += bool(r.get('empty'))
             agg['illegal'] += (not r.get('flagged') and not r.get('empty') and not r.get('legal'))
     res['stat'] = agg
+    if (sets or {}).get('threats') == 'on' and mv is not None:
+        # 清单以落定那次回答为准（非法重试时前几次的清单不算）
+        final = [r for r in recs if r['type'] == 'attempt' and r.get('ply') == ply and r.get('legal') and r.get('move') == mv]
+        res['threats'] = threat_score(pos['game'], st['fens'][-1], mv, final[-1].get('reply') if final else '')
     runner.log(ctx, res)
     return res
+
+
+# ---------------------------------------------------------------- 分档与批次元数据
+def _rel(path):
+    p = os.path.realpath(str(path))
+    root = str(ROOT) + os.sep
+    return p[len(root):] if p.startswith(root) else p
+
+
+def _abs(path):
+    return path if os.path.isabs(path) else str(ROOT / path)
+
+
+def pos_key(p):
+    """判两个局面文件里同一 id 是不是同一道题：局面、到这步的着法（中国象棋禁着要看）、对手刚走的那步。"""
+    return (p.get('game'), p.get('fen'), tuple(p.get('moves') or ()), p.get('fen_before_opp'), p.get('opp_move'))
+
+
+def merge_positions(files):
+    """几个局面文件按 id 合并；同一 id 内容不同就退出（防止两批局面的同名 id 混进同一个档）。"""
+    by = {}
+    for f in files:
+        for p in load_positions(_abs(f)):
+            q = by.get(p['id'])
+            if q is not None and pos_key(q) != pos_key(p):
+                raise SystemExit('局面 %s 在 %s 里和之前用过的局面文件（%s）内容不同，不能混进同一个档；换个 --arm 或 --batch'
+                                 % (p['id'], f, ', '.join(files[:-1])))
+            by[p['id']] = p
+    return by
+
+
+def unit_dir(out_root, arm, game):
+    return os.path.join(out_root, arm, game) if arm else os.path.join(out_root, game)
+
+
+def read_meta(d):
+    path = os.path.join(d, 'batch.json')
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding='utf-8') as f:
+        return json.load(f)
+
+
+def write_meta(d, meta):
+    path = os.path.join(d, 'batch.json')
+    tmp = path + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+def meta_positions(meta, batch, game):
+    """这个档用过的局面文件；第一批的 batch.json 没记，按默认路径算。"""
+    return (meta or {}).get('positions') or [_rel(positions_path(batch, game))]
+
+
+ATTACKMAP_GATE = ('attackmap 档碰到 AGENTS.md 硬约束「棋手不准用引擎或规则库帮忙」，待用户拍板，未批不准跑'
+                  '（plan-batch2 块 A、Q5）。只看提示用 --dry-run；用户批了才加 --allow-attackmap。')
+
+
+def check_arm(arm):
+    if arm and (arm in GAMES or not re.fullmatch(r'[A-Za-z0-9_.-]+', arm)):
+        raise SystemExit('档名只用字母、数字、_ . -，且不能叫 %s' % '/'.join(GAMES))
 
 
 def cmd_run(a):
     game = a.game
     G = game_module(game)
-    pos_all = load_positions(a.positions or positions_path(a.batch, game))
+    if a.set and not a.arm:
+        raise SystemExit('--set 要和 --arm 一起给（不给档名时布局和提示同第一批）')
+    check_arm(a.arm)
+    sets = parse_sets(G, a.set)
+    if sets.get('attackmap') == 'on' and not a.dry_run and not a.allow_attackmap:
+        raise SystemExit(ATTACKMAP_GATE)
+    pos_file = a.positions or str(positions_path(a.batch, game))
+    pos_all = load_positions(pos_file)
     if a.ids:
         want = set(a.ids.split(','))
         pos_all = [p for p in pos_all if p['id'] in want]
@@ -189,31 +407,38 @@ def cmd_run(a):
     if a.dry_run:
         p = pos_all[0]
         st = build_state(p)
-        sc = side_cfg(G, efforts[0])
+        sc = side_cfg(G, efforts[0], sets)
         print('== 系统提示 ==\n%s\n\n== 用户提示（%s）==\n%s' % (
             G.system_prompt(G.turn(st), sc, memory.system_text(sc)), p['id'], prompt_of(G, st, sc)))
         return 0
-    out = os.path.join(a.out or str(ROOT / 'runs' / ('quiz-' + a.batch)), game)
+    out_root = a.out or str(ROOT / 'runs' / ('quiz-' + a.batch))
+    out = unit_dir(out_root, a.arm, game)
     os.makedirs(out, exist_ok=True)
-    meta_path = os.path.join(out, 'batch.json')
-    if os.path.exists(meta_path):
-        with open(meta_path, encoding='utf-8') as f:
-            meta = json.load(f)
-    else:
+    meta = read_meta(out)
+    if meta is None:
         # claude 的运行目录：仓库外的空临时目录（design.md P7、P17），一批共用一个，记下来续跑沿用
         meta = {'claude_cwd': os.path.join(os.path.realpath(tempfile.gettempdir()), 'llmchess-cwd',
-                                           'quiz-%s-%s-%s' % (a.batch, game, uuid.uuid4().hex[:8])),
-                'first_commit': commit(), 'claude_version': claude_cli.version()}
-        tmp = meta_path + '.tmp'
-        with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(meta, f, ensure_ascii=False, indent=1)
-        os.replace(tmp, meta_path)
+                                           'quiz-%s-%s%s-%s' % (a.batch, (a.arm + '-') if a.arm else '', game,
+                                                                uuid.uuid4().hex[:8])),
+                'first_commit': commit(), 'claude_version': claude_cli.version(),
+                'arm': a.arm, 'set': sets, 'positions': [_rel(pos_file)]}
+        write_meta(out, meta)
+    else:
+        if (meta.get('set') or {}) != sets:
+            raise SystemExit('%s 已有记录，--set 是 %s，这次给的是 %s；不混写，换个 --arm' % (
+                out, json.dumps(meta.get('set') or {}, ensure_ascii=False), json.dumps(sets, ensure_ascii=False)))
+        files = meta_positions(meta, a.batch, game)
+        if _rel(pos_file) not in files:
+            merge_positions(files + [_rel(pos_file)])        # 同一 id 内容不同就退出
+            meta['positions'] = files + [_rel(pos_file)]
+            write_meta(out, meta)
     os.makedirs(meta['claude_cwd'], exist_ok=True)
     batch_meta = {'commit': commit(), 'claude_version': meta['claude_version'], 'model': a.model, 'argv': sys.argv}
     # 先答完第 1 遍的全部局面 × 档位，再答第 2 遍：中途撞额度时，已有的数据各档是齐的
     tasks = [(p, e, r) for r in range(1, a.reps + 1) for p in pos_all for e in efforts]
     todo = [t for t in tasks if not result_of(answer_path(out, t[0]['id'], t[1], t[2]))]
-    print('%s：共 %d 题，已答 %d，这次要答 %d（%d 路并发）' % (game, len(tasks), len(tasks) - len(todo), len(todo), a.jobs),
+    label = game + ('（档 %s）' % a.arm if a.arm else '')
+    print('%s：共 %d 题，已答 %d，这次要答 %d（%d 路并发）' % (label, len(tasks), len(tasks) - len(todo), len(todo), a.jobs),
           flush=True)
     stop = threading.Event()
     why = []
@@ -224,14 +449,17 @@ def cmd_run(a):
             return None
         print('→ %s %s r%d 开始' % (p['id'], e, r), flush=True)
         try:
-            res = answer_one(p, e, r, out, a.model, meta['claude_cwd'], batch_meta)
+            res = answer_one(p, e, r, out, a.model, meta['claude_cwd'], batch_meta, sets, a.arm, a.timeout)
         except Paused as ex:
             stop.set()
             why.append(str(ex))
             print('！%s %s r%d 撞额度或调不通，整批停下：%s' % (p['id'], e, r, ex), flush=True)
             return None
-        print('← %s %s r%d：%s%s' % (p['id'], e, r, res['move'],
-                                     '（首答非法）' if res.get('first_legal') is False else ''), flush=True)
+        th = res.get('threats')
+        print('← %s %s r%d：%s%s%s' % (p['id'], e, r, res['move'],
+                                       '（首答非法）' if res.get('first_legal') is False else '',
+                                       '（清单 列中 %d / 漏 %d / 错 %d）' % (th['hit'], th['miss'], th['wrong'])
+                                       if th else ''), flush=True)
         return res
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=a.jobs) as ex:
@@ -240,7 +468,76 @@ def cmd_run(a):
     if stop.is_set():
         print('停下了（%s）。还剩 %d 题，接着跑同一条命令即可。' % (why[0][:300], left))
         return 3
-    print('%s：全部答完（剩 %d）。' % (game, left))
+    print('%s：全部答完（剩 %d）。' % (label, left))
+    return 0
+
+
+def cmd_copy(a):
+    """把另一个档里「同一局面、同一提示」的已答记录复制过来当本档的样本（块 A 的 base 档复用块 0 的 zh 复测）。
+    局面按内容（pos_key）对上，不看 id；复制前逐个核对系统提示和第一次的用户提示和本档会发的一字不差，不一样就跳过。
+    复制出的记录里题号换成本档的 id，config / result 标 copied_from。目标已有的不覆盖。"""
+    game = a.game
+    G = game_module(game)
+    check_arm(a.arm)
+    out_root = a.out or str(ROOT / 'runs' / ('quiz-' + a.batch))
+    src, dst = unit_dir(out_root, a.from_arm, game), unit_dir(out_root, a.arm, game)
+    smeta = read_meta(src)
+    if smeta is None:
+        raise SystemExit('%s 没有记录' % src)
+    sets = smeta.get('set') or {}
+    pos_file = a.positions or str(positions_path(a.batch, game))
+    dmeta = read_meta(dst)
+    if dmeta is not None and (dmeta.get('set') or {}) != sets:
+        raise SystemExit('%s 的 --set 是 %s，和来源 %s 的 %s 不同，不能复制' % (
+            dst, json.dumps(dmeta.get('set') or {}), src, json.dumps(sets)))
+    src_by = {pos_key(p): p for p in merge_positions(meta_positions(smeta, a.batch, game)).values()}
+    os.makedirs(dst, exist_ok=True)
+    if dmeta is None:
+        dmeta = {'claude_cwd': smeta['claude_cwd'], 'first_commit': commit(), 'claude_version': smeta.get('claude_version'),
+                 'arm': a.arm, 'set': sets, 'positions': [_rel(pos_file)]}
+    else:
+        files = meta_positions(dmeta, a.batch, game)
+        if _rel(pos_file) not in files:
+            merge_positions(files + [_rel(pos_file)])
+            dmeta['positions'] = files + [_rel(pos_file)]
+    write_meta(dst, dmeta)
+    copied, skipped = 0, []
+    for p in load_positions(pos_file):
+        q = src_by.get(pos_key(p))
+        if q is None:
+            continue
+        st = build_state(p)
+        for name in sorted(os.listdir(src)):
+            m = re.fullmatch(re.escape(q['id']) + r'-(\w+)-r(\d+)\.jsonl', name)
+            if not m:
+                continue
+            effort, rep = m[1], int(m[2])
+            to = answer_path(dst, p['id'], effort, rep)
+            recs = records.read(os.path.join(src, name))
+            if os.path.exists(to) or not any(r['type'] == 'result' for r in recs):
+                continue
+            side = G.turn(st)
+            sc = side_cfg(G, effort, sets)
+            cfg0 = recs[0].get('cfg') or {}
+            att = next((r for r in recs if r['type'] == 'attempt'), {})
+            if (cfg0.get('system') or {}).get(side) != G.system_prompt(side, sc, memory.system_text(sc)) \
+                    or att.get('prompt') != prompt_of(G, st, sc):
+                skipped.append(name)
+                continue
+            tmp = to + '.tmp'
+            with open(tmp, 'w', encoding='utf-8') as f:
+                for r in recs:
+                    r = dict(r)
+                    if 'pos' in r:
+                        r['pos'] = p['id']
+                    if r['type'] in ('config', 'result'):
+                        r['arm'] = a.arm
+                        r['copied_from'] = os.path.join(src, name)
+                    f.write(json.dumps(r, ensure_ascii=False) + '\n')
+            os.replace(tmp, to)
+            copied += 1
+    print('%s：从档 %s 复制了 %d 条作答到档 %s%s' % (game, a.from_arm, copied, a.arm,
+                                              '；提示对不上跳过 %d 条：%s' % (len(skipped), ', '.join(skipped)) if skipped else ''))
     return 0
 
 
@@ -471,9 +768,31 @@ def from_eng(game, mv):
     return X.from_fsf(mv) if game == 'xiangqi' else mv
 
 
-def judge_game(game, batch, out_root, positions=None):
-    pos_by = {p['id']: p for p in load_positions(positions or positions_path(batch, game))}
-    ans_dir = os.path.join(out_root, game)
+def threat_class(row):
+    """threats 档一条大失误归哪类：listed 列出来了还这么走；unlisted 根本没列出来；quiet 引擎给的对方最强应着不是吃子
+    或将军（不在清单口径内）；no_list 没写清单。依据是引擎在走后局面的首选应着（row['refute']）。"""
+    th = row.get('threats')
+    if not th or not th.get('found'):
+        return 'no_list'
+    ref = row.get('refute')
+    if ref is None or ref not in th['true']:
+        return 'quiet'
+    return 'listed' if ref in th['listed'] else 'unlisted'
+
+
+def judge_units(out_root, arm=None, game='all'):
+    """out_root 下要判的 (档名或 None, 棋种)。第一批的旧布局 <棋种>/ 档名记 None；arm 为 None 时全判。"""
+    games = GAMES if game == 'all' else (game,)
+    out = [(None, g) for g in games if arm is None and os.path.isdir(os.path.join(out_root, g))]
+    names = sorted(d for d in os.listdir(out_root) if d not in GAMES and os.path.isdir(os.path.join(out_root, d))) \
+        if os.path.isdir(out_root) else []
+    out += [(d, g) for d in names if arm in (None, d) for g in games if os.path.isdir(os.path.join(out_root, d, g))]
+    return out
+
+
+def judge_game(game, batch, out_root, positions=None, arm=None):
+    ans_dir = unit_dir(out_root, arm, game)
+    pos_by = merge_positions([positions] if positions else meta_positions(read_meta(ans_dir), batch, game))
     results = []
     for name in sorted(os.listdir(ans_dir)) if os.path.isdir(ans_dir) else []:
         if name.endswith('.jsonl') and name != 'judged.jsonl':
@@ -496,14 +815,18 @@ def judge_game(game, batch, out_root, positions=None):
                 before = analyse(eng, start, hist)
                 before['best'] = from_eng(game, before['best'])          # 换成和作答同一种写法（中国象棋 ICCS）
                 cache[res['pos']] = {'before': before, 'best': before['best'],
-                                     'tab': static_table(R, fen), 'after': {}}
+                                     'tab': static_table(R, fen), 'after': {}, 'refute': {}}
                 print('  判 %s：走前 %s，引擎最佳 %s' % (res['pos'], before, cache[res['pos']]['best']), flush=True)
             c = cache[res['pos']]
             row = {k: res.get(k) for k in ('pos', 'game', 'effort', 'rep', 'side', 'move', 'forfeit', 'gave_up',
-                                           'attempts', 'first_legal', 'first_move_text', 'first_think', 'first_elapsed')}
+                                           'attempts', 'first_legal', 'first_move_text', 'first_think', 'first_elapsed',
+                                           'call_fails', 'timeouts')}
+            row['arm'] = arm
             row['stat'] = res['stat']
             row['before'] = c['before']
             row['engine_best'] = c['best']
+            if res.get('threats'):
+                row['threats'] = res['threats']
             mv = res['move']
             if mv is None:
                 rows.append(row)
@@ -513,10 +836,14 @@ def judge_game(game, batch, out_root, positions=None):
                 if not R.legal(f1):
                     term = R.no_move_value(f1)
                     c['after'][mv] = {'mate': 0} if term == LOSE else {'cp': 0}
+                    c['refute'][mv] = None
                 else:
-                    c['after'][mv] = neg(analyse(eng, start, hist + [to_eng(game, mv)]))
+                    a1 = analyse(eng, start, hist + [to_eng(game, mv)])
+                    c['after'][mv] = neg(a1)
+                    c['refute'][mv] = from_eng(game, a1['best']) if a1.get('best') else None
             before, after = c['before'], c['after'][mv]
             row['after'] = after
+            row['refute'] = c['refute'][mv]              # 引擎在走后局面给对方的首选应着
             row['loss'] = clip(before) - clip(after)
             row['best_match'] = mv == c['best']
             row.update(labels(c['tab'], mv))
@@ -524,7 +851,7 @@ def judge_game(game, batch, out_root, positions=None):
                 row['blunder'] = row['loss'] >= XQ_BIG
                 row['mistake'] = XQ_MIS <= row['loss'] < XQ_BIG
                 row['solved'] = row['best_match']
-                row['same_as_prev'] = mv == pos['prev_move']
+                row['same_as_prev'] = mv == pos.get('prev_move')
             else:
                 j = lichess_judgement(before, after)
                 row['judgement'] = j
@@ -533,7 +860,9 @@ def judge_game(game, batch, out_root, positions=None):
                 row['winpct_drop'] = round(win_pct(before) - win_pct(after), 1)
                 b = chess.Board(fen)
                 b.push(chess.Move.from_uci(mv))
-                row['solved'] = mv == pos['solution'] or b.is_checkmate()
+                row['solved'] = mv == pos.get('solution') or b.is_checkmate()
+            if row.get('threats'):
+                row['threat_class'] = threat_class(row) if row['blunder'] else None
             rows.append(row)
     finally:
         eng.close()
@@ -556,12 +885,12 @@ def engine_note(game):
 
 def cmd_judge(a):
     out_root = a.out or str(ROOT / 'runs' / ('quiz-' + a.batch))
-    for game in (GAMES if a.game == 'all' else (a.game,)):
-        if not os.path.isdir(os.path.join(out_root, game)):
-            print('%s：没有作答记录，跳过' % game)
-            continue
-        rows, path = judge_game(game, a.batch, out_root)
-        print('%s：判了 %d 条 → %s\n  %s' % (game, len(rows), path, engine_note(game)))
+    units = judge_units(out_root, a.arm, a.game)
+    if not units:
+        print('%s 下没有要判的作答记录' % out_root)
+    for arm, game in units:
+        rows, path = judge_game(game, a.batch, out_root, arm=arm)
+        print('%s%s：判了 %d 条 → %s\n  %s' % (game, '（档 %s）' % arm if arm else '', len(rows), path, engine_note(game)))
     return 0
 
 
@@ -579,21 +908,26 @@ COLS = ('棋种', '档位', '样本', '首答非法', '判负/放弃', '大失�
         '白送子', '漏吃', '谁能吃到谁类昏招', '漏杀', '送杀', '思考tok中位', '首答思考中位', '耗时中位s', '拦截', '空回复')
 
 
-def report_rows(game, rows):
-    by = collections.OrderedDict((e, []) for e in EFFORTS)
+def _groups(rows):
+    """按 (档名, effort) 分组，档名 None（第一批旧布局）在前、其余按名字，effort 按 EFFORTS 顺序。"""
+    by = collections.defaultdict(list)
     for r in rows:
-        by.setdefault(r['effort'], []).append(r)
+        by[(r.get('arm'), r['effort'])].append(r)
+    order = lambda k: (k[0] is not None, k[0] or '', EFFORTS.index(k[1]) if k[1] in EFFORTS else 99, k[1])
+    return [(k, by[k]) for k in sorted(by, key=order)]
+
+
+def report_rows(game, rows, with_arm=False):
     out = []
-    for e, rs in by.items():
-        if not rs:
-            continue
+    for (arm, e), rs in _groups(rows):
         n = len(rs)
         firsts = [r for r in rs if r.get('first_legal') is not None]
         judged = [r for r in rs if r.get('move') is not None]
         m = len(judged)
         cnt = lambda k: sum(1 for r in judged if r.get(k))
         capture = sum(1 for r in judged if (r['hang'] or r['missed_capture']) and (r['blunder'] or r['mistake']))
-        out.append([game, e, str(n), _pct(sum(1 for r in firsts if not r['first_legal']), len(firsts)),
+        out.append([game] + ([arm or '-'] if with_arm else []) + [
+                    e, str(n), _pct(sum(1 for r in firsts if not r['first_legal']), len(firsts)),
                     '%d/%d' % (sum(1 for r in rs if r.get('forfeit')), sum(1 for r in rs if r.get('gave_up'))),
                     _pct(cnt('blunder'), m), _pct(cnt('mistake'), m),
                     '%.0f' % (sum(max(0, r['loss']) for r in judged) / m) if m else '-',
@@ -606,6 +940,28 @@ def report_rows(game, rows):
     return out
 
 
+THREAT_COLS = ('棋种', '档', 'effort', '有着法的作答', '写了清单', '写「无」', '真实威胁', '列中', '列出比例', '错列',
+               '列全且无错', '大失误', '列出了还走', '没列出', '反击非吃子将军', '没写清单')
+
+
+def threat_rows(game, rows):
+    out = []
+    for (arm, e), rs in _groups(rows):
+        rs = [r for r in rs if r.get('threats') and r.get('move') is not None]
+        if not rs:
+            continue
+        ths = [r['threats'] for r in rs]
+        true = sum(len(t['true']) for t in ths)
+        hit = sum(t['hit'] for t in ths)
+        bl = [r for r in rs if r.get('blunder')]
+        cls = collections.Counter(r.get('threat_class') or threat_class(r) for r in bl)
+        out.append([game, arm or '-', e, str(len(rs)), str(sum(t['found'] for t in ths)), str(sum(t['none'] for t in ths)),
+                    str(true), str(hit), _pct(hit, true), str(sum(t['wrong'] for t in ths)),
+                    str(sum(1 for t in ths if t['found'] and not t['miss'] and not t['wrong'])),
+                    str(len(bl)), str(cls['listed']), str(cls['unlisted']), str(cls['quiet']), str(cls['no_list'])])
+    return out
+
+
 REPORT_NOTES = [
     '样本：已答完的作答数（局面 × 遍）。首答非法：第一次既没被拦也不是空回复的回答里给了非法着 / 没写出着法的比例。',
     '判负/放弃：重试 3 次仍非法 / 拦截或空回复超过上限；这两类不进后面的比例（分母是有着法的作答）。',
@@ -613,25 +969,41 @@ REPORT_NOTES = [
     '白送子 / 漏吃 / 漏杀 / 送杀：静态子力判定（口径见 quiz.py「规则判定」注释）；谁能吃到谁类昏招 = (白送子 或 漏吃) 且引擎判失误以上。',
     '思考 tok：一次作答所有尝试合计；首答思考：第一次有效回答的思考 token。耗时：一次作答所有尝试合计。',
 ]
+THREAT_NOTES = [
+    'threats 清单打分（只数落定那次回答的清单）：真实威胁 = 走完所走着法后对方全部合法的吃子着法和将军着法（规则由 pyffish / '
+    'python-chess 判）；列中 / 错列按着法逐条比，错列含列了但不是吃子或将军的着法、不合法或读不出的行；列出比例 = 列中 / 真实威胁。',
+    '大失误归类（大失误口径同上表）：看引擎在走后局面给对方的首选应着——它是吃子或将军且在清单里 = 列出了还走；是吃子或将军但'
+    '清单里没有 = 没列出；不是吃子或将军 = 反击非吃子将军（不在清单口径内）；回答里没有清单 = 没写清单。',
+]
 
 
 def cmd_report(a):
     out_root = a.out or str(ROOT / 'runs' / ('quiz-' + a.batch))
-    table = []
-    notes = []
+    units = judge_units(out_root)
+    with_arm = any(arm for arm, _ in units)
+    rows_by = collections.defaultdict(list)
+    for arm, game in units:
+        path = os.path.join(unit_dir(out_root, arm, game), 'judged.jsonl')
+        if os.path.exists(path):
+            with open(path, encoding='utf-8') as f:
+                rows_by[game] += [dict(json.loads(l), arm=arm) for l in f if l.strip()]
+    table, threats, notes = [], [], []
     for game in GAMES:
-        path = os.path.join(out_root, game, 'judged.jsonl')
-        if not os.path.exists(path):
-            continue
-        with open(path, encoding='utf-8') as f:
-            rows = [json.loads(l) for l in f if l.strip()]
-        table += report_rows(game, rows)
-        notes.append('%s：%s' % (game, engine_note(game)))
+        if rows_by[game]:
+            table += report_rows(game, rows_by[game], with_arm)
+            threats += threat_rows(game, rows_by[game])
+            notes.append('%s：%s' % (game, engine_note(game)))
     if not table:
         raise SystemExit('没有 judged.jsonl，先跑 judge')
-    lines = ['| ' + ' | '.join(COLS) + ' |', '|' + '---|' * len(COLS)]
+    cols = COLS[:1] + (('档',) if with_arm else ()) + COLS[1:]
+    lines = ['| ' + ' | '.join(cols) + ' |', '|' + '---|' * len(cols)]
     lines += ['| ' + ' | '.join(r) + ' |' for r in table]
-    text = '\n'.join(lines + [''] + notes + REPORT_NOTES) + '\n'
+    lines += [''] + notes + REPORT_NOTES
+    if threats:
+        lines += ['', '| ' + ' | '.join(THREAT_COLS) + ' |', '|' + '---|' * len(THREAT_COLS)]
+        lines += ['| ' + ' | '.join(r) + ' |' for r in threats]
+        lines += [''] + THREAT_NOTES
+    text = '\n'.join(lines) + '\n'
     path = os.path.join(out_root, 'report.txt')
     tmp = path + '.tmp'
     with open(tmp, 'w', encoding='utf-8') as f:
@@ -655,16 +1027,30 @@ def main(argv=None):
     r.add_argument('--reps', type=int, default=2)
     r.add_argument('--jobs', type=int, default=4, help='并发调用数')
     r.add_argument('--model', default='opus')
+    r.add_argument('--arm', help='档名：记录放 runs/quiz-<batch>/<档名>/<棋种>/；不给时布局同第一批')
+    r.add_argument('--set', action='append', metavar='变量=值',
+                   help='本档改的变量，可重复：view / legal / selfcheck / recite / threats / attackmap（attackmap 待用户拍板，见上）')
+    r.add_argument('--allow-attackmap', dest='allow_attackmap', action='store_true',
+                   help='attackmap=on 真跑的开关。待用户拍板，未批不准用')
+    r.add_argument('--timeout', type=int, default=claude_cli.TIMEOUT, help='单次 claude -p 调用的超时秒数，默认 3600')
     r.add_argument('--dry-run', action='store_true', help='只打印第一个局面的系统提示和用户提示')
+    c = sub.add_parser('copy', help='把另一个档里同一局面、同一提示的已答记录复制成本档的样本')
+    c.add_argument('--game', required=True, choices=GAMES)
+    c.add_argument('--batch', default='batch1')
+    c.add_argument('--positions', help='本档的局面文件，默认 data/<batch>/<棋种>.jsonl')
+    c.add_argument('--out')
+    c.add_argument('--from-arm', dest='from_arm', required=True, help='来源档名（同一个 runs/quiz-<batch>/ 下）')
+    c.add_argument('--arm', required=True, help='目标档名')
     j = sub.add_parser('judge', help='引擎事后判')
     j.add_argument('--game', default='all', choices=GAMES + ('all',))
     j.add_argument('--batch', default='batch1')
+    j.add_argument('--arm', help='只判这个档；不给就判全部（含第一批旧布局）')
     j.add_argument('--out')
-    p = sub.add_parser('report', help='汇总表')
+    p = sub.add_parser('report', help='汇总表（按档分组）')
     p.add_argument('--batch', default='batch1')
     p.add_argument('--out')
     a = ap.parse_args(argv)
-    return {'run': cmd_run, 'judge': cmd_judge, 'report': cmd_report}[a.cmd](a)
+    return {'run': cmd_run, 'copy': cmd_copy, 'judge': cmd_judge, 'report': cmd_report}[a.cmd](a)
 
 
 if __name__ == '__main__':

@@ -313,7 +313,31 @@ def render(st, sc):
     if sc['legal'] == 'list':
         ms = sorted(b.legal_moves, key=lambda m: m.uci())
         parts.append('你的全部合法着法（共 %d 个）：%s' % (len(ms), '、'.join('%s(%s)' % (b.san(m), m.uci()) for m in ms)))
+    if sc.get('attackmap') == 'on':
+        parts.append(attack_map(b))
     return '\n\n'.join(parts)
+
+
+def attack_map(b):
+    """局面题 attackmap 档（诊断用，待用户拍板，见 design.md）：对方每个子现在能吃到我哪些子、我哪些子没有保护。
+    按 python-chess 的攻击关系（board.attackers）算，不管牵制；王不列。"""
+    me = b.turn
+    lines = ['攻击关系（程序按规则算出，只列事实）：', '对方现在能吃到你的子：']
+    caps = {}
+    for sq, p in b.piece_map().items():
+        if p.color != me or p.piece_type == chess.KING:
+            continue
+        for a in b.attackers(not me, sq):
+            caps.setdefault(a, []).append(sq)
+    for a in sorted(caps):
+        lines.append('- %s %s 能吃：%s' % (_zh(b.piece_at(a).symbol()), chess.square_name(a), '、'.join(
+            '%s %s' % (_zh(b.piece_at(s).symbol()), chess.square_name(s)) for s in sorted(caps[a]))))
+    if not caps:
+        lines.append('- 无')
+    loose = ['%s %s' % (_zh(p.symbol()), chess.square_name(sq)) for sq, p in sorted(b.piece_map().items())
+             if p.color == me and p.piece_type != chess.KING and not b.attackers(me, sq)]
+    lines.append('你没有保护的子：' + ('、'.join(loose) if loose else '无'))
+    return '\n'.join(lines)
 
 
 def last_move_text(st):
@@ -338,7 +362,16 @@ def system_prompt(side, sc, memory_text):
         s.append(SELFCHECK)
     s.append('回答格式：请用中文回答。可以先写简短的思路，最后一行只写「着法: 」加着法，用 UCI 坐标写起点加终点（例如 着法: e2e4；'
              '升变在后面加棋子字母，如 e7e8q；易位写王的走法，如 e1g1），也可以用 SAN（例如 着法: Nf3、着法: O-O）。')
+    if sc.get('threats') == 'on':
+        s.append(THREATS_ASK)
     return '\n\n'.join(s)
+
+
+# 局面题 threats 档（plan-batch2 块 A）：先列走后对方的吃子 / 将军着法，程序事后按真实局面打分（quiz.threat_score），不回灌
+THREATS_HEAD = '走后威胁'
+THREATS_ASK = ('在最后一行「着法: 」之前，先写一个以「%s:」开头的清单：假设你打算走的这步已经走了，列出对方下一步所有能吃掉你的子的着法、'
+               '所有能将你的着法，每行一着，用 UCI 坐标写对方那步的起点加终点（例如 d8d1），后面可以用括号注明吃什么或将军；'
+               '一着都没有就只写一行「无」。清单写完，最后一行照常写「着法: 」加你的着法。' % THREATS_HEAD)
 
 
 def recite_score(st, reply):
