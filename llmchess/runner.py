@@ -6,7 +6,7 @@ render / last_move_text / system_prompt / recite_score / exports / engine_spec /
 """
 import os, random, time, uuid
 
-from . import claude_cli, memory, records
+from . import claude_cli, memory, opening, records
 from .claude_cli import Paused
 from .engine import Engine, EngineError
 
@@ -239,6 +239,17 @@ def random_turn(ctx, side, moves, ban):
     return mv, stat, None
 
 
+def opening_turn(ctx, side, moves, ban):
+    """随机开局：照 config 里记下的着法走（cli 建盘时生成，续跑照样重放、不重新抽）。不算哪方棋手的着法。"""
+    ply = len(ctx['st']['moves']) + 1
+    mv = opening.moves_of(ctx['cfg'])[ply - 1]
+    if mv not in moves or mv in ban:
+        raise RuntimeError('config 里的开局第 %d 个半回合 %s 不能走' % (ply, mv))
+    stat = records.new_stat()
+    stat['opening'] = True
+    return mv, stat, None
+
+
 TURNS = {'claude': model_turn, 'engine': engine_turn, 'random': random_turn}
 
 
@@ -246,6 +257,7 @@ TURNS = {'claude': model_turn, 'engine': engine_turn, 'random': random_turn}
 def play(ctx, stop_after=None):
     """下到终局或暂停。返回终局 dict；暂停返回 None（已写 pause）。stop_after：本次最多再走几个半回合（冒烟测续跑用）。"""
     G, cfg, st = ctx['G'], ctx['cfg'], ctx['st']
+    n_open = len(opening.moves_of(cfg))
     os.makedirs(ctx['cwd'], exist_ok=True)
     end, moved = ctx['end'], 0
     try:
@@ -264,7 +276,9 @@ def play(ctx, stop_after=None):
             side = G.turn(st)
             moves = G.legal(st)
             ban = G.banned(st, moves)
-            mv, stat, note = TURNS[player_kind(cfg['players'][side])](ctx, side, moves, ban)
+            in_open = len(st['moves']) < n_open
+            turn = opening_turn if in_open else TURNS[player_kind(cfg['players'][side])]
+            mv, stat, note = turn(ctx, side, moves, ban)
             stat['side'] = side
             if mv is None:
                 end = {'winner': other(side), 'reason': '%s连续 %d 次给出非法着法，判负' % (G.SIDES[side], cfg['retries'] + 1)}
@@ -276,9 +290,13 @@ def play(ctx, stop_after=None):
             if cfg['sides'][side]['memory'] == 'notes':
                 ctx['notes'][side].append(note)
             moved += 1
-            log(ctx, {'type': 'move', 'ply': len(st['moves']), 'side': side, 'move': mv, 'text': st['record'][-1],
-                      'check': G.in_check(st), 'note': note, 'stat': stat})
-            print('第 %d 步 %s %s（%s）' % (len(st['moves']), G.SIDES[side], st['record'][-1], mv), flush=True)
+            rec = {'type': 'move', 'ply': len(st['moves']), 'side': side, 'move': mv, 'text': st['record'][-1],
+                   'check': G.in_check(st), 'note': note, 'stat': stat}
+            if in_open:
+                rec['opening'] = True              # 这一步是随机开局程序替双方走的，不算棋手的着法
+            log(ctx, rec)
+            print('第 %d 步 %s %s（%s）%s' % (len(st['moves']), G.SIDES[side], st['record'][-1], mv,
+                                           '　【随机开局】' if in_open else ''), flush=True)
     except Paused as e:
         log(ctx, {'type': 'pause', 'ply': len(st['moves']), 'why': str(e)})
         print('停在第 %d 个半回合之后：%s\n接着下：python3 -m llmchess resume %s' % (len(st['moves']), e, ctx['dir']))
@@ -297,7 +315,12 @@ def finish(ctx):
     summ = records.summary(ctx['stats'], cfg['players'])
     log(ctx, {'type': 'end', 'end': end, 'plies': len(st['moves']), 'moves': st['moves'], 'record': st['record'],
               'summary': summ})
-    files = G.exports(st, cfg, end, records.summary_lines(summ, G.SIDES))
+    lines = records.summary_lines(summ, G.SIDES)
+    op = cfg.get('opening') or {}
+    if op.get('moves'):
+        lines.insert(0, '前 %d 个半回合是随机开局，由程序替双方走（种子 %s，不算棋手的着法）：%s' % (
+            len(op['moves']), op.get('seed'), ' '.join(op.get('record') or op['moves'])))
+    files = G.exports(st, cfg, end, lines)
     for name, text in files.items():
         path = os.path.join(ctx['dir'], name)
         tmp = path + '.tmp'

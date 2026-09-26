@@ -4,6 +4,7 @@
     python3 -m llmchess play --game chess --tag c1 --black engine:maia-1100 --memory notes
     python3 -m llmchess play --game chess --tag c2 --b effort=high --b memory=session   # 两方分设
     python3 -m llmchess play --game xiangqi --tag x2 --dry-run                          # 只打印提示，不调模型
+    python3 -m llmchess play --game chess --tag c3 --black engine:maia-1500 --opening random:8 --opening-seed 1
     python3 -m llmchess resume runs/x1                                                  # 暂停后接着下
 
 棋手：claude:<模型>（默认 claude:opus）/ engine:<引擎>[:参数] / random。
@@ -12,6 +13,8 @@
 模型相关变量（公共值用 --变量，一方单设用 --w / --b 变量=值，w 是先走的红方 / 白方）：
   effort medium|high|xhigh|max、memory stateless|notes|session、view（逗号分隔）、history（-1 全部 / 0 / N）、
   legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、notes_keep N、session_view full|move。
+随机开局 --opening random:N：前 N 个半回合由程序替双方走（引擎浅搜 MultiPV 3、分差 ≤50 厘兵的着法按 --opening-seed 抽），
+  开局写进 config、续跑照记录重放；模型只在着法历史里看到这几步。--dry-run 时打印开局走完后轮到的那一方的提示。
 记录在 runs/<tag>/（不入库）：game.jsonl、record.txt，国际象棋另有 game.pgn。
 暂停（--on-limit pause 时撞额度、连续调不通、--stop-after、停止信号）退出码 3。
 --timeout：单次 claude -p 调用的超时秒数（默认 3600），记进 config，resume 沿用；超时 / 调不通各记一条 call_fail。
@@ -20,7 +23,7 @@
 """
 import argparse, importlib, json, os, pathlib, random, subprocess, sys, tempfile, uuid
 
-from . import claude_cli, memory, records, runner
+from . import claude_cli, memory, opening, records, runner
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RUNS = ROOT / 'runs'
@@ -109,14 +112,34 @@ def play_stoppable(ctx, a):
         restore()
 
 
+def add_opening(a, G, cfg):
+    """--opening random:N：生成开局写进 config（生成一次，续跑不重抽）。"""
+    try:
+        n = opening.parse_mode(a.opening)
+    except ValueError as e:
+        raise SystemExit(str(e))
+    if not n:
+        return
+    if n >= a.max_plies:
+        raise SystemExit('开局半回合数 %d 要小于 --max-plies %d' % (n, a.max_plies))
+    seed = a.opening_seed if a.opening_seed is not None else random.randrange(10 ** 9)
+    cfg['opening'] = opening.generate(G, a.game, n, seed)
+
+
 def cmd_play(a):
     G, cfg = build_cfg(a)
+    add_opening(a, G, cfg)
     if a.dry_run:
         ctx = runner.new_ctx(G, cfg, '/nonexistent')
         for s in 'wb':
             print('== 系统提示（%s，%s）==\n%s\n' % (G.SIDES[s], cfg['players'][s], cfg['system'][s]))
-        sc = cfg['sides']['w']
-        print('== 第一步用户提示（%s）==\n%s' % (G.SIDES['w'], G.render(ctx['st'], sc) + '\n\n' + memory.ask(sc)))
+        for mv in opening.moves_of(cfg):
+            G.push(ctx['st'], mv)
+        side = G.turn(ctx['st'])
+        sc = cfg['sides'][side]
+        what = '随机开局 %d 个半回合之后的' % len(cfg['opening']['moves']) if cfg.get('opening') else '第一步'
+        print('== %s用户提示（%s，%s）==\n%s' % (what, G.SIDES[side], cfg['players'][side],
+                                           G.render(ctx['st'], sc) + '\n\n' + memory.ask(sc)))
         return 0
     if not a.tag:
         raise SystemExit('要 --tag')
@@ -175,6 +198,8 @@ def main(argv=None):
     p.add_argument('--retries', type=int, default=3)
     p.add_argument('--max-plies', dest='max_plies', type=int, default=200)
     p.add_argument('--seed', type=int, help='随机走子的种子，默认随机取一个并记进 config')
+    p.add_argument('--opening', help='random:N：前 N 个半回合由程序替双方走（随机开局），默认不用')
+    p.add_argument('--opening-seed', dest='opening_seed', type=int, help='随机开局的种子，默认随机取一个并记进 config')
     p.add_argument('--stop-after', dest='stop_after', type=int, help='本次最多走几个半回合就暂停（测续跑用）')
     p.add_argument('--timeout', type=int, default=claude_cli.TIMEOUT, help='单次 claude -p 调用的超时秒数，默认 3600')
     p.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait', help=LIMIT_HELP)

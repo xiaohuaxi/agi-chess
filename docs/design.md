@@ -43,6 +43,7 @@ llmchess/
                  → 重试 / 判负 → 落子 → 棋种判终局 → 记录；暂停与续跑
   records.py     JSONL 事件读写、每方统计汇总
   engine.py      很薄的 UCI 文本收发：带完整历史（position fen 起始局面 moves …）、等待有上限、退出时收掉进程
+  opening.py     随机开局：引擎浅搜 MultiPV 3，按种子抽前 N 个半回合（见第三节 opening）
   xiangqi.py     中国象棋：规则包装（从 boards.py 搬）、终局与禁着（从 play_xiangqi.py 搬）、呈现 / 提示 / 自查 /
                  复述打分 / 着法解析（从 llm_duel.py 搬）、中文棋谱、引擎参数与坐标换算
   chess_.py      国际象棋：python-chess 包装、UCI / SAN 解析与非法原因（原因分类照搬 boards.violation 的国际象棋分支）、
@@ -91,6 +92,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 | `timeout` | 秒 | 3600 | 单次 `claude -p` 的超时（`--timeout`，整盘记进 config、resume 沿用；局面题同名参数）。第一批写死 1800，max 档撞了 7/120 次 |
 | `on_limit` | `wait` / `pause` | wait | 撞额度时：`wait` 在程序里等到解除接着调（报错里读得出解除时间就等到那时再加 2 分钟，读不出按 10 分钟起翻倍、最多 30 分钟退避；这种等待不占调不通的重试、也不占着法重试）；`pause` 是旧行为，写 pause、退出码 3。整盘 `play` / `resume` 和 `quiz run` 都有 `--on-limit`。等待中 Ctrl-C / SIGTERM：在等的线程马上醒来写 pause、退出码 3，再跑同一条命令（或 resume）接着来；已在跑的调用答完为止，再按一次强退 |
 | `max_plies` | 整数 | 200 | 研究设的上限，到了判和；和棋规里的限着（中国象棋一百个半回合无吃子、国际象棋五十回合）分开记终局原因 |
+| `opening` | 不设 / `random:N`，加 `--opening-seed` | 不设 | 随机开局（第二批 0.4）：前 N 个半回合由程序替双方走。每个半回合引擎浅搜（国际象棋 Stockfish、中国象棋 Fairy-Stockfish，固定深度 10、单线程、每局面 ucinewgame，同种子可复现），MultiPV 3，从和最好着分差 ≤50 厘兵的着法里按 (种子, 半回合号) 抽。建盘时生成一次写进 config，续跑照记录重放。引擎输出不进提示，模型只在着法历史里看到这几步 |
 
 两种棋的系统提示在「回答格式」那段要求「请用中文回答。」（第二批块 0.1，整盘和局面题共用；第一批国际象棋里英文作答和答错常一起出现）。
 
@@ -105,9 +107,9 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 
 每盘一个目录 `runs/<tag>/`（入 `.gitignore`），一行一条 JSON，和上一轮兼容并补字段：
 
-- `config`：全部变量、两边系统提示、完整命令行、本机 Claude Code 版本、引擎名与参数、代码 commit。
+- `config`：全部变量、两边系统提示、完整命令行、本机 Claude Code 版本、引擎名与参数、代码 commit；随机开局另有 `opening`（种子、半回合数、开局引擎与参数、`moves` / `record`、每步的候选与评分 `detail`）。
 - `attempt`（每次调用一条）：半回合号、哪方、第几次尝试、提示原文、回复原文、解析出的着法、是否合法及原因、便条文本、复述得分；`usage` 展开成 `in`（无缓存输入）、`cache_read`、`cache_write`、`out`、`think`、`text_out = out − think`；`cost`、`duration_ms`、`ttft_ms`、`session_id`、服务端模型串、`stop_reason`、`api_error_status`；`claude` 字段存返回 JSON 原样。
-- `move`：落定的一步、记谱、是否将军、本步各次尝试的合计用量。
+- `move`：落定的一步、记谱、是否将军、本步各次尝试的合计用量。随机开局那几步带 `opening: true`（没有 attempt），不计入任何一方的统计。
 - `flag`：安全分类器拦截（`stop_reason` 为 `refusal` 或结果正文含 `safeguards flagged`，或 `session` 模式下会话记录里出现 Claude Code 自动插入的那条"被安全分类器拦下"消息）单独记一条，并在报告里单列；这类不算非法着法、不扣重试次数。正文为空的回复（冒烟见过一次：`end_turn`、有思考、正文空）同样不扣重试次数，另计"空回复"。一步里被拦或空回复超过 2 次就暂停，交给人看。
 - `call_fail`：一次 `claude -p` 超时或调不通（非零退出、回的不是 JSON），重试前记一条：半回合号、哪方、第几次着法尝试、第几次调用、是否超时、退出码、用时、stderr / stdout 末尾、下次重试前等几秒；局面题另带题号 / effort / 遍 / 档名。撞额度不记这条（记 `pause`）。
 - `limit_wait`：撞额度在程序里等解除，等之前、等完各记一条（`phase` 为 start / end）：开始时间、读出的解除时间（读不出为空）、打算等几秒、第几次等、报错末尾；结束另记结束时间、实际等了多久、是否被停止信号打断。带的半回合号 / 题号同 `call_fail`。claude 报错里解除时间的写法没有公开格式，解析尽量宽松（epoch 秒、ISO 时间、「resets in 2h」「resets 5am (时区)」「resets Sep 27, 5am」），读错或离谱（早于 5 分钟前、晚于 8 天后）都退回退避。
@@ -115,7 +117,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 - 不管给模型的 `history` 设多少，记录里都有起始局面和全部落定着法；续跑时按它重放，重复局面照样判得出。
 - 结束时另写 `record.txt`（棋谱加统计）；国际象棋另出 `game.pgn`，中国象棋的 `record.txt` 用中文记谱。终局原因用棋种自己的说法。
 
-`analyze` 读这个目录，逐步给出"走前最好能得多少、走后剩多少、亏了多少"、大失误 / 失误、规则判定（白送子、漏吃、漏杀），输出 `analysis.jsonl`。口径沿用上一轮（中国象棋截断 ±1000、只看未分胜负的步），国际象棋另加按胜率换算的亏损（lichess 式），并算平均每步亏损。
+`analyze` 读这个目录，逐步给出"走前最好能得多少、走后剩多少、亏了多少"、大失误 / 失误、规则判定（白送子、漏吃、漏杀），输出 `analysis.jsonl`。口径沿用上一轮（中国象棋截断 ±1000、只看未分胜负的步），国际象棋另加按胜率换算的亏损（lichess 式），并算平均每步亏损。随机开局的半回合照样评分，但不算进任何一方的大失误、ACPL 和件数。
 
 ## 五、对手模式
 

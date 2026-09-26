@@ -30,12 +30,14 @@
   - 引擎：国际象棋 Stockfish 固定深度 18，中国象棋 Fairy-Stockfish（UCI_Variant xiangqi）固定深度 16（同上一轮）；
     单线程、每个局面前 ucinewgame 清哈希，同一局面重跑结果一样。
   - 阶段分桶：按该方第几步分成 1–15、16–30、31–45、46+。
+  - 随机开局（config 里的 opening）那几个半回合照样逐步评分、写进 analysis.jsonl（opening 字段为真），
+    但不算进任何一方的大失误、失误、ACPL、lichess 判定和件数：那几步是程序替双方走的，不是棋手的着法。
 
 没下完的盘（有 pause 没 end）照样分析已落定的着法；分析参数一致、步数也没变就跳过。
 """
 import argparse, json, math, os, re, statistics, sys
 
-from . import records
+from . import opening, records
 from .cli import game_module
 from .engine import Engine
 
@@ -165,7 +167,7 @@ def terminal_score(end, stm):
 
 def params_of(cfg, depth, eng_id):
     return {'version': VERSION, 'game': cfg['game'], 'engine': eng_id, 'depth': depth, 'hash': HASH, 'threads': 1,
-            'clip': CLIP, 'big': BIG, 'mistake': MIS}
+            'clip': CLIP, 'big': BIG, 'mistake': MIS, 'opening': len(opening.moves_of(cfg))}
 
 
 def analyse_run(run_dir, depth=None, force=False, log=print):
@@ -184,7 +186,8 @@ def analyse_run(run_dir, depth=None, force=False, log=print):
                 old = json.load(f)
             p = old.get('params', {})
             if (old.get('plies') == len(mrecs) and p.get('version') == VERSION and p.get('depth') == depth
-                    and p.get('hash') == HASH and p.get('game') == game):
+                    and p.get('hash') == HASH and p.get('game') == game
+                    and p.get('opening', 0) == len(opening.moves_of(cfg))):
                 log('%s：已分析过（%d 个半回合，深度 %d），跳过' % (run_dir, len(mrecs), depth))
                 return old
         except (OSError, ValueError):
@@ -216,7 +219,7 @@ def analyse_run(run_dir, depth=None, force=False, log=print):
                    'move': r['move'], 'text': st['record'][-1], 'fen': fen_before,
                    'before': show(before), 'after': show(after), 'before_v': value(before), 'after_v': value(after),
                    'loss': loss, 'best': best, 'played_best': best == r['move'], 'depth': d_before,
-                   'decided': decided(before),
+                   'decided': decided(before), 'opening': bool(r.get('opening')),
                    'cls': None if decided(before) else 'blunder' if loss >= BIG else 'mistake' if loss >= MIS else None}
             if game == 'chess':
                 j, d = lichess_judgement(before, after)
@@ -256,7 +259,8 @@ def events(plies):
 
 
 def summarize(rows, cfg):
-    out = {'game': cfg['game'], 'sides': {}}
+    out = {'game': cfg['game'], 'sides': {}, 'opening_plies': sum(bool(r.get('opening')) for r in rows)}
+    rows = [r for r in rows if not r.get('opening')]           # 随机开局那几步不算任何一方的
     for side in 'wb':
         rs = [r for r in rows if r['side'] == side]
         und = [r for r in rs if not r['decided']]
@@ -299,7 +303,8 @@ def usage_row(recs, side):
     """这一方的调用统计：非法、退回、拦截、空回复、每步 token 中位、合计花费与用时。"""
     att = [r for r in recs if r['type'] == 'attempt' and r['side'] == side]
     costs = records.attempt_costs(recs)[0]    # session 档记录里的 cost 是会话累计值（旧记录）或已做差（新记录），统一按会话做差
-    stats = [r['stat'] for r in recs if r['type'] in ('move', 'forfeit') and r.get('side') == side]
+    stats = [r['stat'] for r in recs if r['type'] in ('move', 'forfeit') and r.get('side') == side
+             and not r.get('opening')]
     tot_in = [s.get('in', 0) + s.get('cache_read', 0) + s.get('cache_write', 0) for s in stats]
     return {
         'illegal': sum(r.get('legal') is False for r in att),
@@ -349,7 +354,8 @@ def table_rows(run_dirs, depth=None, force=False, log=print):
                    'blunders': a['blunders'], 'blunder_rate': a['blunder_rate'], 'mistakes': a['mistakes'],
                    'events': a['events'], 'acpl': a['acpl'],
                    'lichess_blunders': a['lichess']['Blunder'] if 'lichess' in a else None,
-                   'phases': a['phases'], 'depth': summ['params']['depth']}
+                   'phases': a['phases'], 'depth': summ['params']['depth'],
+                   'opening': len(opening.moves_of(cfg))}
             row.update(usage_row(recs, side))
             out.append(row)
     return out

@@ -69,10 +69,10 @@ def attempt_costs(recs):
 
 
 def summary(stats, players):
-    """每方合计与中位数。stats 是每个半回合一条（带 side）。"""
+    """每方合计与中位数。stats 是每个半回合一条（带 side）；随机开局那几步（opening）不算哪方的。"""
     out = {}
     for side in 'wb':
-        ss = [s for s in stats if s['side'] == side]
+        ss = [s for s in stats if s['side'] == side and not s.get('opening')]
         row = {'player': players[side], 'plies': len(ss), 'calls': sum(s['attempts'] for s in ss),
                'illegal': sum(s['illegal'] for s in ss), 'noparse': sum(s['noparse'] for s in ss),
                'flags': sum(s.get('flags', 0) for s in ss), 'empty': sum(s.get('empty', 0) for s in ss),
