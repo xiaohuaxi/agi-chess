@@ -75,6 +75,28 @@ class Prompts(unittest.TestCase):
         self.assertEqual(cfg['sides']['w']['history'], 0)
         self.assertIn('--effort', claude_cli.command('opus', 'high', '-'))
 
+    def test_reason_on_adds_one_sentence_off_unchanged(self):
+        for game, side in (('xiangqi', 'w'), ('chess', 'b')):
+            G = Q.game_module(game)
+            p = positions(game)[0]
+            st = Q.build_state(p)
+            off = Q.quiz_cfg(G, game, side, 'high', 'opus', '/tmp/x')['system'][side]
+            off2 = Q.quiz_cfg(G, game, side, 'high', 'opus', '/tmp/x', {'reason': 'off'})['system'][side]
+            on = Q.quiz_cfg(G, game, side, 'high', 'opus', '/tmp/x', {'reason': 'on'})['system'][side]
+            self.assertEqual(off, G.system_prompt(side, Q.side_cfg(G, 'high'), Q.memory.system_text(Q.side_cfg(G, 'high'))))
+            self.assertEqual(off, off2)
+            self.assertNotIn(Q.REASON_ASK, off)
+            self.assertEqual(on, off + '\n\n' + Q.REASON_ASK)
+            # 用户提示两档一样，只差系统提示那一句
+            self.assertEqual(Q.prompt_of(G, st, Q.side_cfg(G, 'high', {'reason': 'on'})),
+                             Q.prompt_of(G, st, Q.side_cfg(G, 'high')))
+        self.assertIn('为什么这么走', Q.REASON_ASK)
+        self.assertIn('「着法: 」', Q.REASON_ASK)
+        for bad in ('思考', '思路', '候选'):                                  # 别像在索取内部思考，也不设栏目
+            self.assertNotIn(bad, Q.REASON_ASK)
+        with self.assertRaises(SystemExit):
+            Q.parse_sets(Q.game_module('chess'), ['reason=maybe'])
+
 
 class Answering(unittest.TestCase):
     def setUp(self):
@@ -193,6 +215,12 @@ class Arms(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.main('--arm', 'chess')
         self.assertEqual(Q.judge_units(self.out), [('sc', 'chess')])
+
+    def test_reason_arm_records_prompt(self):
+        self.assertEqual(self.main('--arm', 'reason', '--set', 'reason=on'), 0)
+        recs = records.read(Q.answer_path(os.path.join(self.out, 'reason', 'chess'), 'c01', 'medium', 1))
+        self.assertTrue(recs[0]['cfg']['system']['b'].endswith(Q.REASON_ASK))
+        self.assertEqual(recs[0]['set'], {'reason': 'on'})
 
     def test_positions_conflict_in_same_arm(self):
         self.assertEqual(self.main('--arm', 'b'), 0)

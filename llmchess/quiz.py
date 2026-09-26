@@ -12,8 +12,12 @@
     python3 -m llmchess.quiz copy --game xiangqi --batch batch2 --from-arm zh --arm base   # 同局面同提示的旧作答复用过来
     python3 -m llmchess.quiz judge --batch batch2 [--arm threats]   # 不给 --arm 就判全部档
     python3 -m llmchess.quiz report --batch batch2                  # 按档分组出表；threats 档另出一张清单打分表
+    # 第三批块 A：batch2 的局面（剔除 x2-25）、reason 档，记录另放一个根目录（--out，judge / report 给同一个 --out）
+    python3 -m llmchess.quiz run --game chess --batch batch2 --out runs/quiz-batch3 --arm reason --set reason=on --efforts xhigh --reps 2
 
---set 可改的变量：view、legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、threats on|off、attackmap on|off。
+--set 可改的变量：view、legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、threats on|off、attackmap on|off、
+  reason on|off。
+  reason=on：系统提示末尾加一句，请它用自己的话说明这步为什么这么走（REASON_ASK，措辞的讲究见那里）；只进提示，不打分。
   threats=on：要求回答里在「着法:」之前先列「走后威胁:」清单（走完这步后对方所有吃子、将军着法），程序按走后真实局面
     打分（列中 / 漏列 / 错列），分数只写进记录，不回灌给模型。
   attackmap=on：局面后附程序算出的攻击关系（对方能吃到我哪些子、我哪些子没保护）。它碰到 AGENTS.md 硬约束「棋手不准用规则库
@@ -111,7 +115,7 @@ def build_state(pos):
 
 
 SET_KEYS = {'view': None, 'legal': ('none', 'list'), 'selfcheck': ('on', 'off'), 'recite': ('on', 'off'),
-            'threats': ('on', 'off'), 'attackmap': ('on', 'off')}
+            'threats': ('on', 'off'), 'attackmap': ('on', 'off'), 'reason': ('on', 'off')}
 
 
 def parse_sets(G, items):
@@ -135,20 +139,35 @@ def parse_sets(G, items):
 
 def side_cfg(G, effort, sets=None):
     """和 cli.side_cfg 默认值一致，只把 history 设成 0、effort 按档位；sets 是分档的覆盖值（parse_sets 的结果）。
-    max_plies 只用来拼系统提示里那句整盘规则。threats / attackmap 只有局面题有。"""
+    max_plies 只用来拼系统提示里那句整盘规则。threats / attackmap / reason 只有局面题有。"""
     sc = {'effort': effort, 'memory': 'stateless', 'view': G.DEFAULT_VIEW.split(','), 'history': 0, 'legal': 'none',
-          'selfcheck': 'off', 'recite': 'off', 'threats': 'off', 'attackmap': 'off', 'notes_keep': 1,
+          'selfcheck': 'off', 'recite': 'off', 'threats': 'off', 'attackmap': 'off', 'reason': 'off', 'notes_keep': 1,
           'session_view': 'full', 'max_plies': 200}
     for k, v in (sets or {}).items():
         sc[k] = v.split(',') if k == 'view' else v
     return sc
 
 
+# reason 档（第三批块 A）：请棋手说明这步为什么这么走。措辞是刻意的，改之前先读这段：
+# - 用户要求把棋手当人看：人每走一步都有依据，由它自己说；不设栏目、不要求列候选着法、不限定写什么。
+# - 不能写成「把你的思考过程写出来」之类：第一批这样写过，像在索取模型内部思考，被安全分类器拦下（memory.py ASK_NOTES
+#   上方同一类教训）。只要回答正文里的理由。以后改措辞，先用几次真实调用核实不被拦。
+# 两种棋共用这一句，所以挂在这里（system_of）而不是各棋种的 system_prompt 里；off 时系统提示和以前逐字相同。
+REASON_ASK = ('下棋的人每走一步都有自己的依据，可能是一个长远的计划，也可能是想走出某种局面。请在回答里用你自己的话说明这步'
+              '为什么这么走，写什么、怎么写由你决定；最后一行照常只写「着法: 」加着法。')
+
+
+def system_of(G, side, sc):
+    """局面题的系统提示：棋种的整盘系统提示，reason=on 时末尾加 REASON_ASK。"""
+    s = G.system_prompt(side, sc, memory.system_text(sc))
+    return s + '\n\n' + REASON_ASK if sc.get('reason') == 'on' else s
+
+
 def quiz_cfg(G, game, side, effort, model, cwd, sets=None, timeout=None):
     sc = side_cfg(G, effort, sets)
     player = 'claude:%s' % model
     return {'game': game, 'players': {side: player}, 'sides': {side: sc}, 'retries': 3, 'max_plies': 200,
-            'system': {side: G.system_prompt(side, sc, memory.system_text(sc))},
+            'system': {side: system_of(G, side, sc)},
             'commands': {side: claude_cli.shown(claude_cli.command(model, effort, '-'))}, 'claude_cwd': cwd,
             'timeout': timeout or claude_cli.TIMEOUT}
 
@@ -427,7 +446,7 @@ def cmd_run(a):
         st = build_state(p)
         sc = side_cfg(G, efforts[0], sets)
         print('== 系统提示 ==\n%s\n\n== 用户提示（%s）==\n%s' % (
-            G.system_prompt(G.turn(st), sc, memory.system_text(sc)), p['id'], prompt_of(G, st, sc)))
+            system_of(G, G.turn(st), sc), p['id'], prompt_of(G, st, sc)))
         return 0
     out_root = a.out or str(ROOT / 'runs' / ('quiz-' + a.batch))
     out = unit_dir(out_root, a.arm, game)
@@ -548,7 +567,7 @@ def cmd_copy(a):
             sc = side_cfg(G, effort, sets)
             cfg0 = recs[0].get('cfg') or {}
             att = next((r for r in recs if r['type'] == 'attempt'), {})
-            if (cfg0.get('system') or {}).get(side) != G.system_prompt(side, sc, memory.system_text(sc)) \
+            if (cfg0.get('system') or {}).get(side) != system_of(G, side, sc) \
                     or att.get('prompt') != prompt_of(G, st, sc):
                 skipped.append(name)
                 continue
@@ -1057,7 +1076,7 @@ def main(argv=None):
     r.add_argument('--model', default='opus')
     r.add_argument('--arm', help='档名：记录放 runs/quiz-<batch>/<档名>/<棋种>/；不给时布局同第一批')
     r.add_argument('--set', action='append', metavar='变量=值',
-                   help='本档改的变量，可重复：view / legal / selfcheck / recite / threats / attackmap（attackmap 待用户拍板，见上）')
+                   help='本档改的变量，可重复：view / legal / selfcheck / recite / threats / attackmap / reason（attackmap 待用户拍板，见上）')
     r.add_argument('--allow-attackmap', dest='allow_attackmap', action='store_true',
                    help='attackmap=on 真跑的开关。待用户拍板，未批不准用')
     r.add_argument('--timeout', type=int, default=claude_cli.TIMEOUT, help='单次 claude -p 调用的超时秒数，默认 3600')
