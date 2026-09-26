@@ -298,6 +298,7 @@ def thirds(xs):
 def usage_row(recs, side):
     """这一方的调用统计：非法、退回、拦截、空回复、每步 token 中位、合计花费与用时。"""
     att = [r for r in recs if r['type'] == 'attempt' and r['side'] == side]
+    costs = records.attempt_costs(recs)[0]    # session 档记录里的 cost 是会话累计值（旧记录）或已做差（新记录），统一按会话做差
     stats = [r['stat'] for r in recs if r['type'] in ('move', 'forfeit') and r.get('side') == side]
     tot_in = [s.get('in', 0) + s.get('cache_read', 0) + s.get('cache_write', 0) for s in stats]
     return {
@@ -311,7 +312,7 @@ def usage_row(recs, side):
         'median_out': _median([s.get('out', 0) for s in stats]),
         'median_think': _median([s.get('think', 0) for s in stats]),
         'input_thirds': thirds(tot_in),
-        'cost': round(sum((r.get('usage') or {}).get('cost') or 0 for r in att), 4),
+        'cost': round(sum(costs[id(r)] for r in att), 4),
         'elapsed': round(sum(r.get('elapsed') or 0 for r in att), 1),
     }
 

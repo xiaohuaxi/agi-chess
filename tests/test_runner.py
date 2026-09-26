@@ -8,9 +8,11 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 
-from llmchess import cli, records, runner
+from llmchess import chess_ as C, claude_cli, cli, quiz, records, runner
 from llmchess import xiangqi as X
+from llmchess.claude_cli import Paused
 
 
 def run_quiet(argv):
@@ -136,6 +138,106 @@ class RepeatedPositionDetectedAfterReload(unittest.TestCase):
         self.assertEqual(ctx['st']['moves'], moves)
         end = X.ending(ctx['st'])
         self.assertEqual(end, {'winner': None, 'reason': '同一局面出现三次，判和'})
+
+
+class SessionCostIsCumulative(unittest.TestCase):
+    """claude -p --resume 返回的 total_cost_usd 是整段会话的累计值：session 档每次调用的花费要按会话做差，
+    续跑时从记录里接上一次的累计值；stateless 原样记。claude 调用打桩，不真调。"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def make_ctx(self, mem):
+        run_dir = os.path.join(self.tmp, 'run-' + mem)
+        os.makedirs(run_dir)
+        sc = dict(quiz.side_cfg(C, 'medium'), memory=mem)
+        cfg = {'game': 'chess', 'players': {'w': 'claude:opus', 'b': 'random'}, 'sides': {'w': sc, 'b': dict(sc)},
+               'retries': 3, 'max_plies': 200, 'seed': 1, 'system': {'w': 'sys', 'b': 'sys'},
+               'claude_cwd': os.path.join(run_dir, 'cwd')}
+        ctx = runner.new_ctx(C, cfg, run_dir)
+        runner.log(ctx, {'type': 'config', 'cfg': cfg})
+        return ctx
+
+    @staticmethod
+    def fake_call(totals, seen):
+        """按顺序回放累计花费：(文本, 累计值)；用完抛 Paused。会话 id 取命令行里的那个，seen 记下每次的会话参数。"""
+        it = iter(totals)
+
+        def call(cmd, prompt, cwd, **k):
+            try:
+                text, total = next(it)
+            except StopIteration:
+                raise Paused('额度限制：test')
+            flag = next((x for x in ('--session-id', '--resume') if x in cmd), None)
+            seen.append(flag)
+            sid = cmd[cmd.index(flag) + 1] if flag else 'x'
+            return {'result': text, 'stop_reason': 'end_turn', 'total_cost_usd': total, 'session_id': sid,
+                    'usage': {'input_tokens': 10, 'output_tokens': 20}}, 1.0
+        return call
+
+    def turn(self, ctx):
+        st = ctx['st']
+        moves = C.legal(st)
+        with contextlib.redirect_stdout(io.StringIO()):
+            return runner.model_turn(ctx, 'w', moves, C.banned(st, moves))
+
+    def attempts(self, ctx):
+        return [r for r in records.read(ctx['log']) if r['type'] == 'attempt']
+
+    def test_session_deltas_and_resume(self):
+        ctx = self.make_ctx('session')
+        seen = []
+        # 非法 0.01 → 空回复累计 0.03 → 撞额度暂停
+        with mock.patch.object(claude_cli, 'call', self.fake_call([('着法: a1a1', 0.01), ('', 0.03)], seen)):
+            with self.assertRaises(Paused):
+                self.turn(ctx)
+        runner.log(ctx, {'type': 'pause', 'ply': 0, 'why': 'test'})
+        ctx2 = runner.load(C, ctx['dir'])
+        sid = ctx['sessions']['w']
+        self.assertEqual(ctx2['sessions']['w'], sid)
+        self.assertAlmostEqual(ctx2['cost_total'][sid], 0.03)      # 续跑从记录里接上累计值
+        self.assertAlmostEqual(ctx2['pending']['stat']['cost'], 0.03)
+        with mock.patch.object(claude_cli, 'call', self.fake_call([('着法: e2e4', 0.06)], seen)):
+            mv, stat, _ = self.turn(ctx2)
+        self.assertEqual(mv, 'e2e4')
+        self.assertEqual(seen, ['--session-id', '--resume', '--resume'])
+        atts = self.attempts(ctx)
+        self.assertTrue(atts[1]['empty'])
+        for a, cost, total in zip(atts, (0.01, 0.02, 0.03), (0.01, 0.03, 0.06)):
+            self.assertAlmostEqual(a['usage']['cost'], cost)
+            self.assertAlmostEqual(a['usage']['cost_total'], total)
+        self.assertAlmostEqual(stat['cost'], 0.06)
+
+    def test_session_old_records_resume(self):
+        """旧记录没有 cost_total、cost 就是累计值：pending 统计和续跑后的做差照样对。"""
+        ctx = self.make_ctx('session')
+        base = {'type': 'attempt', 'ply': 1, 'side': 'w', 'player': 'claude:opus', 'session': 's1', 'elapsed': 1.0}
+        runner.log(ctx, dict(base, **{'try': 1, 'legal': False, 'move_text': 'a1a1', 'reason': 'x',
+                                      'usage': {'cost': 0.02}}))
+        runner.log(ctx, dict(base, **{'try': 2, 'legal': False, 'move_text': 'a1a1', 'reason': 'x',
+                                      'usage': {'cost': 0.05}}))
+        ctx2 = runner.load(C, ctx['dir'])
+        self.assertAlmostEqual(ctx2['pending']['stat']['cost'], 0.05)
+        with mock.patch.object(claude_cli, 'call', self.fake_call([('着法: e2e4', 0.09)], [])):
+            mv, stat, _ = self.turn(ctx2)
+        self.assertAlmostEqual(self.attempts(ctx)[-1]['usage']['cost'], 0.04)
+        self.assertAlmostEqual(stat['cost'], 0.09)
+
+    def test_stateless_unchanged(self):
+        ctx = self.make_ctx('stateless')
+        with mock.patch.object(claude_cli, 'call', self.fake_call([('着法: a1a1', 0.01), ('着法: e2e4', 0.01)], [])):
+            mv, stat, _ = self.turn(ctx)
+        self.assertEqual(mv, 'e2e4')
+        for a in self.attempts(ctx):
+            self.assertAlmostEqual(a['usage']['cost'], 0.01)
+            self.assertNotIn('cost_total', a['usage'])
+        self.assertAlmostEqual(stat['cost'], 0.02)
+
+    def test_cost_delta_reset(self):
+        self.assertEqual(records.cost_delta(0.5, None), 0.5)
+        self.assertAlmostEqual(records.cost_delta(0.5, 0.2), 0.3)
+        self.assertEqual(records.cost_delta(0.1, 0.4), 0.1)       # 累计值变小（被重置）：用原值
 
 
 if __name__ == '__main__':

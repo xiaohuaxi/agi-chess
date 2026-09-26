@@ -43,6 +43,31 @@ def add_usage(stat, u, dt):
         stat[k] += u.get(k) or 0
 
 
+def cost_delta(total, prev):
+    """session 档本次调用的花费。claude -p --resume 返回的 total_cost_usd 是整段会话到此为止的累计值，
+    不是这一次的，逐步相加会算重，所以减去同一会话上一次调用的累计值；会话第一次、或累计值变小（被重置）时用原值。"""
+    return total if prev is None or total < prev else total - prev
+
+
+def attempt_costs(recs):
+    """按记录顺序给每条 attempt 算本次花费，返回 ({id(记录): 花费}, {会话 id: 最后一次累计值})。
+    session 档按会话 id 做差（见 cost_delta）：新记录的累计值在 usage.cost_total，旧记录没有这个字段、usage.cost 就是累计值；
+    没有会话 id 的（stateless / notes / 引擎）原样取 usage.cost。"""
+    out, last = {}, {}
+    for r in recs:
+        if r.get('type') != 'attempt':
+            continue
+        u = r.get('usage') or {}
+        sid = r.get('session')
+        if not sid:
+            out[id(r)] = u.get('cost') or 0
+            continue
+        total = u.get('cost_total', u.get('cost')) or 0
+        out[id(r)] = cost_delta(total, last.get(sid))
+        last[sid] = total
+    return out, last
+
+
 def summary(stats, players):
     """每方合计与中位数。stats 是每个半回合一条（带 side）。"""
     out = {}

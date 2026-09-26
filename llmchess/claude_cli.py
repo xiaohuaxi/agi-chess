@@ -86,7 +86,9 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None):
 
 
 def usage(d):
-    """用量展开（design.md P3）：output_tokens 已包含思考；输入总量 = in + cache_read + cache_write。"""
+    """用量展开（design.md P3）：output_tokens 已包含思考；输入总量 = in + cache_read + cache_write。
+    token 字段是这一次调用自己的；cost（total_cost_usd）在 --resume 续接时却是整段会话的累计值，
+    session 档由对局循环按会话做差（records.cost_delta），这里原样给出。"""
     u = d.get('usage') or {}
     out = u.get('output_tokens') or 0
     think = (u.get('output_tokens_details') or {}).get('thinking_tokens') or 0

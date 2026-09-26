@@ -236,5 +236,18 @@ class Table(TmpCase):
             self.assertEqual(json.load(f)[0]['result'], '未完')
 
 
+class SessionCost(unittest.TestCase):
+    def test_old_cumulative_records_are_diffed(self):
+        """旧记录里 session 档的 usage.cost 是会话累计值，按会话 id 做差；新记录（带 cost_total）结果一样；
+        没有会话 id 的原样相加。"""
+        def att(side, cost, sid, **u):
+            return {'type': 'attempt', 'ply': 1, 'side': side, 'player': 'claude:opus', 'session': sid,
+                    'usage': dict(u, cost=cost), 'elapsed': 1.0}
+        recs = [att('w', 0.01, 's1'), att('b', 0.02, None), att('w', 0.03, 's1'), att('b', 0.02, None),
+                att('w', 0.06, 's1'), att('w', 0.04, 's1', cost_total=0.10), att('w', 0.05, 's1', cost_total=0.02)]
+        self.assertAlmostEqual(A.usage_row(recs, 'w')['cost'], 0.10 + 0.02)    # 最后一条累计变小：用原值
+        self.assertAlmostEqual(A.usage_row(recs, 'b')['cost'], 0.04)
+
+
 if __name__ == '__main__':
     unittest.main()

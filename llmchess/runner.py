@@ -30,7 +30,7 @@ def new_ctx(G, cfg, run_dir):
     cwd = cfg.get('claude_cwd') or os.path.join(run_dir, 'cwd')
     return {'G': G, 'cfg': cfg, 'st': G.start(), 'dir': run_dir, 'log': os.path.join(run_dir, 'game.jsonl'),
             'cwd': cwd, 'stats': [], 'sessions': {}, 'notes': {'w': [], 'b': []}, 'seen_flags': {},
-            'end': None, 'engines': {}}
+            'cost_total': {}, 'end': None, 'engines': {}}
 
 
 def load(G, run_dir):
@@ -59,6 +59,7 @@ def load(G, run_dir):
             ctx['end'] = r['end']
         elif t == 'end':
             ctx['end'] = r['end']
+    ctx['cost_total'] = records.attempt_costs(recs)[1]     # 各会话上一次调用的累计花费，续跑接着做差
     ctx['pending'] = pending_ply(recs, len(st['moves']) + 1)
     return ctx
 
@@ -66,10 +67,11 @@ def load(G, run_dir):
 def pending_ply(recs, ply):
     """暂停时还没落子的那个半回合里模型已经用掉的尝试：续跑接着算重试次数、错着反馈和用量，不重新给满机会。"""
     p = {'ply': ply, 'bad': [], 'k': 0, 'flags': 0, 'redo': False, 'stat': records.new_stat()}
+    costs = records.attempt_costs(recs)[0]            # 旧记录里 session 档的 cost 是会话累计值，按会话做差
     for r in recs:
         if r['type'] != 'attempt' or r['ply'] != ply or not str(r.get('player', '')).startswith('claude'):
             continue
-        records.add_usage(p['stat'], r.get('usage') or {}, r.get('elapsed') or 0)
+        records.add_usage(p['stat'], dict(r.get('usage') or {}, cost=costs[id(r)]), r.get('elapsed') or 0)
         if r.get('recite'):
             p['stat'].setdefault('recite', []).append(r['recite'])
         if r.get('flagged') or r.get('empty'):
@@ -139,6 +141,12 @@ def model_turn(ctx, side, moves, ban):
             sid = ctx['sessions'][side] = d.get('session_id') or sid
         reply = d.get('result') or ''
         u = claude_cli.usage(d)
+        if mem == 'session':
+            # --resume 返回的花费是整段会话的累计值：本次花费 = 累计值 − 同一会话上一次调用的累计值（被拦、空回复也算一次），
+            # 原始累计值另存 cost_total 以便核对
+            total = u['cost']
+            u['cost'] = records.cost_delta(total, ctx['cost_total'].get(sid))
+            u['cost_total'] = ctx['cost_total'][sid] = total
         records.add_usage(stat, u, dt)
         # 安全分类器：回复正文被拦（这次不算非法，另算次数）；session 下再看会话记录里 claude 自动插的那条消息
         blocked = claude_cli.flagged(d)
