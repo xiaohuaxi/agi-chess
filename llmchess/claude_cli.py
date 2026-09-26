@@ -9,6 +9,7 @@ stdin 接 /dev/null（否则 claude 会等 3 秒并打警告）。思考深度�
 import json, os, pathlib, re, subprocess, time
 
 FLAG_TEXT = 'safeguards flagged'
+TIMEOUT = 3600          # 单次调用的默认超时（秒）；第一批写死 1800，max 档撞了 7/120 次
 
 
 class Paused(Exception):
@@ -53,21 +54,27 @@ def flagged(d):
     return d.get('stop_reason') == 'refusal' or FLAG_TEXT in (d.get('result') or '')
 
 
-def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None):
+def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, on_fail=None):
     """跑一次 claude -p。返回 (解析后的 JSON, 用时秒)。调不通按 waits 重试；撞额度抛 Paused。
-    rebuild：每次重试前重新拼命令（新会话第一次调用超时时，会话可能已经建好，重试要改用 --resume）。"""
+    rebuild：每次重试前重新拼命令（新会话第一次调用超时时，会话可能已经建好，重试要改用 --resume）。
+    timeout：单次调用的超时秒数。
+    on_fail(info)：每次调用失败（超时、非零退出、回的不是 JSON）后、重试或抛 Paused 之前调一次，调用方用它把失败写进
+    自己那盘 / 那题的记录。info = {try（第几次调用，从 1 起）, timeout（是否超时）, rc, elapsed, stderr, stdout（各留末尾
+    500 字）, next_wait（下次重试前等几秒，None 表示不再重试）}。撞额度不走这里（直接抛 Paused，由调用方记 pause）。
+    on_fail 自己出错只打一行，不影响重试。"""
     env = dict(os.environ, CLAUDE_CODE_DISABLE_CLAUDE_MDS='1')
     last = None
     for n, wait in enumerate(tuple(waits) + (None,)):
         if n and rebuild:
             cmd = rebuild()
         t0 = time.time()
+        timed_out = False
         try:
             p = subprocess.run(cmd + [prompt], cwd=cwd, env=env, capture_output=True, text=True,
-                               stdin=subprocess.DEVNULL, timeout=1800)
+                               stdin=subprocess.DEVNULL, timeout=timeout)
             out, err, rc = p.stdout, p.stderr, p.returncode
         except subprocess.TimeoutExpired:
-            out, err, rc = '', 'timeout 1800s', -1
+            out, err, rc, timed_out = '', 'timeout %ds' % timeout, -1, True
         dt = time.time() - t0
         try:
             d = json.loads(out)
@@ -78,6 +85,12 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None):
         last = {'rc': rc, 'stdout': out[-2000:], 'stderr': err[-2000:]}
         if limit_hit(err + ((d.get('result') or '') if d else out)) or (d and d.get('api_error_status') == 429):
             raise Paused('额度限制：%s' % (out + err)[-500:])
+        if on_fail:
+            try:
+                on_fail({'try': n + 1, 'timeout': timed_out, 'rc': rc, 'elapsed': round(dt, 1),
+                         'stderr': err[-500:], 'stdout': out[-500:], 'next_wait': wait})
+            except Exception as e:               # 记录失败不能拖垮调用本身
+                print('  （记录调用失败时出错：%s）' % e, flush=True)
         if wait is None:
             break
         print('  调用失败（rc=%s），%d 秒后重试：%s' % (rc, wait, (err or out)[-200:].strip()), flush=True)

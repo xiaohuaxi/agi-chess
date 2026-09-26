@@ -88,7 +88,10 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 | `selfcheck` | on / off | off | 上一轮开了没见效；作单独变量。两种棋的自查文字各写各的 |
 | `recite` | on / off | off | 先复述局面再走，程序逐格比对。复述格式和打分目前只有中国象棋有 |
 | `retries` | 整数 | 3 | 非法重试上限，用完判负（和 Game Arena 一致 [1]） |
+| `timeout` | 秒 | 3600 | 单次 `claude -p` 的超时（`--timeout`，整盘记进 config、resume 沿用；局面题同名参数）。第一批写死 1800，max 档撞了 7/120 次 |
 | `max_plies` | 整数 | 200 | 研究设的上限，到了判和；和棋规里的限着（中国象棋一百个半回合无吃子、国际象棋五十回合）分开记终局原因 |
+
+两种棋的系统提示在「回答格式」那段要求「请用中文回答。」（第二批块 0.1，整盘和局面题共用；第一批国际象棋里英文作答和答错常一起出现）。
 
 **思考与计划的延续（`memory`）**：
 
@@ -105,6 +108,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 - `attempt`（每次调用一条）：半回合号、哪方、第几次尝试、提示原文、回复原文、解析出的着法、是否合法及原因、便条文本、复述得分；`usage` 展开成 `in`（无缓存输入）、`cache_read`、`cache_write`、`out`、`think`、`text_out = out − think`；`cost`、`duration_ms`、`ttft_ms`、`session_id`、服务端模型串、`stop_reason`、`api_error_status`；`claude` 字段存返回 JSON 原样。
 - `move`：落定的一步、记谱、是否将军、本步各次尝试的合计用量。
 - `flag`：安全分类器拦截（`stop_reason` 为 `refusal` 或结果正文含 `safeguards flagged`，或 `session` 模式下会话记录里出现 Claude Code 自动插入的那条"被安全分类器拦下"消息）单独记一条，并在报告里单列；这类不算非法着法、不扣重试次数。正文为空的回复（冒烟见过一次：`end_turn`、有思考、正文空）同样不扣重试次数，另计"空回复"。一步里被拦或空回复超过 2 次就暂停，交给人看。
+- `call_fail`：一次 `claude -p` 超时或调不通（非零退出、回的不是 JSON），重试前记一条：半回合号、哪方、第几次着法尝试、第几次调用、是否超时、退出码、用时、stderr / stdout 末尾、下次重试前等几秒；局面题另带题号 / effort / 遍 / 档名。撞额度不记这条（记 `pause`）。
 - `pause` / `resume` / `forfeit` / `end`（结果、每方合计与中位数：调用数、非法数、每步输入/输出/思考 token、用时、花费）。
 - 不管给模型的 `history` 设多少，记录里都有起始局面和全部落定着法；续跑时按它重放，重复局面照样判得出。
 - 结束时另写 `record.txt`（棋谱加统计）；国际象棋另出 `game.pgn`，中国象棋的 `record.txt` 用中文记谱。终局原因用棋种自己的说法。

@@ -136,7 +136,12 @@ def model_turn(ctx, side, moves, ban):
             def rebuild(sid=sid):
                 made = claude_cli.transcript_path(ctx['cwd'], sid).exists()
                 return claude_cli.command(model, sc['effort'], system, sid, new_session=not made)
-        d, dt = claude_cli.call(cmd, prompt, ctx['cwd'], rebuild=rebuild)
+        def on_fail(info, k=k):
+            # 超时 / 调不通落进这盘（这题）自己的记录；ctx['tags'] 是局面题的题号 / 档 / 遍
+            log(ctx, dict({'type': 'call_fail', 'ply': ply, 'side': side, 'attempt': k + 1}, **ctx.get('tags', {}),
+                          **info))
+        d, dt = claude_cli.call(cmd, prompt, ctx['cwd'], rebuild=rebuild,
+                                timeout=cfg.get('timeout') or claude_cli.TIMEOUT, on_fail=on_fail)
         if mem == 'session':
             sid = ctx['sessions'][side] = d.get('session_id') or sid
         reply = d.get('result') or ''

@@ -551,7 +551,7 @@ def system_prompt(side, sc, memory_text):
          '每一步我都会给你当前局面。' + memory_text]
     if sc['selfcheck'] == 'on':
         s.append(SELFCHECK)
-    s.append('回答格式：可以先写简短的思路，最后一行只写「着法: 」加着法，用 ICCS 坐标（例如 着法: h2e2），'
+    s.append('回答格式：请用中文回答。可以先写简短的思路，最后一行只写「着法: 」加着法，用 ICCS 坐标（例如 着法: h2e2），'
              '也可以用中文记谱（例如 着法: 炮二平五）。')
     return '\n\n'.join(s)
 

@@ -14,6 +14,7 @@
   legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、notes_keep N、session_view full|move。
 记录在 runs/<tag>/（不入库）：game.jsonl、record.txt，国际象棋另有 game.pgn。
 暂停（撞额度、连续调不通、--stop-after）退出码 3。
+--timeout：单次 claude -p 调用的超时秒数（默认 3600），记进 config，resume 沿用；超时 / 调不通各记一条 call_fail。
 """
 import argparse, importlib, json, os, pathlib, random, subprocess, sys, tempfile, uuid
 
@@ -87,7 +88,7 @@ def build_cfg(a):
     sides = {'w': side_cfg(a, G, a.w, a.max_plies), 'b': side_cfg(a, G, a.b, a.max_plies)}
     cfg = {'game': a.game, 'tag': a.tag, 'players': players, 'sides': sides, 'retries': a.retries,
            'max_plies': a.max_plies, 'seed': a.seed if a.seed is not None else random.randrange(10 ** 9),
-           'forfeit': runner.FORFEIT_NOTE}
+           'forfeit': runner.FORFEIT_NOTE, 'timeout': a.timeout}
     cfg['system'] = {s: G.system_prompt(s, sides[s], memory.system_text(sides[s])) for s in 'wb'}
     cfg['commands'] = {s: claude_cli.shown(claude_cli.command(players[s].split(':', 1)[1], sides[s]['effort'], '-'))
                        for s in 'wb' if runner.player_kind(players[s]) == 'claude'}
@@ -159,6 +160,7 @@ def main(argv=None):
     p.add_argument('--max-plies', dest='max_plies', type=int, default=200)
     p.add_argument('--seed', type=int, help='随机走子的种子，默认随机取一个并记进 config')
     p.add_argument('--stop-after', dest='stop_after', type=int, help='本次最多走几个半回合就暂停（测续跑用）')
+    p.add_argument('--timeout', type=int, default=claude_cli.TIMEOUT, help='单次 claude -p 调用的超时秒数，默认 3600')
     p.add_argument('--dry-run', action='store_true', help='只打印系统提示和第一步提示，不调模型')
     r = sub.add_parser('resume', help='按记录接着下')
     r.add_argument('dir')

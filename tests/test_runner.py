@@ -234,6 +234,33 @@ class SessionCostIsCumulative(unittest.TestCase):
             self.assertNotIn('cost_total', a['usage'])
         self.assertAlmostEqual(stat['cost'], 0.02)
 
+    def test_call_fail_logged_with_ply_and_timeout_passed(self):
+        ctx = self.make_ctx('stateless')
+        ctx['cfg']['timeout'] = 77
+        seen = []
+
+        def call(cmd, prompt, cwd, **k):
+            seen.append(k['timeout'])
+            k['on_fail']({'try': 1, 'timeout': True, 'rc': -1, 'elapsed': 77.0, 'stderr': 'timeout 77s', 'stdout': '',
+                          'next_wait': 30})
+            return {'result': '着法: e2e4', 'stop_reason': 'end_turn', 'usage': {}}, 1.0
+        with mock.patch.object(claude_cli, 'call', call):
+            mv, _, _ = self.turn(ctx)
+        self.assertEqual((mv, seen), ('e2e4', [77]))
+        fails = [r for r in records.read(ctx['log']) if r['type'] == 'call_fail']
+        self.assertEqual(len(fails), 1)
+        self.assertEqual((fails[0]['ply'], fails[0]['side'], fails[0]['attempt'], fails[0]['timeout']), (1, 'w', 1, True))
+
+    def test_play_records_timeout_and_chinese_prompt(self):
+        out = os.path.join(self.tmp, 'runs')
+        run_quiet(['play', '--game', 'chess', '--tag', 'c9', '--out', out, '--white', 'random', '--black', 'random',
+                   '--seed', '1', '--max-plies', '2', '--timeout', '900'])
+        cfg = records.read(os.path.join(out, 'c9', 'game.jsonl'))[0]['cfg']
+        self.assertEqual(cfg['timeout'], 900)
+        for G in (C, X):
+            sc = quiz.side_cfg(G, 'medium')
+            self.assertIn('请用中文回答。', G.system_prompt('w', sc, 'x'))
+
     def test_cost_delta_reset(self):
         self.assertEqual(records.cost_delta(0.5, None), 0.5)
         self.assertAlmostEqual(records.cost_delta(0.5, 0.2), 0.3)

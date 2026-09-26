@@ -6,8 +6,10 @@ import json
 import os
 import pathlib
 import shutil
+import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 from llmchess import claude_cli as CL
 
@@ -126,6 +128,44 @@ class TranscriptFlags(unittest.TestCase):
             self.assertIsNone(CL.transcript_flags(cwd, 'no-such-session'))
         finally:
             shutil.rmtree(tmp)
+
+
+class CallTimeout(unittest.TestCase):
+    """call() 的超时可配、失败回调：subprocess.run 打桩，不真调 claude。"""
+
+    def test_timeout_param_and_on_fail_then_success(self):
+        seen, fails = [], []
+        good = subprocess.CompletedProcess([], 0, stdout=json.dumps({'result': '着法: e2e4'}), stderr='')
+
+        def run(cmd, **k):
+            seen.append(k['timeout'])
+            if len(seen) == 1:
+                raise subprocess.TimeoutExpired(cmd, k['timeout'])
+            return good
+        with mock.patch.object(CL.subprocess, 'run', run), mock.patch.object(CL.time, 'sleep', lambda s: None):
+            d, _ = CL.call(['claude'], 'p', '/tmp', waits=(5,), timeout=77, on_fail=fails.append)
+        self.assertEqual(d['result'], '着法: e2e4')
+        self.assertEqual(seen, [77, 77])
+        self.assertEqual(len(fails), 1)
+        self.assertTrue(fails[0]['timeout'])
+        self.assertEqual((fails[0]['try'], fails[0]['next_wait'], fails[0]['rc']), (1, 5, -1))
+
+    def test_default_timeout_and_broken_callback(self):
+        seen = []
+        bad = subprocess.CompletedProcess([], 1, stdout='not json', stderr='boom')
+
+        def run(cmd, **k):
+            seen.append(k['timeout'])
+            return bad
+
+        def broken(info):
+            raise RuntimeError('记录坏了')
+        with mock.patch.object(CL.subprocess, 'run', run), mock.patch.object(CL.time, 'sleep', lambda s: None), \
+                mock.patch('builtins.print'):
+            with self.assertRaises(CL.Paused):          # 回调出错不影响重试，最后照常抛「连续调不通」
+                CL.call(['claude'], 'p', '/tmp', waits=(0,), on_fail=broken)
+        self.assertEqual(seen, [CL.TIMEOUT, CL.TIMEOUT])
+        self.assertEqual(CL.TIMEOUT, 3600)
 
 
 class Flagged(unittest.TestCase):
