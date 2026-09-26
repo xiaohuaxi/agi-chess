@@ -1,7 +1,23 @@
 """离线单元测试：思考延续三种模式的文字处理（llmchess/memory.py）。全是纯函数，手写假回复即可。"""
 import unittest
 
-from llmchess import memory as M
+import chess
+
+from llmchess import chess_ as C, memory as M, xiangqi as X
+
+# 第二批 B1 的原样回复（b2B1 parsebug）：先写「着法: e3」，又改口「应当写皇后的着法：」，再写「着法: g3e3」
+REVISED_CHESS = """**思路：** 黑后在 g4 受 e6 象保护。如果 Qxg4 Bxg4 换后，白方少三个兵进入残局，基本没有机会，所以要保留皇后。
+
+- Qe3 可以让出 g 线，并用第三横线看住 h3。这样能防住 Bh3 配合后在 g2 将杀的威胁。
+- 皇后在 e3 还同时瞄着 h6 和 b6 方向，保留一些反击机会。
+- 如果黑方走 d4 赶后，白后可以退到 d3 或 e4。
+
+着法: e3
+
+等一下，应当写皇后的着法：
+
+着法: g3e3"""
+REVISED_FEN = 'r4rk1/2p2pp1/1p2b2p/3pP3/p5q1/6Q1/5PPP/NR3RK1 w - - 5 23'
 
 
 class ExtractMove(unittest.TestCase):
@@ -17,6 +33,22 @@ class ExtractMove(unittest.TestCase):
 
     def test_full_width_colon(self):
         self.assertEqual(M.extract_move('着法：h2e2'), 'h2e2')
+
+    def test_revised_move_chess_verbatim(self):
+        text = M.extract_move(REVISED_CHESS)
+        self.assertEqual(text, 'g3e3')
+        st = {'board': chess.Board(REVISED_FEN), 'fens': [REVISED_FEN], 'moves': [], 'record': []}
+        self.assertEqual(C.parse(st, text), ('g3e3', None))
+
+    def test_revised_move_xiangqi(self):
+        reply = '思路：先出马。\n\n着法: h2e2\n\n不对，我想走的是马，应该写成：\n\n**着法：h0g2**'
+        text = M.extract_move(reply)
+        self.assertEqual(X.parse(X.start(), text), ('h0g2', None))
+        reply2 = '改一下最后的着法：\n着法：马二进三'
+        self.assertEqual(X.parse(X.start(), M.extract_move(reply2)), ('h0g2', None))
+
+    def test_move_on_next_line_after_colon(self):
+        self.assertEqual(M.extract_move('我的着法：\n\ne2e4'), 'e2e4')
 
 
 class ExtractNote(unittest.TestCase):
