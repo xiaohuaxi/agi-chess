@@ -368,6 +368,27 @@ class Show(unittest.TestCase):
         self.assertEqual(Q.show_of({'view': 'fen'}), None)
         self.assertEqual(Q.show_of({'show': 'pieces'}), 'pieces')
 
+    def test_boardpieces_xiangqi_is_all_minus_fen(self):
+        # boardpieces（第 4P2 批新增，只有中国象棋有）：文字棋盘 + 子力清单，逐字等于 all 去掉 FEN 那一段
+        game = 'xiangqi'
+        G = Q.game_module(game)
+        st = Q.build_state(self.pos(game))
+        side = G.turn(st)
+        sc_all = Q.side_cfg(G, 'high', Q.parse_sets(G, ['show=all']))
+        sc_bp = Q.side_cfg(G, 'high', Q.parse_sets(G, ['show=boardpieces']))
+        user_all, user_bp = Q.prompt_of(G, st, sc_all), Q.prompt_of(G, st, sc_bp)
+        parts_all = user_all.split('\n\n')
+        self.assertIn('FEN：', parts_all[-2])                   # all 里 FEN 段在「请走一步」那句之前
+        self.assertEqual(user_bp, '\n\n'.join(parts_all[:-2] + parts_all[-1:]))
+        self.assertIn(self.MARK[game]['board'], user_bp)
+        self.assertIn(self.MARK[game]['pieces'], user_bp)
+        self.assertNotIn(self.MARK[game]['fen'], user_bp)
+
+    def test_boardpieces_not_defined_for_chess(self):
+        G = Q.game_module('chess')
+        with self.assertRaises(SystemExit):
+            Q.side_cfg(G, 'high', Q.parse_sets(G, ['show=boardpieces']))
+
 
 class Excluded(unittest.TestCase):
     """剔除的局面（x2-25）：run 不再出，旧记录照样能判。"""

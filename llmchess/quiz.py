@@ -20,6 +20,7 @@
   show：局面怎么呈现（SHOW_VIEWS）。all 是棋种默认 view，提示和不给 show 时逐字相同；board 只给文字棋盘，pieces 只给
     子力清单，fen 只给 FEN 串。轮到谁走、执哪方、坐标和回答格式本来就在开头几行和系统提示里，各档都有，除呈现那段外提示一字不差。
     注意国际象棋默认 view 是 fen,ascii，没有子力清单，所以国际象棋的 all 只有两样，pieces 档的清单 all 里没有。
+    boardpieces（第 4P2 批新增）：只有中国象棋有，= 文字棋盘 + 子力清单（all 去掉 FEN 那段，逐字相同）；国际象棋没有这档，传了报错。
     和 view 二选一。每次作答的 result、judged.jsonl 各记一个 show 字段（给了 view 的档记 null）。
   reason=on：系统提示末尾加一句，请它用自己的话说明这步为什么这么走（REASON_ASK，措辞的讲究见那里）；只进提示，不打分。
   threats=on：要求回答里在「着法:」之前先列「走后威胁:」清单（走完这步后对方所有吃子、将军着法），程序按走后真实局面
@@ -118,7 +119,7 @@ def build_state(pos):
     return st
 
 
-SET_KEYS = {'view': None, 'show': ('all', 'board', 'pieces', 'fen'), 'legal': ('none', 'list'), 'selfcheck': ('on', 'off'), 'recite': ('on', 'off'),
+SET_KEYS = {'view': None, 'show': ('all', 'board', 'pieces', 'fen', 'boardpieces'), 'legal': ('none', 'list'), 'selfcheck': ('on', 'off'), 'recite': ('on', 'off'),
             'threats': ('on', 'off'), 'attackmap': ('on', 'off'), 'reason': ('on', 'off')}
 
 
@@ -144,14 +145,20 @@ def parse_sets(G, items):
 
 
 # show 档（呈现方式）：各档对应的棋种 view。all 就是棋种默认 view（和改动前的提示逐字相同）；board 是各棋种的文字棋盘。
-SHOW_VIEWS = {'xiangqi': {'board': 'grid', 'pieces': 'pieces', 'fen': 'fen'},
+# boardpieces（第 4P2 批新增）：只有中国象棋需要，= grid + pieces（all 去掉 fen 那段，逐字相同，因为 DEFAULT_VIEW 顺序
+# 就是 grid,pieces,fen，render 按 sc['view'] 顺序逐段拼接、段间用两个换行分隔，去掉最后一段不影响前面几段的文字）。
+# 国际象棋没有这档的需要：允许传但不生效没意义，也不该悄悄映射成某个已有档造成误解，所以明确报错。
+SHOW_VIEWS = {'xiangqi': {'board': 'grid', 'pieces': 'pieces', 'fen': 'fen', 'boardpieces': 'grid,pieces'},
               'chess': {'board': 'ascii', 'pieces': 'pieces', 'fen': 'fen'}}
 
 
 def show_views(G, show):
     if show == 'all':
         return G.DEFAULT_VIEW.split(',')
-    return [SHOW_VIEWS['xiangqi' if G is X else 'chess'][show]]
+    game = 'xiangqi' if G is X else 'chess'
+    if show not in SHOW_VIEWS[game]:
+        raise SystemExit('%s 没有 show=%s 这一档' % (game, show))
+    return SHOW_VIEWS[game][show].split(',')
 
 
 def show_of(sets):
