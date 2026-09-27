@@ -7,7 +7,7 @@ from unittest import mock
 
 import chess
 
-from llmchess import claude_cli, quiz as Q, records, runner
+from llmchess import claude_cli, quiz as Q, records, runner, xiangqi as X
 from llmchess.claude_cli import Paused
 
 
@@ -222,6 +222,17 @@ class Arms(unittest.TestCase):
         self.assertTrue(recs[0]['cfg']['system']['b'].endswith(Q.REASON_ASK))
         self.assertEqual(recs[0]['set'], {'reason': 'on'})
 
+    def test_show_arm_records(self):
+        self.assertEqual(self.main('--arm', 'fen', '--set', 'show=fen'), 0)
+        recs = records.read(Q.answer_path(os.path.join(self.out, 'fen', 'chess'), 'c01', 'medium', 1))
+        self.assertEqual(recs[0]['set'], {'show': 'fen'})
+        self.assertEqual(recs[0]['cfg']['sides']['b']['view'], ['fen'])
+        att = next(r for r in recs if r['type'] == 'attempt')
+        self.assertIn('FEN：', att['prompt'])
+        self.assertNotIn('字符棋盘', att['prompt'])
+        self.assertEqual(recs[-1]['type'], 'result')
+        self.assertEqual(recs[-1]['show'], 'fen')
+
     def test_positions_conflict_in_same_arm(self):
         self.assertEqual(self.main('--arm', 'b'), 0)
         other = os.path.join(self.tmp, 'other.jsonl')
@@ -291,6 +302,71 @@ class Arms(unittest.TestCase):
         res = Q.result_of(path)
         self.assertEqual((res['call_fails'], res['timeouts']), (1, 1))
         self.assertEqual(recs[0]['cfg']['timeout'], 120)
+
+
+class Show(unittest.TestCase):
+    """show 档（呈现方式）：四档两种棋都能出提示；all 和改动前逐字一致；其余档只含自己那一种呈现，行棋方、执哪方都在。"""
+    FIXTURE = os.path.join(os.path.dirname(__file__), 'fixtures')
+    IDS = {'xiangqi': 'x2-01', 'chess': 'c2-01'}
+    # 各种呈现的标志文字：文字棋盘 / 子力清单 / FEN 串
+    MARK = {'xiangqi': {'board': '棋盘（上方是黑方', 'pieces': '子力清单', 'fen': 'FEN：'},
+            'chess': {'board': '字符棋盘', 'pieces': '子力清单', 'fen': 'FEN：'}}
+    SIDE = {'xiangqi': '红方', 'chess': '白方'}
+
+    def pos(self, game):
+        return next(p for p in Q.load_positions(Q.positions_path('batch2', game)) if p['id'] == self.IDS[game])
+
+    def dry_run(self, game, *extra):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = Q.main(['run', '--game', game, '--batch', 'batch2', '--ids', self.IDS[game], '--efforts', 'high',
+                         '--dry-run'] + list(extra))
+        self.assertEqual(rc, 0)
+        return buf.getvalue()
+
+    def test_all_matches_prompt_before_change(self):
+        # fixtures 是加 show 之前 --dry-run 的原样输出（系统提示 + 用户提示）
+        for game in Q.GAMES:
+            with open(os.path.join(self.FIXTURE, 'quiz_prompt_%s.txt' % self.IDS[game]), encoding='utf-8') as f:
+                want = f.read()
+            self.assertEqual(self.dry_run(game), want)
+            self.assertEqual(self.dry_run(game, '--arm', 't', '--set', 'show=all'), want)
+
+    def test_each_show_has_only_its_view(self):
+        for game in Q.GAMES:
+            G = Q.game_module(game)
+            st = Q.build_state(self.pos(game))
+            side = G.turn(st)
+            base = Q.side_cfg(G, 'high')
+            sys0, user0 = Q.system_of(G, side, base), Q.prompt_of(G, st, base)
+            for show in ('all', 'board', 'pieces', 'fen'):
+                with self.subTest(game=game, show=show):
+                    sc = Q.side_cfg(G, 'high', Q.parse_sets(G, ['show=' + show]))
+                    system, user = Q.system_of(G, side, sc), Q.prompt_of(G, st, sc)
+                    self.assertEqual(system, sys0)                         # 系统提示各档一样
+                    self.assertIn('执' + self.SIDE[game], system)
+                    self.assertIn('轮到你（%s）走' % self.SIDE[game], user)
+                    self.assertIn('对方刚走', user)
+                    self.assertTrue(user.endswith(user0.split('\n\n')[-1]))   # 最后「请走一步」那句一样
+                    if show == 'all':
+                        self.assertEqual(user, user0)
+                        continue
+                    for kind, mark in self.MARK[game].items():
+                        (self.assertIn if kind == show else self.assertNotIn)(mark, user)
+                    # 除呈现那段以外一字不差：开头几行、结尾一样，中间只有这一段
+                    head = user0.split('\n\n')[0]
+                    self.assertEqual(user, '\n\n'.join([head, G.VIEWS[Q.SHOW_VIEWS[game][show]](
+                        *((st,) if game == 'chess' else (st['fens'][-1], X.board_of(st['fens'][-1])[0]))), user0.split('\n\n')[-1]]))
+
+    def test_bad_value_and_view_conflict(self):
+        G = Q.game_module('xiangqi')
+        with self.assertRaises(SystemExit):
+            Q.parse_sets(G, ['show=grid'])
+        with self.assertRaises(SystemExit):
+            Q.parse_sets(G, ['show=fen', 'view=fen'])
+        self.assertEqual(Q.show_of({}), 'all')
+        self.assertEqual(Q.show_of({'view': 'fen'}), None)
+        self.assertEqual(Q.show_of({'show': 'pieces'}), 'pieces')
 
 
 class Excluded(unittest.TestCase):

@@ -15,8 +15,12 @@
     # 第三批块 A：batch2 的局面（剔除 x2-25）、reason 档，记录另放一个根目录（--out，judge / report 给同一个 --out）
     python3 -m llmchess.quiz run --game chess --batch batch2 --out runs/quiz-batch3 --arm reason --set reason=on --efforts xhigh --reps 2
 
---set 可改的变量：view、legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、threats on|off、attackmap on|off、
-  reason on|off。
+--set 可改的变量：view、show all|board|pieces|fen、legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、
+  threats on|off、attackmap on|off、reason on|off。
+  show：局面怎么呈现（SHOW_VIEWS）。all 是棋种默认 view，提示和不给 show 时逐字相同；board 只给文字棋盘，pieces 只给
+    子力清单，fen 只给 FEN 串。轮到谁走、执哪方、坐标和回答格式本来就在开头几行和系统提示里，各档都有，除呈现那段外提示一字不差。
+    注意国际象棋默认 view 是 fen,ascii，没有子力清单，所以国际象棋的 all 只有两样，pieces 档的清单 all 里没有。
+    和 view 二选一。每次作答的 result、judged.jsonl 各记一个 show 字段（给了 view 的档记 null）。
   reason=on：系统提示末尾加一句，请它用自己的话说明这步为什么这么走（REASON_ASK，措辞的讲究见那里）；只进提示，不打分。
   threats=on：要求回答里在「着法:」之前先列「走后威胁:」清单（走完这步后对方所有吃子、将军着法），程序按走后真实局面
     打分（列中 / 漏列 / 错列），分数只写进记录，不回灌给模型。
@@ -114,7 +118,7 @@ def build_state(pos):
     return st
 
 
-SET_KEYS = {'view': None, 'legal': ('none', 'list'), 'selfcheck': ('on', 'off'), 'recite': ('on', 'off'),
+SET_KEYS = {'view': None, 'show': ('all', 'board', 'pieces', 'fen'), 'legal': ('none', 'list'), 'selfcheck': ('on', 'off'), 'recite': ('on', 'off'),
             'threats': ('on', 'off'), 'attackmap': ('on', 'off'), 'reason': ('on', 'off')}
 
 
@@ -134,7 +138,26 @@ def parse_sets(G, items):
         if k == 'recite' and v == 'on' and not G.RECITE:
             raise SystemExit('这种棋还没有复述打分，recite 只能 off')
         out[k] = v
+    if 'view' in out and 'show' in out:
+        raise SystemExit('view 和 show 二选一')
     return out
+
+
+# show 档（呈现方式）：各档对应的棋种 view。all 就是棋种默认 view（和改动前的提示逐字相同）；board 是各棋种的文字棋盘。
+SHOW_VIEWS = {'xiangqi': {'board': 'grid', 'pieces': 'pieces', 'fen': 'fen'},
+              'chess': {'board': 'ascii', 'pieces': 'pieces', 'fen': 'fen'}}
+
+
+def show_views(G, show):
+    if show == 'all':
+        return G.DEFAULT_VIEW.split(',')
+    return [SHOW_VIEWS['xiangqi' if G is X else 'chess'][show]]
+
+
+def show_of(sets):
+    """本档的呈现方式：给了 show 就是它；给了 view（自定义组合）记 None；都没给是 all。"""
+    sets = sets or {}
+    return sets.get('show') or (None if 'view' in sets else 'all')
 
 
 def side_cfg(G, effort, sets=None):
@@ -145,6 +168,8 @@ def side_cfg(G, effort, sets=None):
           'session_view': 'full', 'max_plies': 200}
     for k, v in (sets or {}).items():
         sc[k] = v.split(',') if k == 'view' else v
+    if 'show' in sc:
+        sc['view'] = show_views(G, sc['show'])
     return sc
 
 
@@ -334,7 +359,7 @@ def answer_one(pos, effort, rep, out, model, cwd, batch_meta, sets=None, arm=Non
         mv, stat, gave_up = None, None, 'flags'     # 拦截 / 空回复太多：这一题记成放弃，不拖停整批
     recs = records.read(path)
     res = {'type': 'result', 'pos': pos['id'], 'game': pos['game'], 'effort': effort, 'rep': rep, 'arm': arm,
-           'side': side, 'move': mv, 'forfeit': mv is None and gave_up is None, 'gave_up': gave_up}
+           'show': show_of(sets), 'side': side, 'move': mv, 'forfeit': mv is None and gave_up is None, 'gave_up': gave_up}
     res.update(summarize_attempts(recs, ply))
     agg = records.new_stat()
     for r in recs:
@@ -839,7 +864,9 @@ def judge_units(out_root, arm=None, game='all'):
 
 def judge_game(game, batch, out_root, positions=None, arm=None):
     ans_dir = unit_dir(out_root, arm, game)
-    pos_by = merge_positions([positions] if positions else meta_positions(read_meta(ans_dir), batch, game))
+    meta = read_meta(ans_dir)
+    pos_by = merge_positions([positions] if positions else meta_positions(meta, batch, game))
+    show = show_of((meta or {}).get('set'))
     results = []
     for name in sorted(os.listdir(ans_dir)) if os.path.isdir(ans_dir) else []:
         if name.endswith('.jsonl') and name != 'judged.jsonl':
@@ -869,6 +896,7 @@ def judge_game(game, batch, out_root, positions=None, arm=None):
                                            'attempts', 'first_legal', 'first_move_text', 'first_think', 'first_elapsed',
                                            'call_fails', 'timeouts')}
             row['arm'] = arm
+            row['show'] = show
             row['stat'] = res['stat']
             row['before'] = c['before']
             row['engine_best'] = c['best']
@@ -1076,7 +1104,7 @@ def main(argv=None):
     r.add_argument('--model', default='opus')
     r.add_argument('--arm', help='档名：记录放 runs/quiz-<batch>/<档名>/<棋种>/；不给时布局同第一批')
     r.add_argument('--set', action='append', metavar='变量=值',
-                   help='本档改的变量，可重复：view / legal / selfcheck / recite / threats / attackmap / reason（attackmap 待用户拍板，见上）')
+                   help='本档改的变量，可重复：view / show / legal / selfcheck / recite / threats / attackmap / reason（attackmap 待用户拍板，见上）')
     r.add_argument('--allow-attackmap', dest='allow_attackmap', action='store_true',
                    help='attackmap=on 真跑的开关。待用户拍板，未批不准用')
     r.add_argument('--timeout', type=int, default=claude_cli.TIMEOUT, help='单次 claude -p 调用的超时秒数，默认 3600')
