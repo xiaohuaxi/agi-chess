@@ -13,6 +13,8 @@ w / b 是「我方」（--player，默认 claude:opus）执先走的一方（红
 对手写法同 play 的棋手，engine: 前缀可省：random、maia-1100 … maia-1900、stockfish:elo=1600、fsf:nodes=100。
 
 批次的我方设置记在 runs/<批>/batch.json，再跑同一批次时必须一致（对手、种子可以追加）。
+局面呈现照 play 的默认给法（中国象棋 pieces、国际象棋 all），--set show=all 回到旧提示；改默认之前开的中国象棋批次要续跑、
+  追加，得带 --set show=all（batch.json 记的是实际给法，见 batch_meta）。
 再跑同一条命令 = 续跑：下完的跳过、没下完的 resume、没开的开。
 撞额度：--on-limit（默认 wait，同 play）透传给每盘。wait 时撞了额度的盘在自己的进程里等到解除接着下，驱动照常开新盘
 （新盘也跟着等）；pause 时撞额度的盘写 pause 退出码 3，驱动就按下面的「停下」处理。--timeout 也透传给每盘的 play / resume。
@@ -90,8 +92,18 @@ def other(side):
 
 # ---------------------------------------------------------------- 批次设置与锁
 def batch_meta(a):
-    return {'game': a.game, 'player': a.player, 'effort': a.effort, 'memory': a.memory, 'set': sorted(a.set or []),
+    """呈现方式（show）单独记：--set 里的 show=… 不进 set，改记实际生效的给法（不给就是棋种默认给法），而且只在它不是
+    all 时才记——all 是改默认之前的给法，改之前开的批次 batch.json 里没有 show 这一项，照旧设置续跑、追加种子都还对得上；
+    中国象棋的旧批次不写 --set show=all 就会因为多出 show: pieces 报不一致，不会悄悄把两种给法混进一批。
+    给了自定义 view 或我方不是模型时不记。"""
+    sets = [kv for kv in a.set or [] if not kv.startswith('show=')]
+    kv = dict(x.split('=', 1) for x in a.set or [] if '=' in x)
+    show = kv.get('show') or (None if 'view' in kv else cli.game_module(a.game).DEFAULT_SHOW)
+    meta = {'game': a.game, 'player': a.player, 'effort': a.effort, 'memory': a.memory, 'set': sorted(sets),
             'opening': a.opening, 'max_plies': a.max_plies, 'retries': a.retries}
+    if show not in (None, 'all') and a.player.startswith('claude:'):
+        meta['show'] = show
+    return meta
 
 
 def check_meta(bdir, meta):

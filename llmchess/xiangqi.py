@@ -17,7 +17,10 @@ import pyffish as sf
 XQ = 'xiangqi'
 START = sf.start_fen(XQ)
 SIDES = {'w': '红方', 'b': '黑方'}
-DEFAULT_VIEW = 'grid,pieces,fen'
+ALL_VIEW = 'grid,pieces,fen'       # show=all：棋盘 + 清单 + FEN，第 4P2 批之前的默认给法，旧记录都是它
+# 呈现方式（show 档）→ view。整盘对局（cli）和局面题（quiz）共用。boardpieces = all 去掉 FEN 那段（逐字相同）。
+SHOWS = {'all': ALL_VIEW, 'board': 'grid', 'pieces': 'pieces', 'fen': 'fen', 'boardpieces': 'grid,pieces'}
+DEFAULT_SHOW = 'pieces'           # 第 4P2 批定的默认给法（docs/results/batch4-presentation.md 末节），show=all 回到旧提示
 RECITE = True                     # 支持复述打分
 
 

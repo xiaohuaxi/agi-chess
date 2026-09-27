@@ -15,13 +15,17 @@
     # 第三批块 A：batch2 的局面（剔除 x2-25）、reason 档，记录另放一个根目录（--out，judge / report 给同一个 --out）
     python3 -m llmchess.quiz run --game chess --batch batch2 --out runs/quiz-batch3 --arm reason --set reason=on --efforts xhigh --reps 2
 
---set 可改的变量：view、show all|board|pieces|fen、legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、
+--set 可改的变量：view、show all|board|pieces|fen|boardpieces、legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、
   threats on|off、attackmap on|off、reason on|off。
-  show：局面怎么呈现（SHOW_VIEWS）。all 是棋种默认 view，提示和不给 show 时逐字相同；board 只给文字棋盘，pieces 只给
+  show：局面怎么呈现（X.SHOWS / C.SHOWS，整盘对局共用）。**不给 show 时用棋种默认给法 DEFAULT_SHOW：中国象棋 pieces、
+    国际象棋 all**（第 4P2 批定的，见 docs/results/batch4-presentation.md 末节）。all 是改默认之前的给法（ALL_VIEW），
+    --set show=all 和以前不给 show 的提示逐字相同，第 4P2 批及以前的数据都是它；board 只给文字棋盘，pieces 只给
     子力清单，fen 只给 FEN 串。轮到谁走、执哪方、坐标和回答格式本来就在开头几行和系统提示里，各档都有，除呈现那段外提示一字不差。
-    注意国际象棋默认 view 是 fen,ascii，没有子力清单，所以国际象棋的 all 只有两样，pieces 档的清单 all 里没有。
+    注意国际象棋的 all 是 fen,ascii，没有子力清单，所以国际象棋的 all 只有两样，pieces 档的清单 all 里没有。
     boardpieces（第 4P2 批新增）：只有中国象棋有，= 文字棋盘 + 子力清单（all 去掉 FEN 那段，逐字相同）；国际象棋没有这档，传了报错。
-    和 view 二选一。每次作答的 result、judged.jsonl 各记一个 show 字段（给了 view 的档记 null）。
+    和 view 二选一。每次作答的 result、judged.jsonl 各记一个 show 字段（给了 view 的档记 null）。新跑的档不给 show 时，
+    默认给法（不是 all 的话）会显式写进 batch.json 和每题 config 的 set；旧档 set 里没有 show 的，一律按 all 解读。
+    不给 --arm 的旧布局也用默认给法，所以第一批中国象棋的旧目录（set 为空）不能再续跑（会报 set 不一致）。
   reason=on：系统提示末尾加一句，请它用自己的话说明这步为什么这么走（REASON_ASK，措辞的讲究见那里）；只进提示，不打分。
   threats=on：要求回答里在「着法:」之前先列「走后威胁:」清单（走完这步后对方所有吃子、将军着法），程序按走后真实局面
     打分（列中 / 漏列 / 错列），分数只写进记录，不回灌给模型。
@@ -42,7 +46,7 @@
   judge 在每个 <棋种> 目录写 judged.jsonl，report 在 runs/quiz-<batch>/ 下写 report.txt。
 
 提示和整盘对局给模型的完全一样：同一个系统提示（里面「满 200 个半回合判和」之类的整盘规则文字原样保留，没有为局面题改写，
-免得两种模式的提示不一样）、该棋种默认 view、history=0（只给当前局面，不附着法历史；「对方刚走」那句保留）。
+免得两种模式的提示不一样）、同样的默认给法（show）、history=0（只给当前局面，不附着法历史；「对方刚走」那句保留）。
 中国象棋的状态里带着从开局起的全部着法，禁着（长将 / 长捉）照样按完整历史判；只是提示里不给历史。
 国际象棋谜题没有开局到这步的着法，状态从谜题 FEN 起、走完对手那一步；回合数改用 FEN 里的真实回合数（见 QuizChess）。
 
@@ -144,33 +148,41 @@ def parse_sets(G, items):
     return out
 
 
-# show 档（呈现方式）：各档对应的棋种 view。all 就是棋种默认 view（和改动前的提示逐字相同）；board 是各棋种的文字棋盘。
-# boardpieces（第 4P2 批新增）：只有中国象棋需要，= grid + pieces（all 去掉 fen 那段，逐字相同，因为 DEFAULT_VIEW 顺序
+# show 档（呈现方式）→ view 的对照放在各棋种模块（X.SHOWS / C.SHOWS），整盘对局（cli）也用它。all 就是 ALL_VIEW（第 4P2 批
+# 之前的默认给法，旧提示逐字相同）；board 是各棋种的文字棋盘。
+# boardpieces（第 4P2 批新增）：只有中国象棋需要，= grid + pieces（all 去掉 fen 那段，逐字相同，因为 ALL_VIEW 顺序
 # 就是 grid,pieces,fen，render 按 sc['view'] 顺序逐段拼接、段间用两个换行分隔，去掉最后一段不影响前面几段的文字）。
 # 国际象棋没有这档的需要：允许传但不生效没意义，也不该悄悄映射成某个已有档造成误解，所以明确报错。
-SHOW_VIEWS = {'xiangqi': {'board': 'grid', 'pieces': 'pieces', 'fen': 'fen', 'boardpieces': 'grid,pieces'},
-              'chess': {'board': 'ascii', 'pieces': 'pieces', 'fen': 'fen'}}
+SHOW_VIEWS = {'xiangqi': X.SHOWS, 'chess': C.SHOWS}
 
 
 def show_views(G, show):
-    if show == 'all':
-        return G.DEFAULT_VIEW.split(',')
-    game = 'xiangqi' if G is X else 'chess'
-    if show not in SHOW_VIEWS[game]:
-        raise SystemExit('%s 没有 show=%s 这一档' % (game, show))
-    return SHOW_VIEWS[game][show].split(',')
+    if show not in G.SHOWS:
+        raise SystemExit('%s 没有 show=%s 这一档' % ('xiangqi' if G is X else 'chess', show))
+    return G.SHOWS[show].split(',')
 
 
 def show_of(sets):
-    """本档的呈现方式：给了 show 就是它；给了 view（自定义组合）记 None；都没给是 all。"""
+    """记录里这一档的呈现方式：给了 show 就是它；给了 view（自定义组合）记 None；都没给是 all。
+    「都没给是 all」是旧记录（第 4P2 批之前）的含义，不随默认给法变：新跑的档由 with_default_show 把默认给法写进 set。"""
     sets = sets or {}
     return sets.get('show') or (None if 'view' in sets else 'all')
 
 
+def with_default_show(G, sets):
+    """新跑的档：没给 show 也没给 view 时，把棋种的默认给法（G.DEFAULT_SHOW）显式写进 set，这样 batch.json、每题记录的
+    set / show 都看得出用的是哪种给法，旧记录（set 里没有 show，= all）的含义也不变。默认就是 all 的棋种（国际象棋）
+    不写，免得和改动前的旧档对不上、续跑被当成不同的 set 拒掉。"""
+    if 'show' in sets or 'view' in sets or G.DEFAULT_SHOW == 'all':
+        return sets
+    return dict(sets, show=G.DEFAULT_SHOW)
+
+
 def side_cfg(G, effort, sets=None):
     """和 cli.side_cfg 默认值一致，只把 history 设成 0、effort 按档位；sets 是分档的覆盖值（parse_sets 的结果）。
+    sets 按记录里的含义解读：没有 show / view 就是 all（旧给法）；新跑的默认给法由 cmd_run 先经 with_default_show 补进 sets。
     max_plies 只用来拼系统提示里那句整盘规则。threats / attackmap / reason 只有局面题有。"""
-    sc = {'effort': effort, 'memory': 'stateless', 'view': G.DEFAULT_VIEW.split(','), 'history': 0, 'legal': 'none',
+    sc = {'effort': effort, 'memory': 'stateless', 'view': G.ALL_VIEW.split(','), 'history': 0, 'legal': 'none',
           'selfcheck': 'off', 'recite': 'off', 'threats': 'off', 'attackmap': 'off', 'reason': 'off', 'notes_keep': 1,
           'session_view': 'full', 'max_plies': 200}
     for k, v in (sets or {}).items():
@@ -451,9 +463,9 @@ def cmd_run(a):
     game = a.game
     G = game_module(game)
     if a.set and not a.arm:
-        raise SystemExit('--set 要和 --arm 一起给（不给档名时布局和提示同第一批）')
+        raise SystemExit('--set 要和 --arm 一起给（不给档名时布局同第一批）')
     check_arm(a.arm)
-    sets = parse_sets(G, a.set)
+    sets = with_default_show(G, parse_sets(G, a.set))
     if sets.get('attackmap') == 'on' and not a.dry_run and not a.allow_attackmap:
         raise SystemExit(ATTACKMAP_GATE)
     pos_file = a.positions or str(positions_path(a.batch, game))

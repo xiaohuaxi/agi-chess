@@ -298,3 +298,64 @@ class SessionCostIsCumulative(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class GameShow(unittest.TestCase):
+    """整盘对局的呈现方式：默认给法中国象棋 pieces、国际象棋 all；--show all 回到改默认之前的提示；
+    --show / --view 二选一，一方单设覆盖公共的；每方实际用的 show 记进 config。"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def sides(self, game, *extra):
+        out = os.path.join(self.tmp, 'runs')
+        tag = 'g%d' % len(os.listdir(out)) if os.path.isdir(out) else 'g0'
+        rc = run_quiet(['play', '--game', game, '--tag', tag, '--out', out, '--white', 'random', '--black', 'random',
+                        '--seed', '1', '--max-plies', '1'] + list(extra))
+        self.assertEqual(rc, 0)
+        return records.read(os.path.join(out, tag, 'game.jsonl'))[0]['cfg']['sides']
+
+    def dry_user(self, game, *extra):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            self.assertEqual(cli.main(['play', '--game', game, '--dry-run'] + list(extra)), 0)
+        return buf.getvalue().split('第一步的用户提示')[1]
+
+    def test_defaults_recorded(self):
+        s = self.sides('xiangqi')
+        self.assertEqual({k: (s[k]['show'], s[k]['view']) for k in 'wb'}, {k: ('pieces', ['pieces']) for k in 'wb'})
+        s = self.sides('chess')
+        self.assertEqual({k: (s[k]['show'], s[k]['view']) for k in 'wb'}, {k: ('all', ['fen', 'ascii']) for k in 'wb'})
+
+    def test_switch_back_to_all_and_overrides(self):
+        s = self.sides('xiangqi', '--show', 'all')
+        self.assertEqual(s['w']['view'], X.ALL_VIEW.split(','))       # 和改默认之前的整盘默认 view 一样
+        self.assertEqual(s['w']['view'], ['grid', 'pieces', 'fen'])
+        s = self.sides('xiangqi', '--b', 'show=all')
+        self.assertEqual((s['w']['show'], s['b']['show'], s['b']['view']), ('pieces', 'all', ['grid', 'pieces', 'fen']))
+        s = self.sides('xiangqi', '--show', 'board', '--b', 'view=fen')
+        self.assertEqual((s['w']['view'], s['b']['show'], s['b']['view']), (['grid'], None, ['fen']))
+        s = self.sides('xiangqi', '--view', 'fen,grid')
+        self.assertEqual((s['w']['show'], s['w']['view']), (None, ['fen', 'grid']))
+        with self.assertRaises(SystemExit):
+            self.sides('xiangqi', '--show', 'all', '--view', 'fen')
+        with self.assertRaises(SystemExit):
+            self.sides('xiangqi', '--b', 'show=all', '--b', 'view=fen')
+        with self.assertRaises(SystemExit):
+            self.sides('chess', '--show', 'boardpieces')              # 国际象棋没有这档
+        with self.assertRaises(SystemExit):
+            self.sides('xiangqi', '--show', 'grid')
+
+    def test_prompt_matches_quiz_show(self):
+        # 整盘和局面题共用同一套 show → view，提示里的呈现段一样
+        user = self.dry_user('xiangqi')
+        self.assertIn('子力清单', user)
+        self.assertNotIn('FEN：', user)
+        self.assertNotIn('棋盘（上方是黑方', user)
+        user = self.dry_user('xiangqi', '--show', 'all')
+        for mark in ('子力清单', 'FEN：', '棋盘（上方是黑方'):
+            self.assertIn(mark, user)
+        self.assertEqual(self.dry_user('chess'), self.dry_user('chess', '--show', 'all'))
+        self.assertIn('FEN：', self.dry_user('chess'))
+

@@ -11,7 +11,10 @@ import chess
 import chess.pgn
 
 SIDES = {'w': '白方', 'b': '黑方'}
-DEFAULT_VIEW = 'fen,ascii'
+ALL_VIEW = 'fen,ascii'            # show=all：FEN + 字母棋盘（国际象棋默认 view 里本来没有子力清单）
+# 呈现方式（show 档）→ view。整盘对局（cli）和局面题（quiz）共用。
+SHOWS = {'all': ALL_VIEW, 'board': 'ascii', 'pieces': 'pieces', 'fen': 'fen'}
+DEFAULT_SHOW = 'all'              # 第 4P2 批复核后保留现状：字母棋盘缺易位权和吃过路兵信息，不按简洁换
 RECITE = False                    # 复述格式和打分还没有
 START = chess.STARTING_FEN
 MAIA_DIR = os.path.expanduser('~/.local/share/maia')

@@ -233,6 +233,29 @@ class Arms(unittest.TestCase):
         self.assertEqual(recs[-1]['type'], 'result')
         self.assertEqual(recs[-1]['show'], 'fen')
 
+    def test_default_show_recorded_xiangqi(self):
+        # 中国象棋不给 show：用默认给法 pieces，batch.json、config 的 set 和 result 的 show 都记 pieces；
+        # 同一档续跑改给 show=all 会被当成不同的 set 拒掉，不混写
+        argv = ['run', '--game', 'xiangqi', '--ids', 'x01', '--efforts', 'medium', '--reps', '1', '--jobs', '1',
+                '--out', self.out, '--arm', 'd']
+        reply = lambda cmd, prompt, cwd, **k: (fake_reply('着法: h2e2'), 0.1)
+        with mock.patch.object(claude_cli, 'call', reply), mock.patch.object(claude_cli, 'version', lambda: 'test'):
+            self.assertEqual(quiet(Q.main, argv), 0)
+            d = os.path.join(self.out, 'd', 'xiangqi')
+            meta = Q.read_meta(d)
+            self.addCleanup(shutil.rmtree, meta['claude_cwd'], ignore_errors=True)
+            self.assertEqual(meta['set'], {'show': 'pieces'})
+            recs = records.read(Q.answer_path(d, 'x01', 'medium', 1))
+            self.assertEqual(recs[0]['set'], {'show': 'pieces'})
+            self.assertEqual(recs[0]['cfg']['sides'][recs[-1]['side']]['view'], ['pieces'])
+            att = next(r for r in recs if r['type'] == 'attempt')
+            self.assertIn('子力清单', att['prompt'])
+            self.assertNotIn('FEN：', att['prompt'])
+            self.assertEqual(recs[-1]['show'], 'pieces')
+            self.assertEqual(quiet(Q.main, argv + ['--set', 'show=pieces']), 0)          # 显式给默认值 = 同一档
+            with self.assertRaises(SystemExit):
+                quiet(Q.main, argv + ['--set', 'show=all'])
+
     def test_positions_conflict_in_same_arm(self):
         self.assertEqual(self.main('--arm', 'b'), 0)
         other = os.path.join(self.tmp, 'other.jsonl')
@@ -325,12 +348,35 @@ class Show(unittest.TestCase):
         return buf.getvalue()
 
     def test_all_matches_prompt_before_change(self):
-        # fixtures 是加 show 之前 --dry-run 的原样输出（系统提示 + 用户提示）
+        # fixtures 是加 show 之前 --dry-run 的原样输出（系统提示 + 用户提示），也就是第 4P2 批及以前的数据用的提示。
+        # 改默认给法之后，显式 show=all 必须仍和它逐字一致；国际象棋默认仍是 all，不给 show 也一致。
         for game in Q.GAMES:
             with open(os.path.join(self.FIXTURE, 'quiz_prompt_%s.txt' % self.IDS[game]), encoding='utf-8') as f:
                 want = f.read()
-            self.assertEqual(self.dry_run(game), want)
             self.assertEqual(self.dry_run(game, '--arm', 't', '--set', 'show=all'), want)
+            if game == 'chess':
+                self.assertEqual(self.dry_run(game), want)
+            else:
+                self.assertNotEqual(self.dry_run(game), want)
+
+    def test_default_show_per_game(self):
+        # 第 4P2 批定的默认给法：中国象棋 pieces（只给子力清单），国际象棋 all（FEN + 字母棋盘）
+        self.assertEqual((X.DEFAULT_SHOW, Q.C.DEFAULT_SHOW), ('pieces', 'all'))
+        self.assertEqual(self.dry_run('xiangqi'), self.dry_run('xiangqi', '--arm', 't', '--set', 'show=pieces'))
+        user = self.dry_run('xiangqi').split('== 用户提示')[1]
+        self.assertIn(self.MARK['xiangqi']['pieces'], user)
+        self.assertNotIn(self.MARK['xiangqi']['board'], user)
+        self.assertNotIn(self.MARK['xiangqi']['fen'], user)
+        self.assertEqual(self.dry_run('chess'), self.dry_run('chess', '--arm', 't', '--set', 'show=all'))
+        # 默认给法显式写进 set（记录看得出来）；国际象棋默认 all 不写，和旧档对得上；给了 show / view 就不动
+        self.assertEqual(Q.with_default_show(X, {}), {'show': 'pieces'})
+        self.assertEqual(Q.with_default_show(X, {'reason': 'on'}), {'reason': 'on', 'show': 'pieces'})
+        self.assertEqual(Q.with_default_show(X, {'show': 'all'}), {'show': 'all'})
+        self.assertEqual(Q.with_default_show(X, {'view': 'fen'}), {'view': 'fen'})
+        self.assertEqual(Q.with_default_show(Q.C, {}), {})
+        # 旧记录（set 里没有 show）仍按 all 解读，side_cfg 也还原旧提示
+        self.assertEqual(Q.show_of({}), 'all')
+        self.assertEqual(Q.side_cfg(X, 'high')['view'], ['grid', 'pieces', 'fen'])
 
     def test_each_show_has_only_its_view(self):
         for game in Q.GAMES:

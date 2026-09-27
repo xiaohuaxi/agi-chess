@@ -1,7 +1,7 @@
 """离线测试：批量驱动（llmchess/batch.py）。不调 claude：盘都是 random / 引擎，或者 PATH 里换成假 claude，下得很短。
 批次放在每个用例自建的临时目录里（名字带随机后缀），用完删掉。起引擎的用例在本机没有引擎时跳过。
 """
-import contextlib, io, json, os, shutil, signal, subprocess, sys, tempfile, time, unittest
+import argparse, contextlib, io, json, os, shutil, signal, subprocess, sys, tempfile, time, unittest
 from unittest import mock
 
 from llmchess import batch as B, claude_cli as CL, records
@@ -34,6 +34,22 @@ class Helpers(unittest.TestCase):
         self.assertEqual(B.slug('engine:stockfish:elo=1600'), 'stockfish-elo1600')
         self.assertEqual(B.slug('engine:fsf:nodes=10'), 'fsf-nodes10')
         self.assertEqual(B.slug('engine:maia-1100'), 'maia-1100')
+
+    def test_batch_meta_show(self):
+        # 批次记实际给法：中国象棋默认 pieces 记成 show；all（含国际象棋默认、显式 show=all）不记，和改默认前的旧批次对得上
+        def meta(game, sets, player='claude:opus'):
+            a = argparse.Namespace(game=game, player=player, effort='xhigh', memory='stateless', set=sets,
+                                   opening='', max_plies=200, retries=3)
+            return B.batch_meta(a)
+        old = {'game': 'xiangqi', 'player': 'claude:opus', 'effort': 'xhigh', 'memory': 'stateless', 'set': [],
+               'opening': '', 'max_plies': 200, 'retries': 3}
+        self.assertEqual(meta('xiangqi', None), dict(old, show='pieces'))
+        self.assertEqual(meta('xiangqi', ['show=pieces']), dict(old, show='pieces'))
+        self.assertEqual(meta('xiangqi', ['show=all']), old)
+        self.assertEqual(meta('xiangqi', ['view=fen']), dict(old, set=['view=fen']))
+        self.assertEqual(meta('xiangqi', None, 'engine:fsf:nodes=10'), dict(old, player='engine:fsf:nodes=10'))
+        self.assertEqual(meta('chess', None), dict(old, game='chess'))
+        self.assertEqual(meta('chess', ['show=board', 'legal=list']), dict(old, game='chess', set=['legal=list'], show='board'))
 
     def test_wilson(self):
         lo, hi = B.wilson(5, 10)

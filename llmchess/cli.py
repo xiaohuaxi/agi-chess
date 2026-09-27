@@ -11,8 +11,12 @@
   国际象棋引擎 maia-1100 … maia-1900（lc0，go nodes 1）、stockfish[:elo=N|nodes=N|depth=N|movetime=毫秒]；
   中国象棋引擎 fsf[:nodes=N|depth=N|movetime=毫秒]（Fairy-Stockfish，默认 nodes=1000）。
 模型相关变量（公共值用 --变量，一方单设用 --w / --b 变量=值，w 是先走的红方 / 白方）：
-  effort medium|high|xhigh|max、memory stateless|notes|session、view（逗号分隔）、history（-1 全部 / 0 / N）、
+  effort medium|high|xhigh|max、memory stateless|notes|session、show、view（逗号分隔）、history（-1 全部 / 0 / N）、
   legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、notes_keep N、session_view full|move。
+局面怎么呈现：show all|board|pieces|fen|boardpieces（boardpieces 只有中国象棋），和局面题的 --set show 同一套（棋种模块的
+  SHOWS）。不给时用棋种默认给法：中国象棋 pieces（只给子力清单）、国际象棋 all（FEN + 字母棋盘），第 4P2 批定的；
+  --show all 回到改默认之前的提示（中国象棋棋盘 + 清单 + FEN）。view 是自定义组合，和 show 二选一：同一层（公共 / 一方单设）
+  两个都给报错，一方单设的覆盖公共的那个。每方实际用的 show 记在 config 的 sides 里（自定义 view 记 null）。
 随机开局 --opening random:N：前 N 个半回合由程序替双方走（引擎浅搜 MultiPV 3、分差 ≤50 厘兵的着法按 --opening-seed 抽），
   开局写进 config、续跑照记录重放；模型只在着法历史里看到这几步。--dry-run 打印的是开局走完后模型方第一步的提示。
 记录在 runs/<tag>/（不入库）：game.jsonl、record.txt，国际象棋另有 game.pgn。
@@ -30,7 +34,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 RUNS = ROOT / 'runs'
 GAMES = {'xiangqi': 'llmchess.xiangqi', 'chess': 'llmchess.chess_'}
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
-SIDE_KEYS = {'effort': str, 'memory': str, 'view': str, 'history': int, 'legal': str, 'selfcheck': str,
+SIDE_KEYS = {'effort': str, 'memory': str, 'show': str, 'view': str, 'history': int, 'legal': str, 'selfcheck': str,
              'recite': str, 'notes_keep': int, 'session_view': str}
 
 
@@ -40,12 +44,24 @@ def game_module(name):
 
 def side_cfg(a, G, overrides, max_plies):
     sc = {k: getattr(a, k) for k in SIDE_KEYS}
-    sc['view'] = sc['view'] or G.DEFAULT_VIEW
+    if sc['show'] and sc['view']:
+        raise SystemExit('--show 和 --view 二选一')
+    own = set()
     for item in overrides or []:
         k, sep, v = item.partition('=')
         if not sep or k not in SIDE_KEYS:
             raise SystemExit('一方单设写成 变量=值，变量是 %s 之一：%r' % ('/'.join(SIDE_KEYS), item))
         sc[k] = SIDE_KEYS[k](v)
+        own.add(k)
+        if k in ('show', 'view'):                  # 一方单设的呈现方式覆盖公共的那个
+            sc['view' if k == 'show' else 'show'] = None
+    if {'show', 'view'} <= own:
+        raise SystemExit('一方单设里 show 和 view 二选一')
+    if not sc['view']:
+        sc['show'] = sc['show'] or G.DEFAULT_SHOW
+        if sc['show'] not in G.SHOWS:
+            raise SystemExit('show 只能是 %s，收到 %r' % ('/'.join(G.SHOWS), sc['show']))
+        sc['view'] = G.SHOWS[sc['show']]
     sc['view'] = sc['view'].split(',') if isinstance(sc['view'], str) else sc['view']
     for v in sc['view']:
         if v not in G.VIEWS:
@@ -211,7 +227,8 @@ def main(argv=None):
     p.add_argument('--black')
     p.add_argument('--effort', default='medium')
     p.add_argument('--memory', default='stateless')
-    p.add_argument('--view', default=None, help='默认：中国象棋 grid,pieces,fen；国际象棋 fen,ascii')
+    p.add_argument('--show', default=None, help='局面怎么呈现，默认：中国象棋 pieces；国际象棋 all（fen,ascii）；和 --view 二选一')
+    p.add_argument('--view', default=None, help='自定义呈现组合（逗号分隔），和 --show 二选一')
     p.add_argument('--history', type=int, default=-1)
     p.add_argument('--legal', default='none')
     p.add_argument('--selfcheck', default='off')
