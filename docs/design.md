@@ -84,7 +84,8 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 | 棋手 | `claude:<模型>` / `engine:<名字>[:参数]` / `random`（见第二节） | `claude:opus` | `--red`/`--white`、`--black` |
 | `effort` | medium / high / xhigh / max | medium | 与上一轮一致，方便对照；实验里扫全档 |
 | `memory` | `stateless` / `notes` / `session` | stateless | 见下 |
-| `view` | 国际象棋：`fen`、`ascii`、`pieces`、`pgn`；中国象棋：`grid`、`pieces`、`fen`、`cells`、`board` | 国际象棋 `fen,ascii`；中国象棋 `grid,pieces,fen` | 逗号分隔、按序拼 |
+| `show` | `all` / `board` / `pieces` / `fen`；中国象棋另有 `boardpieces` | 中国象棋 `pieces`（只给子力清单）；国际象棋 `all`（FEN + 字母棋盘） | 局面怎么给，整盘（`--show`）和局面题（`--set show=`）共用一套。`show=all` 逐字复现改默认之前的提示（中国象棋棋盘 + 子力清单 + FEN 三样，第四批及以前的数据都是它）。依据：第四批局面题 high 下，中国象棋只给清单的昏招比三样全给少、也不会认错「車」，分不开时按简洁选；国际象棋只给字母棋盘和全给分不开，但棋盘缺易位权和吃过路兵信息，所以不换（`results/batch4-presentation.md` 末节） |
+| `view` | 国际象棋：`fen`、`ascii`、`pieces`、`pgn`；中国象棋：`grid`、`pieces`、`fen`、`cells`、`board` | 由 `show` 决定 | 自定义组合，逗号分隔、按序拼；和 `show` 二选一 |
 | `history` | -1 全部 / 0 不附 / N 最近 N 个半回合 | -1 | 上一轮 C/D/E 只附 20 步、A/B 附全部，两者混在一起了；这次统一全部 |
 | `legal` | `none` / `list` | none | 测棋力时可以开，报告里分开写 [5][6] |
 | `selfcheck` | on / off | off | 上一轮开了没见效；作单独变量。两种棋的自查文字各写各的 |
