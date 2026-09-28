@@ -20,7 +20,7 @@
 | P7 | 关掉工具、MCP、用户设置、CLAUDE.md 后，模型拿不到引擎 | **已核实** | 沿用上一轮命令（`--tools "" --strict-mcp-config --setting-sources "" --system-prompt ... CLAUDE_CODE_DISABLE_CLAUDE_MDS=1`），抓到的请求 `tools: []`。system 里只剩 Claude Code 固定的一句身份说明和我们的系统提示，用户消息前多一小段 userEmail 提示，另有一条环境说明（工作目录、日期、模型名）。**2026-09-25 用对弈程序实际拼出的命令复核**（运行目录是仓库外的空临时目录，桩服务抓请求）：`tools: []`，没有 MCP，system 只有身份说明和我们的提示，全文搜不到 stockfish / fairy / lc0 / maia / `/opt/homebrew` / llm-chess / CLAUDE.md / AGENTS / memory / skill / hook。`--bare` 只认 API key、不能走订阅，不用；加 `--safe-mode` 请求体没有变化，不加。 |
 | P8 | 续接跨天、跨长暂停后思考仍保留 | 待验证 | 文档说前缀必须逐字节一致。环境说明里带日期，续接时 Claude Code 是重放当初那条还是重新生成，没测。上一段 P5 的实测都在几分钟内完成。 |
 | P9 | 走 API 直连更可控，但本研究不需要 | **已核实（文档）/ 决定不用** | 直连能多拿到：`display: "summarized"` 的思考摘要、`thinking-binding-controls` 的丢块报告、完全干净的 system（没有 Claude Code 那两段）、per-message effort。代价是走 API 计费、不走订阅额度，而且要自己维护 messages 数组、保证只追加不改写，否则思考块会被丢掉或 400。本研究要的"思考深度、思考延续、token 统计"`claude -p` 全都能做到，所以**默认 `claude -p`**，API 只作为以后要看思考摘要时的可选后端；要加时再在对局循环里加一个棋手分支。 |
-| P10 | Codex 能当另一方 | 待验证（没写，要加时再加一个棋手分支） | `codex exec` 有 `--json`、`-m`、`-c key=value`（推理档位走配置项）、`--ephemeral`、`exec resume`。**它自带 shell**，只读沙箱也能跑本机的 python-chess 和 Fairy-Stockfish，等于能用引擎。怎么把它的工具全关掉、怎么取思考 token，实施前要单独核实。 |
+| P10 | Codex 能当另一方 | **已核实（2026-09-28）** | sol 和 DeepSeek 都走 `codex exec`（`llmchess/codex_cli.py`），关 features + 补丁模型目录后请求里工具数为 0，诱导跑引擎、读文件都做不到，事件流和会话记录里没有工具调用；全局 `~/.codex/AGENTS.md` 关不掉，作为固定噪声进上下文。只支持无状态。详见 `results/batch5-isolation.md`。 |
 | P11 | 国际象棋固定强度对手：Fairy-Stockfish 限 Elo | **已核实能用 / 分数标定待验证** | 本机 `/opt/homebrew/bin/fairy-stockfish`，`id name Fairy-Stockfish 14.0.1 XQ`，有 `UCI_LimitStrength`、`UCI_Elo`（500–2850）、`Skill Level`（-20..20）。实测同一局面每手 0.1 秒：不限强时 6 次只走 d5/Bb3/Qc2 三种好棋，限 500 时出现 Nxe5（送子）这类着法，限强生效。但它是经典估值、不是正版 Stockfish，Elo 标定和正版不一定一致；python-chess 驱动它时不能手动设 `UCI_Variant`（库自动管）。 |
 | P12 | 正版 Stockfish、Maia | **已安装（用户同意）** | Stockfish 19 在 `/opt/homebrew/bin/stockfish`，lc0 v0.32.1 在 `/opt/homebrew/bin/lc0`；Maia 权重 1100–1900 共 9 档在 `~/.local/share/maia/maia-XXXX.pb.gz`（不入库）。官方 README：用 lc0 加载，`go nodes 1`、不搜索。另有 `pip` 包 `maia2`（要 torch，较重，不用）。 |
 | P13 | 中国象棋固定强度对手 | 部分核实 | 同一个 Fairy-Stockfish 下中国象棋可限强，但 `UCI_Elo` 的标定是国际象棋的，**分数在中国象棋上没有意义**，只能当一把强度旋钮做相对比较。本机没有中国象棋的 Maia 类"像人"引擎。已定：这次不引入 Pikafish，就用本机 Fairy-Stockfish 限节点数或深度造几档弱对手，不和人类段位对应。 |
@@ -71,7 +71,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
   - `claude:<模型>`：沿用上一轮命令（见 P7），`stdin` 接 `/dev/null`（否则会等 3 秒并打警告），运行目录 `runs/<tag>/cwd`（P17）。
   - `engine:<名字>[:参数]`：国际象棋 `maia-1100`…`maia-1900`（lc0 加权重，`go nodes 1`）、`stockfish[:elo=N|nodes=N|movetime=毫秒]`；中国象棋 `fsf[:nodes=N|depth=N]`（Fairy-Stockfish，`UCI_Variant xiangqi`）。每步把起始局面和全部着法发给引擎，不只发末尾 FEN；等待有上限；中国象棋出棋时用 `searchmoves` 排除会被判长将 / 长捉的着法（P15）。`boards.Engine` 是单局面分析用的（不带历史、等待没有上限），不拿来当对手；另外 boards.py 实测过 Skill Level 不可复现，弱档一律用节点数或深度。
   - `random`：随机走子，按对局种子可复现，当最低参照（LLM CHESS 用它 [5]）。
-  - Codex、API 直连：没写，要加时再加一个棋手分支（P9、P10）。
+  - `codex:<模型>` / `deepseek:<模型>`：`codex exec`，只支持无状态，目前只接进了局面题（quiz `--model sol|deepseek`），整盘入口还没放开（P10）。API 直连：没写（P9）。
 - **引擎只当对手和事后裁判**。给模型的提示里永远不出现引擎的任何输出；分析在对局结束后另跑。
 
 ## 三、变量与默认值
@@ -155,7 +155,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 - **`session` 模式的混杂**：连续会话里模型除了能看到之前的思考，还能看到之前的全部提示和回复；它要是比 `stateless` 好，分不清是思考起作用还是看到了历史局面。`notes` 正好当中间档：只带它自己写的计划、不带思考。要彻底拆开，可以加一档"stateless + 全部历史正文"，第一批先不跑。
 - **安全分类器**：提示里一旦有"回忆 / 复述你的思考"就会被拦（P6），`session` 模式下 Claude Code 还会往会话里塞一条提示并重试，从此污染这一方的历史。要检测并记录，出现就把这盘标出来。
 - **跨天续跑可能丢思考**（P8 待验证）：`session` 模式的一盘尽量一次下完；撞额度暂停后续跑的盘在报告里标出。
-- **Codex 能用引擎**（P10）：接 Codex 前必须先证明它调不了本机的棋库和引擎，否则不能当棋手。
+- **Codex 能用引擎**（P10）：已证明关得掉（`results/batch5-isolation.md`）；Codex 升级后工具的挂法会变（0.157 起工具挪进了 input 里的 `additional_tools`），升级后要重抓一次请求核实工具数仍是 0。
 - **Elo 换算很粗**：Fairy-Stockfish 限强的标定未核实，Maia 是"像某分段的人"而不是精确标尺，几盘结果只能给区间。和公开数字对照时要写清对手和条件不同。
 - **会话越长越贵越慢**：`session` 模式 100 个回合后每步输入可能到几十万 token（大部分走缓存）。1M 上下文装得下，但要盯住额度。
 - **看不到思考原文**（P4）：昏招归因只能靠它写出来的正文和便条；如果以后要读思考摘要，只能走 API 直连。

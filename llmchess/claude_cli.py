@@ -171,7 +171,7 @@ def _iso(t):
     return datetime.datetime.fromtimestamp(t).astimezone().isoformat(timespec='seconds')
 
 
-def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, on_fail=None, on_wait=None):
+def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, on_fail=None, on_wait=None, parse=None):
     """跑一次 claude -p。返回 (解析后的 JSON, 用时秒)。调不通按 waits 重试；撞额度见下。
     rebuild：每次重试前重新拼命令（新会话第一次调用超时时，会话可能已经建好，重试要改用 --resume）。
     timeout：单次调用的超时秒数。
@@ -183,7 +183,9 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, 
     不受影响（这一次调用还没返回）。每次等待前后各调一次 on_wait(info)：开始 {phase:'start', start, reset_at（读出的解除
     时间或 None）, planned（打算等几秒）, n（这次调用里第几次等）, reason（报错末尾）}；结束再加 {phase:'end', end, waited,
     stopped}。等待中收到停止信号（STOP）立刻醒来抛 Paused，和旧的撞额度暂停一样可以续跑。
-    on_fail / on_wait 自己出错只打一行，不影响调用。"""
+    on_fail / on_wait 自己出错只打一行，不影响调用。
+    parse(stdout)：把输出解析成 dict（认不出返回 None 或抛 ValueError）；不给就按 claude -p 的单个 JSON 读。
+    codex exec 的棋手（codex_cli）借这一套重试和等额度，只换解析。"""
     env = dict(os.environ, CLAUDE_CODE_DISABLE_CLAUDE_MDS='1')
     last = None
     n = lim = calls = 0                        # n：失败次数（占 waits）；lim：撞额度等了几次；calls：总共调了几次
@@ -211,7 +213,7 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, 
             out, err, rc, timed_out = '', 'timeout %ds' % timeout, -1, True
         dt = time.time() - t0
         try:
-            d = json.loads(out)
+            d = parse(out) if parse else json.loads(out)
         except ValueError:
             d = None
         if d is not None and ((rc == 0 and not d.get('is_error')) or flagged(d)):

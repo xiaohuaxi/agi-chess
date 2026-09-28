@@ -64,7 +64,7 @@ import pyffish as sf
 
 from . import chess_ as C
 from . import xiangqi as X
-from . import claude_cli, memory, records, runner
+from . import claude_cli, codex_cli, memory, records, runner
 from .claude_cli import Paused
 from .cli import commit
 from .engine import Engine
@@ -209,10 +209,13 @@ def system_of(G, side, sc):
 
 def quiz_cfg(G, game, side, effort, model, cwd, sets=None, timeout=None):
     sc = side_cfg(G, effort, sets)
-    player = 'claude:%s' % model
+    player = codex_cli.spec_of(model)            # opus → claude:opus；sol / deepseek / codex:… / deepseek:… 走 codex exec
+    kind, name = player.split(':', 1)
+    shown = claude_cli.shown(claude_cli.command(name, effort, '-')) if kind == 'claude' else \
+        codex_cli.shown(kind, name, effort)
     return {'game': game, 'players': {side: player}, 'sides': {side: sc}, 'retries': 3, 'max_plies': 200,
             'system': {side: system_of(G, side, sc)},
-            'commands': {side: claude_cli.shown(claude_cli.command(model, effort, '-'))}, 'claude_cwd': cwd,
+            'commands': {side: shown}, 'claude_cwd': cwd,
             'timeout': timeout or claude_cli.TIMEOUT}
 
 
@@ -515,6 +518,8 @@ def cmd_run(a):
             write_meta(out, meta)
     os.makedirs(meta['claude_cwd'], exist_ok=True)
     batch_meta = {'commit': commit(), 'claude_version': meta['claude_version'], 'model': a.model, 'argv': sys.argv}
+    if codex_cli.spec_of(a.model).split(':', 1)[0] in codex_cli.KINDS:
+        batch_meta['codex_version'] = codex_cli.version()
     # 先答完第 1 遍的全部局面 × 档位，再答第 2 遍：中途撞额度时，已有的数据各档是齐的
     tasks = [(p, e, r) for r in range(1, a.reps + 1) for p in pos_all for e in efforts]
     todo = [t for t in tasks if not result_of(answer_path(out, t[0]['id'], t[1], t[2]))]
@@ -1120,7 +1125,9 @@ def main(argv=None):
     r.add_argument('--efforts', default=','.join(EFFORTS))
     r.add_argument('--reps', type=int, default=2)
     r.add_argument('--jobs', type=int, default=4, help='并发调用数')
-    r.add_argument('--model', default='opus')
+    r.add_argument('--model', default='opus',
+                   help='claude 模型名（默认 opus）；sol（= codex:gpt-6-sol）、deepseek（= profile 默认模型）、'
+                        'codex:<模型>、deepseek:<模型> 走 codex exec，只支持无状态，见 codex_cli.py')
     r.add_argument('--arm', help='档名：记录放 runs/quiz-<batch>/<档名>/<棋种>/；不给时布局同第一批')
     r.add_argument('--set', action='append', metavar='变量=值',
                    help='本档改的变量，可重复：view / show / legal / selfcheck / recite / threats / attackmap / reason（attackmap 待用户拍板，见上）')

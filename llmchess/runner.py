@@ -6,7 +6,7 @@ render / last_move_text / system_prompt / recite_score / exports / engine_spec /
 """
 import os, random, time, uuid
 
-from . import claude_cli, memory, opening, records
+from . import claude_cli, codex_cli, memory, opening, records
 from .claude_cli import Paused
 from .engine import Engine, EngineError
 
@@ -21,6 +21,9 @@ def other(side):
 
 def player_kind(spec):
     return spec.split(':', 1)[0]
+
+
+MODEL_KINDS = ('claude',) + codex_cli.KINDS     # 模型棋手：claude -p，或 codex exec（sol / DeepSeek，只支持无状态）
 
 
 def new_ctx(G, cfg, run_dir):
@@ -69,7 +72,7 @@ def pending_ply(recs, ply):
     p = {'ply': ply, 'bad': [], 'k': 0, 'flags': 0, 'redo': False, 'stat': records.new_stat()}
     costs = records.attempt_costs(recs)[0]            # 旧记录里 session 档的 cost 是会话累计值，按会话做差
     for r in recs:
-        if r['type'] != 'attempt' or r['ply'] != ply or not str(r.get('player', '')).startswith('claude'):
+        if r['type'] != 'attempt' or r['ply'] != ply or player_kind(str(r.get('player', ''))) not in MODEL_KINDS:
             continue
         records.add_usage(p['stat'], dict(r.get('usage') or {}, cost=costs[id(r)]), r.get('elapsed') or 0)
         if r.get('recite'):
@@ -97,9 +100,12 @@ def model_turn(ctx, side, moves, ban):
     """问模型走一步，返回 (着法或 None, 本步统计)。None 表示重试用完仍非法。"""
     G, cfg, st = ctx['G'], ctx['cfg'], ctx['st']
     sc = cfg['sides'][side]
-    model = cfg['players'][side].split(':', 1)[1]
+    kind, model = cfg['players'][side].split(':', 1)
     system = cfg['system'][side]
     mem = sc['memory']
+    codex = kind in codex_cli.KINDS
+    if codex and mem == 'session':
+        raise SystemExit('%s 棋手只支持无状态（stateless / notes），不支持 session' % kind)
     ply = len(st['moves']) + 1
     if mem == 'session' and sc['session_view'] == 'move' and ctx['sessions'].get(side) and st['moves']:
         body = '对方刚走：%s。%s' % (G.last_move_text(st), '你现在正被将军！' if G.in_check(st) else '')
@@ -122,7 +128,11 @@ def model_turn(ctx, side, moves, ban):
             prompt = memory.retry_prompt(sc, base, bad, cfg['retries'] + 1 - k)
         else:
             prompt = base
-        if mem == 'session':
+        if codex:
+            new, sid = False, None
+            files = codex_cli.prepare(kind, model, sc['effort'], system, ctx['cwd'])
+            cmd = codex_cli.command(kind, model, sc['effort'], *files, ctx['cwd'])
+        elif mem == 'session':
             sid = ctx['sessions'].get(side)
             new = sid is None
             sid = sid or str(uuid.uuid4())
@@ -145,11 +155,12 @@ def model_turn(ctx, side, moves, ban):
             log(ctx, dict({'type': 'limit_wait', 'ply': ply, 'side': side, 'attempt': k + 1}, **ctx.get('tags', {}),
                           **info))
         d, dt = claude_cli.call(cmd, prompt, ctx['cwd'], rebuild=rebuild,
-                                timeout=cfg.get('timeout') or claude_cli.TIMEOUT, on_fail=on_fail, on_wait=on_wait)
+                                timeout=cfg.get('timeout') or claude_cli.TIMEOUT, on_fail=on_fail, on_wait=on_wait,
+                                parse=codex_cli.parse if codex else None)
         if mem == 'session':
             sid = ctx['sessions'][side] = d.get('session_id') or sid
         reply = d.get('result') or ''
-        u = claude_cli.usage(d)
+        u = codex_cli.usage(d, model) if codex else claude_cli.usage(d)
         if mem == 'session':
             # --resume 返回的花费是整段会话的累计值：本次花费 = 累计值 − 同一会话上一次调用的累计值（被拦、空回复也算一次），
             # 原始累计值另存 cost_total 以便核对
@@ -250,7 +261,7 @@ def opening_turn(ctx, side, moves, ban):
     return mv, stat, None
 
 
-TURNS = {'claude': model_turn, 'engine': engine_turn, 'random': random_turn}
+TURNS = {'claude': model_turn, 'codex': model_turn, 'deepseek': model_turn, 'engine': engine_turn, 'random': random_turn}
 
 
 # ---------------------------------------------------------------- 一盘
