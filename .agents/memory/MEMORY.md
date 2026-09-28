@@ -2,3 +2,4 @@
 - [尽力而为、别做成大工程](best-effort-not-big-project.md) — 事不可为就停；额度充裕，可开 xhigh/max。
 - [思考延续是核心变量](thinking-carryover-is-key.md) — 用户假设每步丢思考是下得臭的根源；两家跨轮保留已核实。
 - [本轮范围与额度](round1-scope-and-quota.md) — 跑到方向性结论；冒烟后不等用户；Codex 额度紧，sol 可当棋手但要省。
+- [尽早收敛基础设施、棋手当真人](converge-infra-real-player.md) — 只给局面、不给提示与理由、会话连续下；只剩棋盘给法待定。
