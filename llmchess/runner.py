@@ -6,7 +6,7 @@ render / last_move_text / system_prompt / recite_score / exports / engine_spec /
 """
 import os, random, time, uuid
 
-from . import claude_cli, codex_cli, memory, opening, records
+from . import chat, claude_cli, codex_cli, memory, opening, records
 from .claude_cli import Paused
 from .engine import Engine, EngineError
 
@@ -23,7 +23,9 @@ def player_kind(spec):
     return spec.split(':', 1)[0]
 
 
-MODEL_KINDS = ('claude',) + codex_cli.KINDS     # 模型棋手：claude -p，或 codex exec（sol / DeepSeek，只支持无状态）
+MODEL_KINDS = ('claude',) + codex_cli.KINDS     # 模型棋手：claude / codex（GPT）/ deepseek
+# 调用走哪条路看 config 的 backend：'llm-chat'（新开的整盘，chat.py）；缺省是旧路（claude -p 直调、codex exec 只支持无状态），
+# 旧记录续跑和局面题都走旧路，逐字复现。
 
 
 def new_ctx(G, cfg, run_dir):
@@ -87,7 +89,7 @@ def pending_ply(recs, ply):
             p['k'] += 1
             p['stat']['illegal'] += 1
             p['stat']['noparse'] += r.get('move_text') is None
-            p['bad'].append((r.get('move_text') or '（没写）', r.get('reason')))
+            p['bad'].append((r.get('move_text') or '（没写）', r.get('reason'), r.get('feedback')))
     return p
 
 
@@ -103,11 +105,16 @@ def model_turn(ctx, side, moves, ban):
     kind, model = cfg['players'][side].split(':', 1)
     system = cfg['system'][side]
     mem = sc['memory']
-    codex = kind in codex_cli.KINDS
+    via_chat = cfg.get('backend') == 'llm-chat'
+    real = memory.real(sc)
+    codex = kind in codex_cli.KINDS and not via_chat
     if codex and mem == 'session':
         raise SystemExit('%s 棋手只支持无状态（stateless / notes），不支持 session' % kind)
     ply = len(st['moves']) + 1
-    if mem == 'session' and sc['session_view'] == 'move' and ctx['sessions'].get(side) and st['moves']:
+    if real:
+        # 着法记录只在新会话的第一条给（session 档之后前文里都有）；stateless / notes 每步都是新会话
+        body = G.render(st, sc, not (mem == 'session' and ctx['sessions'].get(side)))
+    elif mem == 'session' and sc['session_view'] == 'move' and ctx['sessions'].get(side) and st['moves']:
         body = '对方刚走：%s。%s' % (G.last_move_text(st), '你现在正被将军！' if G.in_check(st) else '')
     else:
         body = G.render(st, sc)
@@ -122,13 +129,21 @@ def model_turn(ctx, side, moves, ban):
     if p and p['ply'] == ply:                  # 续跑：接上暂停前这一步已经用掉的尝试
         bad, flags, k, redo, stat = p['bad'], p['flags'], p['k'], p['redo'], p['stat']
     while k < cfg['retries'] + 1:
-        if redo and mem == 'session':           # 上一条回复被拦或为空，前文已在会话里
+        if redo and mem == 'session' and ctx['sessions'].get(side):   # 上一条回复被拦或为空，前文已在会话里
             prompt = '请重新回答这一步。' + memory.ask(sc)
+        elif bad and real:
+            prompt = memory.retry_prompt_real(sc, base, [(t, memory.FEEDBACK[fb]) for t, _, fb in bad],
+                                              cfg['retries'] + 1 - k)
         elif bad:
-            prompt = memory.retry_prompt(sc, base, bad, cfg['retries'] + 1 - k)
+            prompt = memory.retry_prompt(sc, base, [(t, why) for t, why, _ in bad], cfg['retries'] + 1 - k)
         else:
             prompt = base
-        if codex:
+        if via_chat:
+            new = False
+            sid = ctx['sessions'].get(side) if mem == 'session' else None
+            cmd = chat.command(cfg['models'][side], sc['effort'], None if sid else system, sid,
+                               cfg.get('timeout') or claude_cli.TIMEOUT)
+        elif codex:
             new, sid = False, None
             files = codex_cli.prepare(kind, model, sc['effort'], system, ctx['cwd'])
             cmd = codex_cli.command(kind, model, sc['effort'], *files, ctx['cwd'])
@@ -154,14 +169,30 @@ def model_turn(ctx, side, moves, ban):
             # 撞额度在程序里等解除：开始、结束各一条，同样落进这盘（这题）自己的记录
             log(ctx, dict({'type': 'limit_wait', 'ply': ply, 'side': side, 'attempt': k + 1}, **ctx.get('tags', {}),
                           **info))
-        d, dt = claude_cli.call(cmd, prompt, ctx['cwd'], rebuild=rebuild,
-                                timeout=cfg.get('timeout') or claude_cli.TIMEOUT, on_fail=on_fail, on_wait=on_wait,
-                                parse=codex_cli.parse if codex else None)
-        if mem == 'session':
-            sid = ctx['sessions'][side] = d.get('session_id') or sid
+        if via_chat:
+            d, dt = chat.call(cmd, prompt, on_fail=on_fail, on_wait=on_wait)
+            u = chat.usage(d, kind)
+            if mem == 'session' and d.get('meta'):
+                sid = ctx['sessions'][side] = d['meta']['session']
+            if sid:
+                # llm-chat 给的是这一轮自己的花费；照旧记一个会话累计值（records.attempt_costs 按会话做差还原）
+                u['cost_total'] = ctx['cost_total'][sid] = (ctx['cost_total'].get(sid) or 0) + u['cost']
+        else:
+            d, dt = claude_cli.call(cmd, prompt, ctx['cwd'], rebuild=rebuild,
+                                    timeout=cfg.get('timeout') or claude_cli.TIMEOUT, on_fail=on_fail, on_wait=on_wait,
+                                    parse=codex_cli.parse if codex else None)
+            if mem == 'session':
+                sid = ctx['sessions'][side] = d.get('session_id') or sid
+            u = codex_cli.usage(d, model) if codex else claude_cli.usage(d)
+        if via_chat and kind == 'codex' and d.get('meta'):
+            used = chat.codex_tool_calls(d['meta'].get('session'))
+            if used:
+                log(ctx, {'type': 'flag', 'ply': ply, 'side': side, 'source': 'tool_call', 'session': sid,
+                          'count': used, 'text': (d.get('result') or '')[:500]})
+                raise Paused('第 %d 个半回合%s的 GPT 会话里出现 %d 次工具调用（隔离失效，交给人看）' % (
+                    ply, G.SIDES[side], used))
         reply = d.get('result') or ''
-        u = codex_cli.usage(d, model) if codex else claude_cli.usage(d)
-        if mem == 'session':
+        if mem == 'session' and not via_chat:
             # --resume 返回的花费是整段会话的累计值：本次花费 = 累计值 − 同一会话上一次调用的累计值（被拦、空回复也算一次），
             # 原始累计值另存 cost_total 以便核对
             total = u['cost']
@@ -171,7 +202,10 @@ def model_turn(ctx, side, moves, ban):
         # 安全分类器：回复正文被拦（这次不算非法，另算次数）；session 下再看会话记录里 claude 自动插的那条消息
         blocked = claude_cli.flagged(d)
         transcript = None
-        if mem == 'session':
+        if mem == 'session' and via_chat:
+            # GPT / DeepSeek 没有「被拦后自动插一条消息」这回事
+            hits = claude_cli.transcript_flags_at(chat.claude_transcript(sid)) if kind == 'claude' else []
+        elif mem == 'session':
             hits = claude_cli.transcript_flags(ctx['cwd'], sid)
             transcript = 'missing' if hits is None else len(hits)
             if hits and len(hits) > ctx['seen_flags'].get(sid, 0):
@@ -197,17 +231,18 @@ def model_turn(ctx, side, moves, ban):
             redo = True
             continue
         redo = False
-        text = memory.extract_move(reply)
+        text = memory.extract_move(reply, loose=real)
         mv, why = G.parse(st, text)
         if mv and not why and mv in ban:
             why = ban[mv]
+        fb = G.feedback(text, why) if real and why else None      # 新协议下告诉棋手的原因类别（memory.FEEDBACK）
         note = memory.extract_note(reply) if mem == 'notes' else None
         rs = G.recite_score(st, reply) if sc['recite'] == 'on' else None
         if rs:
             stat.setdefault('recite', []).append(rs)
         log(ctx, {'type': 'attempt', 'ply': ply, 'side': side, 'try': k + 1, 'player': cfg['players'][side],
                   'session': sid, 'prompt': prompt, 'reply': reply, 'move_text': text, 'move': mv,
-                  'legal': why is None, 'reason': why, 'note': note, 'recite': rs, 'transcript_flags': transcript,
+                  'legal': why is None, 'reason': why, 'feedback': fb, 'note': note, 'recite': rs, 'transcript_flags': transcript,
                   'usage': u, 'elapsed': round(dt, 1), 'claude': d})
         print('  %s 第 %d 次：%s → %s%s（%.0fs，输出 %d tok，思考 %d，$%.3f）' % (
             G.SIDES[side], k + 1, text, mv, '' if why is None else ' 非法：' + why, dt, u['out'], u['think'],
@@ -216,7 +251,7 @@ def model_turn(ctx, side, moves, ban):
             return mv, stat, note
         stat['illegal'] += 1
         stat['noparse'] += text is None
-        bad.append((text or '（没写）', why))
+        bad.append((text or '（没写）', why, fb))
         k += 1
     return None, stat, None
 

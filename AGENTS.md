@@ -54,7 +54,8 @@
 ## 硬约束
 
 - **棋手不准用引擎或规则库帮忙**：引擎只能当对手，或事后当裁判判昏招。Codex 当棋手前，先证明它的工具关掉了、调不到本机引擎。
-- **模型走 `claude -p`**，用订阅额度，不用 API 直连。思考深度每次显式传。
+- **整盘棋手走 llm-chat**（用户级 skill，只用不改，见 `llmchess/chat.py`）：Claude、GPT 走本机 CLI 的订阅额度，DeepSeek 走它的 HTTP 直连（只作辅助参考）；Claude 不走 API 直连。局面题和旧记录续跑仍是 `claude -p` / `codex exec` 直调。思考深度每次显式传。
+- **整盘协议是「模型就是真实棋手」**（`docs/design.md` 第九节）：不替棋手看棋（不报将军、吃子、威胁，不给合法着法），非法只说不合法；改提示先看那一节的逐句去留。
 - **仓库只在本地**，没有远端，不推送。
 - **规则判定照搬旧实现，不自己改棋规**：中国象棋规则在 `~/repos/jev-study/games/xiangqi/boards.py`（pyffish），国际象棋用 python-chess。第一轮的对弈脚本在 jev-study 本地分支 `archive/duel-web` 的 `games/xiangqi/llm_duel.py`，只读参考，别切那个分支。
 - 对局原始记录放被 git 忽略的目录，结论写进 `docs/`。结论必须写明盘数和条件，盘数少就说只能看方向。

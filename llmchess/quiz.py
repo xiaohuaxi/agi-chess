@@ -99,10 +99,10 @@ class QuizChess:
     def __getattr__(self, name):
         return getattr(C, name)
 
-    def render(self, st, sc):
+    def render(self, st, sc, fresh=True):
         b = st['board']
         ply = 2 * (b.fullmove_number - 1) + (b.turn == chess.BLACK)
-        return self._HEAD.sub('第 %d 回合（已走 %d 个半回合）' % (ply // 2 + 1, ply), C.render(st, sc), count=1)
+        return self._HEAD.sub('第 %d 回合（已走 %d 个半回合）' % (ply // 2 + 1, ply), C.render(st, sc, fresh), count=1)
 
 
 def game_module(game):
@@ -124,7 +124,8 @@ def build_state(pos):
 
 
 SET_KEYS = {'view': None, 'show': ('all', 'board', 'pieces', 'fen', 'boardpieces'), 'legal': ('none', 'list'), 'selfcheck': ('on', 'off'), 'recite': ('on', 'off'),
-            'threats': ('on', 'off'), 'attackmap': ('on', 'off'), 'reason': ('on', 'off')}
+            'threats': ('on', 'off'), 'attackmap': ('on', 'off'), 'reason': ('on', 'off'),
+            'protocol': ('legacy', 'real')}
 
 
 def parse_sets(G, items):

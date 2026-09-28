@@ -455,7 +455,8 @@ def view_grid(board):
     return '\n'.join(lines)
 
 
-def view_pieces(board):
+def view_pieces(board, count=True):
+    """count=False（新协议）不写「（16 子）」：数子也算替棋手看棋（design.md 第九节）。"""
     out = ['子力清单（ICCS 坐标）：']
     for side, red in (('红方', True), ('黑方', False)):
         parts, n = [], 0
@@ -465,7 +466,7 @@ def view_pieces(board):
             if sqs:
                 n += len(sqs)
                 parts.append('%s %s' % (NAME[letter.lower()][0 if red else 1], ' '.join(sqs)))
-        out.append('%s（%d 子）：%s' % (side, n, '；'.join(parts)))
+        out.append('%s（%d 子）：%s' % (side, n, '；'.join(parts)) if count else '%s：%s' % (side, '；'.join(parts)))
     return '\n'.join(out)
 
 
@@ -492,10 +493,10 @@ VIEWS = {'grid': lambda fen, bd: view_grid(bd), 'pieces': lambda fen, bd: view_p
          'board': lambda fen, bd: view_board(bd)}
 
 
-def history_text(st, n):
+def history_text(st, n, title='着法记录'):
     rec = st['record']
     if n == 0 or not rec:
-        return '' if n == 0 else '着法记录：（开局，还没有着法）'
+        return '' if n == 0 else '%s：（开局，还没有着法）' % title
     first = 0 if n < 0 else max(0, len(rec) - n)
     first -= first % 2                               # 从红方那步起，按回合成行
     lines = []
@@ -504,7 +505,7 @@ def history_text(st, n):
         if i + 1 < len(rec):
             row += '　%s（%s）' % (rec[i + 1], st['moves'][i + 1])
         lines.append(row)
-    head = '着法记录（中文记谱，括号里是 ICCS）' + ('' if first == 0 else '，只列最近 %d 个半回合，更早的省略' % (len(rec) - first))
+    head = title + '（中文记谱，括号里是 ICCS）' + ('' if first == 0 else '，只列最近 %d 个半回合，更早的省略' % (len(rec) - first))
     return head + '：\n' + '\n'.join(lines)
 
 
@@ -512,8 +513,11 @@ RECITE_ASK = ('回答时先复述当前局面，再思考和走棋。复述写 1
               '用和上面棋盘相同的字（红方 帅仕相马车炮兵，黑方 将士象馬車砲卒），空点写＋。')
 
 
-def render(st, sc):
-    """本步提示的局面部分（不含最后「请走一步」那句，那句由循环按思考延续方式补）。"""
+def render(st, sc, fresh=True):
+    """本步提示的局面部分（不含最后「请走一步」那句，那句由循环按思考延续方式补）。
+    新协议（sc['protocol'] == 'real'）走 render_real；fresh 只对它有用，见那里。"""
+    if sc.get('protocol') == 'real':
+        return render_real(st, sc, fresh)
     fen = st['fens'][-1]
     board, stm = board_of(fen)
     ply = len(st['moves'])
@@ -534,6 +538,41 @@ def render(st, sc):
     if sc['recite'] == 'on':
         parts.append(RECITE_ASK)
     return '\n\n'.join(parts)
+
+
+def render_real(st, sc, fresh):
+    """「模型就是真实棋手」：只给轮到谁、对方上一步、局面（默认只有子力清单，不写子数），不说是否被将军。
+    着法记录只在新会话的第一条给一次（fresh；session 档之后每步前文里已有），标题「此前已走着法」。"""
+    fen = st['fens'][-1]
+    board, stm = board_of(fen)
+    ply = len(st['moves'])
+    head = ['第 %d 回合（已走 %d 个半回合），轮到你（%s）走。' % (ply // 2 + 1, ply, SIDES[stm])]
+    if st['moves']:
+        head.append('对方刚走：%s（%s）' % (st['record'][-1], st['moves'][-1]))
+    parts = ['\n'.join(head)] + [view_pieces(board, count=False) if v == 'pieces' else VIEWS[v](fen, board)
+                                 for v in sc['view']]
+    if fresh and st['moves']:
+        h = history_text(st, sc['history'], '此前已走着法')
+        if h:
+            parts.append(h)
+    if sc['legal'] == 'list':
+        moves = legal_fen(fen)
+        parts.append('你的全部合法着法（共 %d 个）：%s' % (
+            len(moves), '、'.join('%s(%s)' % (notation(fen, m), m) for m in moves)))
+    if sc.get('attackmap') == 'on':
+        parts.append(attack_map(fen))
+    if sc['recite'] == 'on':
+        parts.append(RECITE_ASK)
+    return '\n\n'.join(parts)
+
+
+def feedback(text, why):
+    """新协议下告诉棋手的非法原因类别（memory.FEEDBACK 的键）：写法问题照实说，其余一律「不合法」。"""
+    if text is None:
+        return 'no_move'
+    if why.startswith('既不是 ICCS'):
+        return 'unreadable'
+    return 'illegal'
 
 
 def _flip(fen):
@@ -589,6 +628,8 @@ SELFCHECK = ('每步落子前先自查：\n'
 
 
 def system_prompt(side, sc, memory_text):
+    if sc.get('protocol') == 'real':
+        return system_real(side, sc, memory_text)
     s = ['你在下一盘中国象棋，执%s。对手是另一位棋手。目标是赢棋。' % SIDES[side],
          '规则按标准中国象棋：将死或困毙对方为胜；长将判负（这类着法会被当作不合规退回）；同一局面出现三次且不属于长将、长捉判和；'
          '连续一百个半回合没有吃子判和；满 %d 个半回合仍未分胜负判和。' % sc['max_plies'],
@@ -597,6 +638,27 @@ def system_prompt(side, sc, memory_text):
     if sc['selfcheck'] == 'on':
         s.append(SELFCHECK)
     s.append('回答格式：请用中文回答。可以先写简短的思路，最后一行只写「着法: 」加着法，用 ICCS 坐标（例如 着法: h2e2），'
+             '也可以用中文记谱（例如 着法: 炮二平五）。')
+    if sc.get('threats') == 'on':
+        s.append(THREATS_ASK)
+    return '\n\n'.join(s)
+
+
+ILLEGAL_RULE = '每步给出着法后，着法不合法或认不出会告诉你，由你重新选；一步里连续 %d 次都没给出合法着法判负。'
+
+
+def system_real(side, sc, memory_text):
+    """「模型就是真实棋手」的系统提示（design.md 第九节）：不要求中文、不要求说理由，只需给出着法；
+    赛制（禁着退回、非法重选上限）预先讲清。"""
+    s = ['你在下一盘中国象棋，执%s。对手是另一位棋手。目标是赢棋。' % SIDES[side],
+         '规则按标准中国象棋：将死或困毙对方为胜；不许长将、长捉，走出这类着法按不合法退回；同一局面出现三次且不属于长将、'
+         '长捉判和；连续一百个半回合没有吃子判和；满 %d 个半回合仍未分胜负判和。' % sc['max_plies'] +
+         ILLEGAL_RULE % (sc.get('retries', 3) + 1),
+         '坐标用 ICCS：纵线 a 到 i 从红方左手边数起，横线 0 到 9 从红方底线数起；一步棋写成起点加终点，例如 h2e2（红炮二平五）。',
+         memory_text]
+    if sc['selfcheck'] == 'on':
+        s.append(SELFCHECK)
+    s.append('回答格式：只需给出着法，写成一行「着法: 」加着法，用 ICCS 坐标（例如 着法: h2e2），'
              '也可以用中文记谱（例如 着法: 炮二平五）。')
     if sc.get('threats') == 'on':
         s.append(THREATS_ASK)

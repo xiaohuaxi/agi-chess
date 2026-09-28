@@ -32,11 +32,34 @@ _MOVE = re.compile(r'着法[ \t]*[:：]\s*(?![\s*`>#_\-]*着法)(\S.*)')
 _NOTE = re.compile(r'便条\s*[:：]\s*(.*?)(?=\n[\s*`>]*着法\s*[:：]|\Z)', re.S)
 
 
+# 「模型就是真实棋手」协议（protocol=real，整盘默认；design.md 第九节）下的说法。旧说法（protocol 缺省 / legacy）一字不动，
+# 局面题旧档和旧记录照旧复现。session 那句只说「同一段连续对话」，不提思考还在不在（不做保证，也不引安全分类器）。
+SYSTEM_REAL = {
+    'stateless': '每一步都是单独提问，你看不到自己之前的回答。每一步都会给你当前局面和对方上一步着法。',
+    'notes': '每一步都是单独提问。每步回答里可以附一段便条，程序会原样放进下一步的提示里。'
+             '每一步都会给你当前局面和对方上一步着法。',
+    'session': '本盘在同一段连续对话中进行。每一步都会给你当前局面和对方上一步着法。',
+}
+ASK_REAL = '请走一步。'
+ASK_NOTES_REAL = ('请走一步。回答的最后先写一段以「便条: 」开头的话（不超过约 150 字，写什么由你定），'
+                  '程序会在下一步的提示里原样给你看；然后另起一行写「着法: 」加你的着法。')
+# 非法后告诉棋手的话（astra 定，design.md 第九节）：纯写法问题照实说，和局面有关的一律只说「不合法」，
+# 不点明被将、牵制、照面、长将长捉这类会泄露对方攻击关系的原因。完整原因只进记录（attempt.reason）。
+FEEDBACK = {'no_move': '回答里没有找到着法', 'unreadable': '这步的写法认不出来',
+            'ambiguous': '这步的写法对应不止一步棋，请写明起点和终点坐标', 'illegal': '这步不合法'}
+
+
+def real(sc):
+    return sc.get('protocol') == 'real'
+
+
 def system_text(sc):
-    return SYSTEM[sc['memory']]
+    return (SYSTEM_REAL if real(sc) else SYSTEM)[sc['memory']]
 
 
 def ask(sc):
+    if real(sc):
+        return ASK_NOTES_REAL if sc['memory'] == 'notes' else ASK_REAL
     return ASK_NOTES if sc['memory'] == 'notes' else ASK
 
 
@@ -50,10 +73,28 @@ def notes_text(notes, keep):
     return '你前几步写的便条（从早到晚）：\n' + '\n'.join('%d. %s' % (i + 1, n) for i, n in enumerate(notes))
 
 
-def extract_move(reply):
-    """回复里最后一处「着法: xxx」后面的文字；没有返回 None。"""
+_MOVE_EN = re.compile(r'(?i)\bmove[ \t]*[:：]\s*(\S.*)')
+_BARE = re.compile(r'^[\s*`>#_\-]*(.*?)[\s*`。.]*$')
+
+
+def extract_move(reply, loose=False):
+    """回复里最后一处「着法: xxx」后面的文字；没有返回 None。
+    loose（新协议）：没有「着法:」时再认英文「Move: xxx」，还没有就取最后一个非空行（不超过 30 个字符才算，
+    去掉 markdown 记号）——棋手只给一行着法、或用英文作答也能读出来；读出的是不是着法由棋种的 parse 判。"""
     hits = _MOVE.findall(reply or '')
-    return hits[-1].strip() if hits else None
+    if hits:
+        return hits[-1].strip()
+    if not loose:
+        return None
+    hits = _MOVE_EN.findall(reply or '')
+    if hits:
+        return hits[-1].strip()
+    lines = [x for x in (reply or '').splitlines() if x.strip()]
+    if lines:
+        last = _BARE.match(lines[-1].strip())[1].strip()
+        if last and len(last) <= 30:
+            return last
+    return None
 
 
 def extract_note(reply):
@@ -63,6 +104,14 @@ def extract_note(reply):
         return None
     note = hits[-1].strip().strip('`*').strip()
     return note or None
+
+
+def retry_prompt_real(sc, base, bad, left):
+    """新协议的重选话术。bad 是 [(模型写的, 给棋手看的原因)]；session 只说刚才那步，其余把各次错着列回完整提示。"""
+    tail = '本步还可重选 %d 次，用完判负。' % left
+    if sc['memory'] == 'session':
+        return '你刚才的着法「%s」：%s。请重新走一步（%s）' % (bad[-1][0], bad[-1][1], tail)
+    return base + '\n\n你这一步前面给出的着法：\n' + '\n'.join('「%s」：%s' % x for x in bad) + '\n请重新走一步（%s）' % tail
 
 
 def retry_prompt(sc, base, bad, left):

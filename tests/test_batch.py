@@ -37,9 +37,9 @@ class Helpers(unittest.TestCase):
 
     def test_batch_meta_show(self):
         # 批次记实际给法：中国象棋默认 pieces 记成 show；all（含国际象棋默认、显式 show=all）不记，和改默认前的旧批次对得上
-        def meta(game, sets, player='claude:opus'):
+        def meta(game, sets, player='claude:opus', protocol='legacy'):
             a = argparse.Namespace(game=game, player=player, effort='xhigh', memory='stateless', set=sets,
-                                   opening='', max_plies=200, retries=3)
+                                   opening='', max_plies=200, retries=3, protocol=protocol)
             return B.batch_meta(a)
         old = {'game': 'xiangqi', 'player': 'claude:opus', 'effort': 'xhigh', 'memory': 'stateless', 'set': [],
                'opening': '', 'max_plies': 200, 'retries': 3}
@@ -50,6 +50,8 @@ class Helpers(unittest.TestCase):
         self.assertEqual(meta('xiangqi', None, 'engine:fsf:nodes=10'), dict(old, player='engine:fsf:nodes=10'))
         self.assertEqual(meta('chess', None), dict(old, game='chess'))
         self.assertEqual(meta('chess', ['show=board', 'legal=list']), dict(old, game='chess', set=['legal=list'], show='board'))
+        # 新协议的批次记 protocol；旧批次的 batch.json 没有这一项，只有 legacy 对得上
+        self.assertEqual(meta('chess', None, protocol='real'), dict(old, game='chess', protocol='real'))
 
     def test_wilson(self):
         lo, hi = B.wilson(5, 10)
@@ -205,7 +207,7 @@ def ns(**kw):
     """batch run 的参数（只含驱动拼命令要用的那些），kw 覆盖。"""
     import argparse
     base = dict(game='chess', player='claude:opus', effort='xhigh', memory='stateless', max_plies=200, retries=3,
-                set=None, opening='random:8', timeout=None, on_limit='wait')
+                set=None, opening='random:8', timeout=None, on_limit='wait', protocol='legacy')
     base.update(kw)
     return argparse.Namespace(**base)
 
@@ -340,9 +342,10 @@ class FakeClaudeLimit(unittest.TestCase):
             f.write(m)
 
     def argv(self, batch, *extra):
+        # 假 claude 顶的是旧路（claude -p 直调），所以用 legacy 协议
         return ['run', '--game', 'chess', '--batch', batch, '--out', self.tmp, '--player', 'claude:opus',
                 '--opp', 'random', '--seeds', '1-2', '--opening', 'none', '--max-plies', '6', '--retries', '0',
-                '--no-analyze'] + list(extra)
+                '--no-analyze', '--protocol', 'legacy'] + list(extra)
 
     def recs(self, bdir, name):
         return records.read(os.path.join(bdir, name, 'game.jsonl'))

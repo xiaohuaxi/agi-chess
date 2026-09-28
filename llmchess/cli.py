@@ -7,7 +7,12 @@
     python3 -m llmchess play --game chess --tag c3 --black engine:maia-1500 --opening random:8 --opening-seed 1
     python3 -m llmchess resume runs/x1                                                  # 暂停后接着下
 
-棋手：claude:<模型>（默认 claude:opus）/ engine:<引擎>[:参数] / random。
+协议 --protocol（默认 real）：real 是「模型就是真实棋手」（design.md 第九节）——每方一段连续会话（memory 默认 session），
+  只给局面、轮到谁、对方上一步，不报将军、不给合法着法；非法着法只告诉它不合法、让它重选（每步最多 retries+1 次，
+  用完判负）；模型调用走 llm-chat（chat.py）。legacy 是改协议之前的提示和调用（claude -p 直调，memory 默认 stateless），
+  用来续跑、复现旧实验；旧记录的 config 里没有 protocol，resume 自动按旧的走。
+棋手：claude:<模型>（默认 claude:opus）/ codex:<GPT 模型，如 sol 或 gpt-6-sol> / deepseek:<模型，默认 deepseek-v4-pro>
+  （后两种只在 real 下）/ engine:<引擎>[:参数] / random。
   国际象棋引擎 maia-1100 … maia-1900（lc0，go nodes 1）、stockfish[:elo=N|nodes=N|depth=N|movetime=毫秒]；
   中国象棋引擎 fsf[:nodes=N|depth=N|movetime=毫秒]（Fairy-Stockfish，默认 nodes=1000）。
 模型相关变量（公共值用 --变量，一方单设用 --w / --b 变量=值，w 是先走的红方 / 白方）：
@@ -28,7 +33,7 @@
 """
 import argparse, importlib, json, os, pathlib, random, subprocess, sys, tempfile, uuid
 
-from . import claude_cli, memory, opening, records, runner
+from . import chat, claude_cli, memory, opening, records, runner
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RUNS = ROOT / 'runs'
@@ -44,6 +49,8 @@ def game_module(name):
 
 def side_cfg(a, G, overrides, max_plies):
     sc = {k: getattr(a, k) for k in SIDE_KEYS}
+    if sc['memory'] is None:
+        sc['memory'] = 'session' if a.protocol == 'real' else 'stateless'
     if sc['show'] and sc['view']:
         raise SystemExit('--show 和 --view 二选一')
     own = set()
@@ -74,12 +81,20 @@ def side_cfg(a, G, overrides, max_plies):
     if sc['recite'] == 'on' and not G.RECITE:
         raise SystemExit('这种棋还没有复述打分，recite 只能 off')
     sc['max_plies'] = max_plies
+    if a.protocol == 'real':
+        # 旧协议的 config 里没有这两项，保持逐字不变
+        if sc['legal'] != 'none' or sc['session_view'] != 'full':
+            raise SystemExit('real 协议下不给合法着法（legal=none）、每步都给完整局面（session_view=full）；要用请 --protocol legacy')
+        sc['protocol'] = 'real'
+        sc['retries'] = a.retries
     return sc
 
 
-def check_player(G, spec):
+def check_player(G, spec, protocol='legacy'):
     kind = runner.player_kind(spec)
     if kind == 'claude' and ':' in spec and spec.split(':', 1)[1]:
+        return
+    if kind in ('codex', 'deepseek') and protocol == 'real':
         return
     if kind == 'random' and spec == 'random':
         return
@@ -89,7 +104,8 @@ def check_player(G, spec):
         except ValueError as e:
             raise SystemExit(str(e))
         return
-    raise SystemExit('棋手写成 claude:<模型> / engine:<引擎>[:参数] / random，收到 %r' % spec)
+    raise SystemExit('棋手写成 claude:<模型> / codex:<模型> / deepseek[:<模型>]（后两种只在 real 协议下）/ '
+                     'engine:<引擎>[:参数] / random，收到 %r' % spec)
 
 
 def commit():
@@ -106,14 +122,29 @@ def build_cfg(a):
     G = game_module(a.game)
     players = {'w': a.red or a.white or 'claude:opus', 'b': a.black or 'claude:opus'}
     for s in 'wb':
-        check_player(G, players[s])
+        if players[s] == 'deepseek':
+            players[s] = 'deepseek:' + chat.DEEPSEEK_DEFAULT
+        check_player(G, players[s], a.protocol)
     sides = {'w': side_cfg(a, G, a.w, a.max_plies), 'b': side_cfg(a, G, a.b, a.max_plies)}
     cfg = {'game': a.game, 'tag': a.tag, 'players': players, 'sides': sides, 'retries': a.retries,
            'max_plies': a.max_plies, 'seed': a.seed if a.seed is not None else random.randrange(10 ** 9),
            'forfeit': runner.FORFEIT_NOTE, 'timeout': a.timeout}
     cfg['system'] = {s: G.system_prompt(s, sides[s], memory.system_text(sides[s])) for s in 'wb'}
-    cfg['commands'] = {s: claude_cli.shown(claude_cli.command(players[s].split(':', 1)[1], sides[s]['effort'], '-'))
-                       for s in 'wb' if runner.player_kind(players[s]) == 'claude'}
+    models = [s for s in 'wb' if runner.player_kind(players[s]) in runner.MODEL_KINDS]
+    if a.protocol == 'real':
+        cfg['protocol'] = 'real'
+        cfg['backend'] = 'llm-chat'
+        cfg['models'] = {}
+        for s in models:
+            kind, name = players[s].split(':', 1)
+            if kind == 'deepseek' and sides[s]['effort'] not in chat.DEEPSEEK_EFFORTS:
+                raise SystemExit('DeepSeek 只有 %s 三档思考，收到 %r' % ('/'.join(chat.DEEPSEEK_EFFORTS), sides[s]['effort']))
+            cfg['models'][s] = chat.model_id(kind, name)
+        cfg['llm_chat'] = chat.script_info()
+        cfg['commands'] = {s: chat.shown(cfg['models'][s], sides[s]['effort']) for s in models}
+    else:
+        cfg['commands'] = {s: claude_cli.shown(claude_cli.command(players[s].split(':', 1)[1], sides[s]['effort'], '-'))
+                           for s in models}
     cfg['engines'] = {s: G.engine_spec(players[s].split(':', 1)[1])
                       for s in 'wb' if runner.player_kind(players[s]) == 'engine'}
     return G, cfg
@@ -152,7 +183,8 @@ def dry_run_position(G, cfg, tmp):
         G.push(st, mv)
     side = G.turn(st)
     kind = runner.player_kind(cfg['players'][side])
-    if kind != 'claude' and runner.player_kind(cfg['players'][runner.other(side)]) == 'claude' and G.ending(st) is None:
+    if kind not in runner.MODEL_KINDS and runner.player_kind(cfg['players'][runner.other(side)]) in runner.MODEL_KINDS \
+            and G.ending(st) is None:
         if kind == 'engine':
             ctx['engines'][side] = runner.Engine(G.engine_spec(cfg['players'][side].split(':', 1)[1])).start()
         try:
@@ -225,8 +257,10 @@ def main(argv=None):
     p.add_argument('--red', help='中国象棋红方（同 --white）')
     p.add_argument('--white', help='国际象棋白方（同 --red）')
     p.add_argument('--black')
+    p.add_argument('--protocol', choices=('real', 'legacy'), default='real',
+                   help='real（默认）：模型就是真实棋手、走 llm-chat；legacy：改协议之前的提示和 claude -p 直调')
     p.add_argument('--effort', default='medium')
-    p.add_argument('--memory', default='stateless')
+    p.add_argument('--memory', default=None, help='stateless / notes / session；默认 real 下 session、legacy 下 stateless')
     p.add_argument('--show', default=None, help='局面怎么呈现，默认：中国象棋 pieces；国际象棋 all（fen,ascii）；和 --view 二选一')
     p.add_argument('--view', default=None, help='自定义呈现组合（逗号分隔），和 --show 二选一')
     p.add_argument('--history', type=int, default=-1)

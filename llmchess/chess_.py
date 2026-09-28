@@ -253,7 +253,7 @@ def view_ascii(b):
     return '字符棋盘（上方是黑方，下方是白方；%s）：\n%s' % (LEGEND, '\n'.join(rows))
 
 
-def view_pieces(b):
+def view_pieces(b, count=True):
     out = ['子力清单：']
     board = _pieces(b)
     for side, white in (('白方', True), ('黑方', False)):
@@ -264,7 +264,7 @@ def view_pieces(b):
             if sqs:
                 n += len(sqs)
                 parts.append('%s %s' % (PIECE_ZH[letter.lower()], ' '.join(sqs)))
-        out.append('%s（%d 子）：%s' % (side, n, '；'.join(parts)))
+        out.append('%s（%d 子）：%s' % (side, n, '；'.join(parts)) if count else '%s：%s' % (side, '；'.join(parts)))
     return '\n'.join(out)
 
 
@@ -301,8 +301,11 @@ def history_text(st, n):
     return head + '：\n' + '\n'.join(lines)
 
 
-def render(st, sc):
-    """本步提示的局面部分（不含最后「请走一步」那句，那句由循环按思考延续方式补）。"""
+def render(st, sc, fresh=True):
+    """本步提示的局面部分（不含最后「请走一步」那句，那句由循环按思考延续方式补）。
+    新协议（sc['protocol'] == 'real'）走 render_real；fresh 只对它有用，见那里。"""
+    if sc.get('protocol') == 'real':
+        return render_real(st, sc, fresh)
     b = st['board']
     ply = len(st['moves'])
     head = ['第 %d 回合（已走 %d 个半回合），轮到你（%s）走。' % (ply // 2 + 1, ply, SIDES[turn(st)]),
@@ -319,6 +322,40 @@ def render(st, sc):
     if sc.get('attackmap') == 'on':
         parts.append(attack_map(b))
     return '\n\n'.join(parts)
+
+
+def render_real(st, sc, fresh):
+    """「模型就是真实棋手」：只给轮到谁、对方上一步、局面（默认 FEN + 字母棋盘），不说是否被将军。
+    对方上一步和着法记录只写 UCI 坐标：SAN 带「+」「#」，等于替它报将军。着法记录只在新会话的第一条给一次（fresh）。"""
+    b = st['board']
+    ply = len(st['moves'])
+    head = ['第 %d 回合（已走 %d 个半回合），轮到你（%s）走。' % (ply // 2 + 1, ply, SIDES[turn(st)])]
+    if st['moves']:
+        head.append('对方刚走：%s' % st['moves'][-1])
+    parts = ['\n'.join(head)] + [view_pieces(b, count=False) if v == 'pieces' else VIEWS[v](st) for v in sc['view']]
+    if fresh and st['moves'] and sc['history'] != 0:
+        first = 0 if sc['history'] < 0 else max(0, ply - sc['history'])
+        first -= first % 2
+        rows = ['%d. %s' % (i // 2 + 1, ' '.join(st['moves'][i:i + 2])) for i in range(first, ply, 2)]
+        parts.append('此前已走着法（UCI）' + ('' if first == 0 else '，只列最近 %d 个半回合' % (ply - first)) + '：\n' +
+                     '\n'.join(rows))
+    if sc['legal'] == 'list':
+        ms = sorted(b.legal_moves, key=lambda m: m.uci())
+        parts.append('你的全部合法着法（共 %d 个）：%s' % (len(ms), '、'.join('%s(%s)' % (b.san(m), m.uci()) for m in ms)))
+    if sc.get('attackmap') == 'on':
+        parts.append(attack_map(b))
+    return '\n\n'.join(parts)
+
+
+def feedback(text, why):
+    """新协议下告诉棋手的非法原因类别（memory.FEEDBACK 的键）：写法问题照实说，其余一律「不合法」。"""
+    if text is None:
+        return 'no_move'
+    if why.startswith('既不是 UCI'):
+        return 'unreadable'
+    if '有两个以上的子都能走' in why:
+        return 'ambiguous'
+    return 'illegal'
 
 
 def attack_map(b):
@@ -356,6 +393,8 @@ SELFCHECK = ('每步落子前先自查：\n'
 
 
 def system_prompt(side, sc, memory_text):
+    if sc.get('protocol') == 'real':
+        return system_real(side, sc, memory_text)
     s = ['你在下一盘国际象棋，执%s。对手是另一位棋手。目标是赢棋。' % SIDES[side],
          '规则按标准国际象棋：将死对方为胜；逼和、双方子力都不足以将死判和；同一局面出现三次、或五十回合没有吃子和兵的走动，'
          '程序自动替你们申诉判和；满 %d 个半回合仍未分胜负判和。' % sc['max_plies'],
@@ -365,6 +404,25 @@ def system_prompt(side, sc, memory_text):
         s.append(SELFCHECK)
     s.append('回答格式：请用中文回答。可以先写简短的思路，最后一行只写「着法: 」加着法，用 UCI 坐标写起点加终点（例如 着法: e2e4；'
              '升变在后面加棋子字母，如 e7e8q；易位写王的走法，如 e1g1），也可以用 SAN（例如 着法: Nf3、着法: O-O）。')
+    if sc.get('threats') == 'on':
+        s.append(THREATS_ASK)
+    return '\n\n'.join(s)
+
+
+ILLEGAL_RULE = '每步给出着法后，着法不合法或认不出会告诉你，由你重新选；一步里连续 %d 次都没给出合法着法判负。'
+
+
+def system_real(side, sc, memory_text):
+    """「模型就是真实棋手」的系统提示（design.md 第九节），和 xiangqi.system_real 同构。"""
+    s = ['你在下一盘国际象棋，执%s。对手是另一位棋手。目标是赢棋。' % SIDES[side],
+         '规则按标准国际象棋：将死对方为胜；逼和、双方子力都不足以将死判和；同一局面出现三次、或五十回合没有吃子和兵的走动，'
+         '程序自动替你们申诉判和；满 %d 个半回合仍未分胜负判和。' % sc['max_plies'] + ILLEGAL_RULE % (sc.get('retries', 3) + 1),
+         '坐标：纵线 a 到 h 从白方左手边数起，横线 1 到 8 从白方底线数起。',
+         memory_text]
+    if sc['selfcheck'] == 'on':
+        s.append(SELFCHECK)
+    s.append('回答格式：只需给出着法，写成一行「着法: 」加着法，用 UCI 坐标写起点加终点（例如 着法: e2e4；升变在后面加棋子字母，'
+             '如 e7e8q；易位写王的走法，如 e1g1），也可以用 SAN（例如 着法: Nf3、着法: O-O）。')
     if sc.get('threats') == 'on':
         s.append(THREATS_ASK)
     return '\n\n'.join(s)

@@ -8,7 +8,9 @@
 
 一批 = runs/<批>/（--out 改上级目录），一盘一个子目录，名字是 <对手>-s<种子>-<w|b>：种子同时是开局种子和随机走子种子，
 w / b 是「我方」（--player，默认 claude:opus）执先走的一方（红 / 白）还是黑方。--colors both 时同一开局两色各一盘。
-我方的变量：--effort（默认 xhigh）、--memory（默认 stateless）、--set 变量=值（可重复，只加在我方，变量同 play 的 --w / --b）；
+协议 --protocol 同 play（默认 real：连续会话、走 llm-chat，memory 默认 session）；改协议之前开的批次要续跑、追加，
+  得带 --protocol legacy（和它当初的 --memory），batch.json 里没有 protocol 就是 legacy。
+我方的变量：--effort（默认 xhigh）、--memory（默认 real 下 session、legacy 下 stateless）、--set 变量=值（可重复，只加在我方，变量同 play 的 --w / --b）；
 其余照 play 的默认值。随机开局默认国际象棋 random:8、中国象棋 random:6，--opening none 关掉。
 对手写法同 play 的棋手，engine: 前缀可省：random、maia-1100 … maia-1900、stockfish:elo=1600、fsf:nodes=100。
 
@@ -36,7 +38,7 @@ w / b 是「我方」（--player，默认 claude:opus）执先走的一方（红
 """
 import argparse, concurrent.futures, json, math, os, re, signal, subprocess, sys, threading
 
-from . import analyze, claude_cli, cli, opening, records
+from . import analyze, claude_cli, cli, opening, records, runner
 
 ROOT = cli.ROOT
 DEFAULT_OPENING = {'chess': 'random:8', 'xiangqi': 'random:6'}
@@ -60,7 +62,7 @@ def parse_seeds(text):
 
 
 def full_spec(spec):
-    return spec if spec.split(':', 1)[0] in ('claude', 'engine', 'random') else 'engine:' + spec
+    return spec if spec.split(':', 1)[0] in ('claude', 'codex', 'deepseek', 'engine', 'random') else 'engine:' + spec
 
 
 def slug(spec):
@@ -101,6 +103,8 @@ def batch_meta(a):
     show = kv.get('show') or (None if 'view' in kv else cli.game_module(a.game).DEFAULT_SHOW)
     meta = {'game': a.game, 'player': a.player, 'effort': a.effort, 'memory': a.memory, 'set': sorted(sets),
             'opening': a.opening, 'max_plies': a.max_plies, 'retries': a.retries}
+    if a.protocol != 'legacy':                   # 旧批次的 batch.json 没有这一项，legacy 照旧对得上
+        meta['protocol'] = a.protocol
     if show not in (None, 'all') and a.player.startswith('claude:'):
         meta['show'] = show
     return meta
@@ -160,7 +164,7 @@ def play_cmd(a, gdir, opp, seed, side):
     players = {side: a.player, other(side): opp}
     cmd = [sys.executable, '-m', 'llmchess', 'play', '--game', a.game, '--tag', os.path.basename(gdir),
            '--out', os.path.dirname(gdir), '--white', players['w'], '--black', players['b'],
-           '--effort', a.effort, '--memory', a.memory, '--max-plies', str(a.max_plies), '--retries', str(a.retries),
+           '--protocol', a.protocol, '--effort', a.effort, '--memory', a.memory, '--max-plies', str(a.max_plies), '--retries', str(a.retries),
            '--seed', str(seed), '--stop-file', os.path.join(os.path.dirname(gdir), STOP)]
     for kv in a.set or []:
         cmd += ['--' + side, kv]
@@ -305,10 +309,12 @@ def end_text(end, side):
 def cmd_run(a):
     G = cli.game_module(a.game)
     a.player = full_spec(a.player)
-    cli.check_player(G, a.player)
+    cli.check_player(G, a.player, a.protocol)
+    if a.memory is None:
+        a.memory = 'session' if a.protocol == 'real' else 'stateless'
     opps = [full_spec(o) for o in a.opp]
     for o in opps:
-        cli.check_player(G, o)
+        cli.check_player(G, o, a.protocol)
     if a.opening is None:
         a.opening = DEFAULT_OPENING[a.game]
     if a.opening == 'none':
@@ -463,7 +469,8 @@ def markdown(res):
              '| 批次 | 我方 | 对手 | 下完/共 | 胜-和-负 | 得分率 | 95%% 区间 | 大失误（率，分母） | ACPL | 独立盘数 | 第 %d 个半回合局面重合 |'
              % CHECK_PLY, '|' + '---|' * 11]
     for g in res['groups']:
-        me = g['player'] + (' %s %s' % (g['effort'], g['memory']) if g['player'].startswith('claude') else '')
+        me = g['player'] + (' %s %s' % (g['effort'], g['memory'])
+                            if g['player'].split(':', 1)[0] in runner.MODEL_KINDS else '')
         lines.append('| %s | %s | %s | %d/%d | %d-%d-%d | %s | %s | %s | %s | %d | %s |' % (
             g['batch'], me, g['opponent'], g['finished'], g['games'], g['win'], g['draw'], g['loss'],
             _pct(g['score_rate']), '–' if g['ci95'][0] is None else '%s–%s' % (_pct(g['ci95'][0]), _pct(g['ci95'][1])),
@@ -518,7 +525,8 @@ def main(argv=None):
     p.add_argument('--colors', default='both', choices=('both', 'w', 'b'), help='我方执哪方，both = 同一开局两色各一盘')
     p.add_argument('--opening', help='random:N 或 none；默认国际象棋 random:8、中国象棋 random:6')
     p.add_argument('--effort', default='xhigh')
-    p.add_argument('--memory', default='stateless')
+    p.add_argument('--protocol', choices=('real', 'legacy'), default='real', help='同 play 的 --protocol')
+    p.add_argument('--memory', default=None, help='默认 real 下 session、legacy 下 stateless')
     p.add_argument('--set', action='append', metavar='变量=值', help='只加在我方的变量（同 play 的 --w / --b），可重复')
     p.add_argument('--max-plies', dest='max_plies', type=int, default=200)
     p.add_argument('--retries', type=int, default=3)

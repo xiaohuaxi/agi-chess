@@ -171,7 +171,8 @@ def _iso(t):
     return datetime.datetime.fromtimestamp(t).astimezone().isoformat(timespec='seconds')
 
 
-def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, on_fail=None, on_wait=None, parse=None):
+def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, on_fail=None, on_wait=None, parse=None,
+         run=None):
     """跑一次 claude -p。返回 (解析后的 JSON, 用时秒)。调不通按 waits 重试；撞额度见下。
     rebuild：每次重试前重新拼命令（新会话第一次调用超时时，会话可能已经建好，重试要改用 --resume）。
     timeout：单次调用的超时秒数。
@@ -185,7 +186,9 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, 
     stopped}。等待中收到停止信号（STOP）立刻醒来抛 Paused，和旧的撞额度暂停一样可以续跑。
     on_fail / on_wait 自己出错只打一行，不影响调用。
     parse(stdout)：把输出解析成 dict（认不出返回 None 或抛 ValueError）；不给就按 claude -p 的单个 JSON 读。
-    codex exec 的棋手（codex_cli）借这一套重试和等额度，只换解析。"""
+    codex exec 的棋手（codex_cli）借这一套重试和等额度，只换解析。
+    run(cmd, prompt, cwd, env, timeout) -> (stdout, stderr, 退出码)：换掉「提示放在命令行最后一个参数」这种跑法，超时抛
+    subprocess.TimeoutExpired。整盘走 llm-chat（chat.run）时用它：提示走 stdin，输出折成一个 JSON 串。"""
     env = dict(os.environ, CLAUDE_CODE_DISABLE_CLAUDE_MDS='1')
     last = None
     n = lim = calls = 0                        # n：失败次数（占 waits）；lim：撞额度等了几次；calls：总共调了几次
@@ -206,9 +209,12 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, 
         t0 = time.time()
         timed_out = False
         try:
-            p = subprocess.run(cmd + [prompt], cwd=cwd, env=env, capture_output=True, text=True,
-                               stdin=subprocess.DEVNULL, timeout=timeout)
-            out, err, rc = p.stdout, p.stderr, p.returncode
+            if run:
+                out, err, rc = run(cmd, prompt, cwd, env, timeout)
+            else:
+                p = subprocess.run(cmd + [prompt], cwd=cwd, env=env, capture_output=True, text=True,
+                                   stdin=subprocess.DEVNULL, timeout=timeout)
+                out, err, rc = p.stdout, p.stderr, p.returncode
         except subprocess.TimeoutExpired:
             out, err, rc, timed_out = '', 'timeout %ds' % timeout, -1, True
         dt = time.time() - t0
@@ -278,8 +284,12 @@ def transcript_path(cwd, session):
 def transcript_flags(cwd, session):
     """会话记录里提到安全分类器的用户消息（claude 拦截后自动插入的那条）。找不到记录返回 None。
     我们自己的提示里不会出现 safeguard / flagged，所以用户消息里出现就是 claude 插的。"""
-    path = transcript_path(cwd, session)
-    if not path.exists():
+    return transcript_flags_at(transcript_path(cwd, session))
+
+
+def transcript_flags_at(path):
+    """同 transcript_flags，直接给会话记录文件路径（llm-chat 的 Claude 会话用，见 chat.claude_transcript）。"""
+    if path is None or not path.exists():
         return None
     hits = []
     for line in path.read_text(encoding='utf-8', errors='replace').splitlines():
