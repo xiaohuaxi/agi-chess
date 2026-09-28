@@ -3,7 +3,7 @@
 
 绝不调 codex 本体：subprocess.run 和模型目录都打桩；文件写进 tempfile.mkdtemp() 的独立目录，跑完删掉。
 """
-import contextlib, io, json, os, shutil, subprocess, tempfile, unittest
+import contextlib, io, json, os, shutil, subprocess, tempfile, threading, unittest
 from unittest import mock
 
 import chess
@@ -190,6 +190,31 @@ class Prepare(unittest.TestCase):
         self.assertEqual(CATALOG[0]['shell_type'], 'unified_exec')  # 不改原表
         with self.assertRaises(SystemExit):
             X.patch_model(CATALOG, 'no-such')
+
+    def test_write_once_threads_same_path(self):
+        # quiz --jobs>1 时同进程多个线程同时写同一个按内容哈希命名的文件：等所有线程都写完临时文件再一起改名，
+        # 临时文件名若撞了，后改名的会找不到源文件（FileNotFoundError）
+        n, path, text = 6, X.pathlib.Path(self.tmp) / 'system-x.md', '系统提示' * 100
+        gate, real, errs = threading.Barrier(n, timeout=10), os.replace, []
+
+        def replace(src, dst):
+            gate.wait()
+            real(src, dst)
+
+        def work():
+            try:
+                X._write_once(path, text)
+            except Exception as e:
+                errs.append(e)
+        with mock.patch.object(X.os, 'replace', replace):
+            ts = [threading.Thread(target=work) for _ in range(n)]
+            for t in ts:
+                t.start()
+            for t in ts:
+                t.join()
+        self.assertEqual(errs, [])
+        self.assertEqual(path.read_text(encoding='utf-8'), text)
+        self.assertEqual(sorted(os.listdir(self.tmp)), ['cwd', 'system-x.md'])  # 不留临时文件
 
     def test_files_beside_cwd_and_effort_checked(self):
         with mock.patch.object(X, 'catalog_models', lambda kind, prof=None: CATALOG):

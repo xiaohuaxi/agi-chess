@@ -21,7 +21,7 @@
 reasoning_output_tokens。换成 claude_cli.usage 的口径：in = input − cached，out 按 OpenAI 口径已含思考，think = reasoning。
 没有花费字段（sol 走订阅，DeepSeek 按量计费但事件流里不给钱），cost 记 0。
 """
-import hashlib, json, os, pathlib, re, subprocess
+import hashlib, json, os, pathlib, re, subprocess, threading
 
 KINDS = ('codex', 'deepseek')
 ALIASES = {'sol': 'codex:gpt-6-sol'}          # quiz --model 的简写；deepseek 单写时取 profile 里的默认模型
@@ -130,10 +130,12 @@ def efforts_of(entry):
 
 
 def _write_once(path, text):
-    """内容按哈希命名，已有就不写；新写的先写临时文件再改名顶上（多线程同时写同一个也不会读到半截）。"""
+    """内容按哈希命名，已有就不写；新写的先写临时文件再改名顶上，不会读到半截。
+    quiz --jobs>1 时同进程几个线程会同时写同一个文件，临时文件名带上进程号和线程号，各写各的，
+    谁后改名谁覆盖，内容一样；只用进程号时几个线程共用一个临时文件，先改名的把它挪走，后改名的就找不到了。"""
     if path.exists():
         return path
-    tmp = path.with_name('.%s.%d.tmp' % (path.name, os.getpid()))
+    tmp = path.with_name('.%s.%d-%d.tmp' % (path.name, os.getpid(), threading.get_ident()))
     tmp.write_text(text, encoding='utf-8')
     os.replace(tmp, path)
     return path
