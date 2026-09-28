@@ -103,3 +103,80 @@ def summary_lines(summ, sides):
             lines.append('　复述局面 %d 次：逐格正确率 %.2f%%，整盘全对 %d 次，缺行 %d 行' % (
                 r['n'], 100 * r['cell_acc'], r['all_ok'], r['rows_missing']))
     return lines
+
+
+# ---------------------------------------------------------------- 棋谱里每步的元信息（design.md 第四节「每步元信息」）
+META_KEYS = ('think', 'out', 'in', 'cache_read', 'cache_write')
+
+
+def _known(r):
+    """这条 attempt 的各项 token 后端有没有给（给了才算数，0 也算给了）。返回 {键: True/False}。
+    判断看原始返回（attempt.claude），不看换算后的 usage：换算时缺的一律记成 0，分不出「没有」和「是 0」。
+    llm-chat：META 里对应字段为 None 就是没给（DeepSeek 不给缓存写；三路的思考 token 都可能为 None）。
+    claude -p 直调：usage 里有 output_tokens_details.thinking_tokens 才算给了思考。
+    codex exec 直调：turn.completed 的 usage 里有 reasoning_output_tokens 才算给了思考。
+    被拦 / 出错没有用量的，全都算没给。"""
+    d = r.get('claude') or {}
+    m = d.get('meta')
+    if isinstance(m, dict):
+        return {'think': m.get('reasoning_tokens') is not None, 'out': m.get('output_tokens') is not None,
+                'in': m.get('input_tokens') is not None, 'cache_read': m.get('cache_read') is not None,
+                'cache_write': m.get('cache_write') is not None}
+    u = d.get('usage')
+    if not isinstance(u, dict):
+        return {k: False for k in META_KEYS}
+    if 'cache_creation_input_tokens' in u or 'output_tokens_details' in u:          # claude -p
+        return {'think': 'thinking_tokens' in (u.get('output_tokens_details') or {}), 'out': 'output_tokens' in u,
+                'in': 'input_tokens' in u, 'cache_read': 'cache_read_input_tokens' in u,
+                'cache_write': 'cache_creation_input_tokens' in u}
+    return {'think': 'reasoning_output_tokens' in u, 'out': 'output_tokens' in u, 'in': 'input_tokens' in u,   # codex exec
+            'cache_read': 'cached_input_tokens' in u, 'cache_write': 'cache_write_input_tokens' in u}
+
+
+def move_meta(recs):
+    """每个落定半回合（模型棋手下的）的元信息：{半回合号: {...}}。随机开局、引擎、随机走子的半回合不给。
+    一步里可能调了几次（非法重选、被拦、空回复），各项是本步所有 attempt 的合计：
+      emt：各次调用的用时之和（秒，只算成功回来的那次子进程，不含调不通的重试和等额度）；
+      think / out / in / cache_read / cache_write：token 合计，本步任一次调用后端没给这一项就记 None（不部分相加、不补 0）；
+      calls：调用次数；illegal / flagged / empty：非法、被拦、空回复次数（取 move.stat，和统计口径一致）。"""
+    moves = {r['ply']: r for r in recs if r.get('type') == 'move' and not r.get('opening')}
+    out = {}
+    for r in recs:
+        if r.get('type') != 'attempt' or r.get('ply') not in moves or 'usage' not in r:
+            continue
+        mv = moves[r['ply']]
+        if r.get('side') != mv['side']:
+            continue
+        m = out.setdefault(r['ply'], dict({k: 0 for k in META_KEYS}, emt=0.0, calls=0))
+        m['calls'] += 1
+        m['emt'] += r.get('elapsed') or 0
+        u, known = r.get('usage') or {}, _known(r)
+        for k in META_KEYS:
+            if m[k] is not None:
+                m[k] = m[k] + (u.get(k) or 0) if known[k] else None
+    for ply, m in out.items():
+        s = moves[ply].get('stat') or {}
+        m.update(illegal=s.get('illegal', 0), flagged=s.get('flags', 0), empty=s.get('empty', 0))
+    return out
+
+
+def emt(seconds):
+    """PGN 规范补充（PGN Specification Supplement）的 %emt 写法：h:mm:ss，整秒（规范只给到秒）。"""
+    s = int(round(seconds))
+    return '%d:%02d:%02d' % (s // 3600, s % 3600 // 60, s % 60)
+
+
+def meta_comment(m):
+    """一步的元信息写成 PGN 评注里的内嵌命令（[%名 参数]，名只用字母数字，规范补充的要求）。
+    %emt 是规范补充里的标准命令；其余是自定义的，标准阅读器按规范补充会原样保留、不做处理。没给的项整条省掉。"""
+    if not m:
+        return ''
+    parts = ['[%%emt %s]' % emt(m['emt'])]
+    for k, name in (('think', 'think'), ('out', 'out'), ('in', 'in'), ('cache_read', 'cacheread'),
+                    ('cache_write', 'cachewrite')):
+        if m.get(k) is not None:
+            parts.append('[%%%s %d]' % (name, m[k]))
+    for k in ('illegal', 'flagged', 'empty'):
+        if m.get(k):
+            parts.append('[%%%s %d]' % (k, m[k]))
+    return ' '.join(parts)

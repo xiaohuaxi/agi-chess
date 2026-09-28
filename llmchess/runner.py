@@ -364,16 +364,25 @@ def finish(ctx):
     summ = records.summary(ctx['stats'], cfg['players'])
     log(ctx, {'type': 'end', 'end': end, 'plies': len(st['moves']), 'moves': st['moves'], 'record': st['record'],
               'summary': summ})
+    print(write_exports(ctx).get('record.txt', ''))
+
+
+def write_exports(ctx):
+    """按记录写棋谱文件（record.txt，国际象棋另有 game.pgn），原子替换。终局时 finish 调；已结束的盘也可以
+    用 `python3 -m llmchess export <目录>` 重新导出（load 重放后调这里，不写任何记录）。返回 {文件名: 内容}。"""
+    G, cfg, st, end = ctx['G'], ctx['cfg'], ctx['st'], ctx['end']
+    summ = records.summary(ctx['stats'], cfg['players'])
     lines = records.summary_lines(summ, G.SIDES)
     op = cfg.get('opening') or {}
     if op.get('moves'):
         lines.insert(0, '前 %d 个半回合是随机开局，由程序替双方走（种子 %s，不算棋手的着法）：%s' % (
             len(op['moves']), op.get('seed'), ' '.join(op.get('record') or op['moves'])))
-    files = G.exports(st, cfg, end, lines)
+    meta = records.move_meta(records.read(ctx['log']))
+    files = G.exports(st, cfg, end, lines, meta)
     for name, text in files.items():
         path = os.path.join(ctx['dir'], name)
         tmp = path + '.tmp'
         with open(tmp, 'w', encoding='utf-8') as f:
             f.write(text)
         os.replace(tmp, path)
-    print(files.get('record.txt', ''))
+    return files

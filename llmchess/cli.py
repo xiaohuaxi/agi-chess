@@ -6,6 +6,7 @@
     python3 -m llmchess play --game xiangqi --tag x2 --dry-run                          # 只打印提示，不调模型
     python3 -m llmchess play --game chess --tag c3 --black engine:maia-1500 --opening random:8 --opening-seed 1
     python3 -m llmchess resume runs/x1                                                  # 暂停后接着下
+    python3 -m llmchess export runs/x1                                                  # 已结束的盘重新导出棋谱
 
 协议 --protocol（默认 real）：real 是「模型就是真实棋手」（design.md 第九节）——每方一段连续会话（memory 默认 session），
   只给局面、轮到谁、对方上一步，不报将军、不给合法着法；非法着法只告诉它不合法、让它重选（每步最多 retries+1 次，
@@ -24,7 +25,8 @@
   两个都给报错，一方单设的覆盖公共的那个。每方实际用的 show 记在 config 的 sides 里（自定义 view 记 null）。
 随机开局 --opening random:N：前 N 个半回合由程序替双方走（引擎浅搜 MultiPV 3、分差 ≤50 厘兵的着法按 --opening-seed 抽），
   开局写进 config、续跑照记录重放；模型只在着法历史里看到这几步。--dry-run 打印的是开局走完后模型方第一步的提示。
-记录在 runs/<tag>/（不入库）：game.jsonl、record.txt，国际象棋另有 game.pgn。
+记录在 runs/<tag>/（不入库）：game.jsonl、record.txt，国际象棋另有 game.pgn。棋谱里每步带评注
+  {[%emt 用时] [%think 思考 token] [%out 输出 token] …}（design.md 第四节）。
 暂停（--on-limit pause 时撞额度、连续调不通、--stop-after、停止信号）退出码 3。
 --timeout：单次 claude -p 调用的超时秒数（默认 3600），记进 config，resume 沿用（resume --timeout 只改这次续跑）；
   超时 / 调不通各记一条 call_fail。
@@ -242,6 +244,18 @@ def cmd_resume(a):
     return play_stoppable(ctx, a)
 
 
+def cmd_export(a):
+    """已结束的盘按记录重新导出棋谱（带每步元信息），不调模型、不写记录。"""
+    run_dir = pathlib.Path(a.dir)
+    cfg = records.read(run_dir / 'game.jsonl')[0]['cfg']
+    ctx = runner.load(game_module(cfg['game']), str(run_dir))
+    if not ctx['end']:
+        raise SystemExit('%s 还没下完（已走 %d 个半回合），下完再导出' % (run_dir, len(ctx['st']['moves'])))
+    files = runner.write_exports(ctx)
+    print('已重新导出 %s：%s' % (run_dir, '、'.join(sorted(files))))
+    return 0
+
+
 LIMIT_HELP = ('撞额度时：wait（默认）在程序里等到解除再接着下，每次等待的起止记 limit_wait；'
               'pause 是旧行为，写 pause 后退出码 3')
 
@@ -288,5 +302,7 @@ def main(argv=None):
     r.add_argument('--stop-file', dest='stop_file', help=stop_help)
     r.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait', help=LIMIT_HELP)
     r.add_argument('--timeout', type=int, help='这次续跑改用的 claude -p 超时秒数（记进 resume 记录），默认沿用 config')
+    e = sub.add_parser('export', help='已结束的盘按记录重新导出棋谱（record.txt / game.pgn，带每步元信息）')
+    e.add_argument('dir')
     a = ap.parse_args(argv)
-    return cmd_play(a) if a.cmd == 'play' else cmd_resume(a)
+    return {'play': cmd_play, 'resume': cmd_resume, 'export': cmd_export}[a.cmd](a)

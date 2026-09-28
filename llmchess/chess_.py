@@ -10,6 +10,8 @@ import os, re, shutil
 import chess
 import chess.pgn
 
+from . import records
+
 SIDES = {'w': '白方', 'b': '黑方'}
 ALL_VIEW = 'fen,ascii'            # show=all：FEN + 字母棋盘（国际象棋默认 view 里本来没有子力清单）
 # 呈现方式（show 档）→ view。整盘对局（cli）和局面题（quiz）共用。
@@ -440,7 +442,8 @@ def recite_score(st, reply):
 
 
 # ---------------------------------------------------------------- 棋谱
-def exports(st, cfg, end, summary_lines):
+def exports(st, cfg, end, summary_lines, meta=None):
+    """meta：{半回合号: 元信息}（records.move_meta），写进 PGN 每步后的评注（records.meta_comment）。"""
     res = ('%s胜' % SIDES[end['winner']] if end['winner'] else '和棋') + '（%s）' % end['reason']
     lines = ['国际象棋 · 模型对弈 · %s' % cfg['tag'],
              '白方：%s　黑方：%s' % (cfg['players']['w'], cfg['players']['b']),
@@ -451,6 +454,8 @@ def exports(st, cfg, end, summary_lines):
     g.headers['White'], g.headers['Black'] = cfg['players']['w'], cfg['players']['b']
     g.headers['Result'] = '1-0' if end['winner'] == 'w' else '0-1' if end['winner'] == 'b' else '1/2-1/2'
     g.headers['Termination'] = end['reason']
+    for ply, node in enumerate(g.mainline(), 1):
+        node.comment = records.meta_comment((meta or {}).get(ply))
     return {'record.txt': '\n'.join(lines) + '\n', 'game.pgn': str(g) + '\n'}
 
 

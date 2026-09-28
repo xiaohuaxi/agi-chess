@@ -61,7 +61,7 @@ start() -> 状态              turn(状态) -> 'w'/'b'           legal(状态) -
 banned(状态, 合法着法) -> 集合      parse(状态, 文字) -> (着法或 None, 不合法原因或 None)
 push(状态, 着法)                ending(状态) -> None 或 {winner, reason}      in_check(状态)
 render(状态, 这方配置) -> 本步局面正文       system_prompt(这方, 这方配置, 记忆说明) -> 文本
-recite_score(状态, 回复)（只有中国象棋）     exports(状态, 配置, 终局, 统计) -> {文件名: 文本}
+recite_score(状态, 回复)（只有中国象棋）     exports(状态, 配置, 终局, 统计, 每步元信息) -> {文件名: 文本}
 engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engine(文字)
 ```
 
@@ -118,7 +118,12 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 - `limit_wait`：撞额度在程序里等解除，等之前、等完各记一条（`phase` 为 start / end）：开始时间、读出的解除时间（读不出为空）、打算等几秒、第几次等、报错末尾；结束另记结束时间、实际等了多久、是否被停止信号打断。带的半回合号 / 题号同 `call_fail`。claude 报错里解除时间的写法没有公开格式，解析尽量宽松（epoch 秒、ISO 时间、「resets in 2h」「resets 5am (时区)」「resets Sep 27, 5am」），读错或离谱（早于 5 分钟前、晚于 8 天后）都退回退避。
 - `pause` / `resume` / `forfeit` / `end`（结果、每方合计与中位数：调用数、非法数、每步输入/输出/思考 token、用时、花费）。
 - 不管给模型的 `history` 设多少，记录里都有起始局面和全部落定着法；续跑时按它重放，重复局面照样判得出。
-- 结束时另写 `record.txt`（棋谱加统计）；国际象棋另出 `game.pgn`，中国象棋的 `record.txt` 用中文记谱。终局原因用棋种自己的说法。
+- 结束时另写 `record.txt`（棋谱加统计）；国际象棋另出 `game.pgn`，中国象棋的 `record.txt` 用中文记谱。终局原因用棋种自己的说法。已结束的盘可以按 `game.jsonl` 重新导出这两个文件（不调模型、不写记录）：`python3 -m llmchess export runs/<tag>`。
+- **每步元信息**（2026-09-28 起，`records.move_meta` / `meta_comment`）：模型下的每个半回合，在棋谱里这步着法后面跟一段评注。写法是 PGN 评注里的内嵌命令 `[%名 参数]`（出自 PGN Specification Supplement：`[%` + 字母数字命令名 + 空格 + 参数 + `]`；读不懂的命令阅读器应原样保留、不做处理）。例：`1. e4 { [%emt 0:00:12] [%think 280] [%out 300] [%in 2] [%cacheread 100] [%cachewrite 50] }`。
+  - `%emt h:mm:ss`：**标准命令**（规范补充：该步用掉的时间，只到整秒，四舍五入）。取本步各次调用用时之和（`attempt.elapsed`，只算成功回来的那次子进程，不含调不通的重试和等额度；llm-chat 路径含脚本起进程的开销）。
+  - 以下都是**自定义命令**，没有通行写法：`%think` 思考 token、`%out` 输出 token（含思考）、`%in` 没走缓存的输入、`%cacheread` / `%cachewrite` 缓存读 / 写，都是本步所有调用的合计，口径同 `attempt.usage`；`%illegal` / `%flagged` / `%empty` 本步非法重选、被安全分类器拦、空回复的次数，为 0 时不写。命令名按规范只用字母数字，所以不带下划线。
+  - **缺省**：本步任何一次调用的后端没给某一项，这一项整条不写（不补 0、不部分相加）；有没有给看原始返回（`attempt.claude`），因为换算后的 `usage` 把缺的都记成 0。各后端：claude:opus（llm-chat 或 `claude -p`）全都给，思考 token 可以真是 0（自适应思考没想）；codex:sol（llm-chat 或 `codex exec`）思考 token 单独给（`reasoning_output_tokens`），缓存写 llm-chat 缺省记 0（`codex exec` 的 `turn.completed` 里有这个字段）；deepseek 走 llm-chat 时缓存写不给（省掉），思考 token 取 `completion_tokens_details.reasoning_tokens`，接口不给时省掉——至今没有 llm-chat 路径的 DeepSeek 整盘记录，实际给不给待看；走 `codex exec` 的旧记录里有。被拦 / 出错没回用量的调用让本步 token 全部省掉，只留 `%emt` 和次数。随机开局、引擎、随机走子的半回合不带评注。
+  - 国际象棋写进 `game.pgn`（python-chess 按导出格式每行不到 80 字符自动折行）。中国象棋现在只导出 `record.txt`，它不是哪种通行格式，所以**照 PGN 评注的写法自定义**：`1. 炮二平五 {[%emt 0:00:05] [%think 15] …}　马２进３`。通行的中国象棋 PGN（xqbase「中国象棋电脑应用规范（四）」）也用 `{}` 注释、没有定义内嵌命令，以后要出 PGN 可以原样搬过去。
 
 `analyze` 读这个目录，逐步给出"走前最好能得多少、走后剩多少、亏了多少"、大失误 / 失误、规则判定（白送子、漏吃、漏杀），输出 `analysis.jsonl`。口径沿用上一轮（中国象棋截断 ±1000、只看未分胜负的步），国际象棋另加按胜率换算的亏损（lichess 式），并算平均每步亏损。随机开局的半回合照样评分，但不算进任何一方的大失误、ACPL 和件数。
 

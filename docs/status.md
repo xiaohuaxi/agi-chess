@@ -44,6 +44,7 @@
 - 设计与前提核实 `design.md`、跨轮思考调研 `thinking-carryover.md`；引擎 Stockfish 19、lc0、Maia 1100–1900（`~/.local/share/maia/`）。
 - 程序 `llmchess/`：对弈循环、两个棋种模块、事后分析器、局面题（含各提示档与「说明理由」档）、随机开局、批量跑盘、限额等待续跑；着法提取的改口修复已合（a363108）。离线测试 222 个全过。
 - 第一至四批全部实验和结论文档，第一轮总结论 `results/summary-round1.md`，棋力人群对照 `results/rating-reference.md`。原始数据都在被忽略的 `runs/`。
+- 棋谱每步带元信息（2026-09-28）：`game.pgn` / `record.txt` 每步评注里写 `[%emt 用时]`（PGN 标准命令）和自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite]`、非法 / 被拦 / 空回复次数，后端没给的项省掉不补 0（`design.md` 第四节）。已结束的盘不用重下：`python3 -m llmchess export runs/<tag>`。
 - 局面给法开关 `show`（all / board / pieces / fen / boardpieces），整盘和局面题共用，默认按第四批结论。
 
 ## 已拍板
