@@ -37,6 +37,7 @@
 - **整盘协议**（`design.md` 第九节，`--protocol real` 为默认）：每方一段连续会话；只给轮到谁、对方上一步、当前局面；**不再报将军**，子力清单不写子数，国际象棋对方着法只写 UCI；着法记录只在会话第一条给一次；不要求中文、不要求理由，只需给出着法（英文、只回一行着法也读得出）；非法只说「不合法」（纯写法问题照实说），每步最多 4 次，用完判负，赛制写进系统提示。拿不准的几条和 astra 一起定。旧提示和调用保留为 `--protocol legacy`，旧数据逐字复现；局面题默认仍是旧的。
 - **棋手走 llm-chat**（`llmchess/chat.py`）：`claude:opus`、`codex:sol`（gpt-6-sol）、`deepseek:deepseek-v4-pro` 三路都支持连续会话。隔离与跨轮思考实测（`results/llm-chat-isolation.md`）：Claude、DeepSeek 零工具；**GPT 请求里仍挂着 4 个 code mode 工具，执行层关着、调出来也落空**，程序每轮查它的会话记录，出现工具调用就暂停；Claude、GPT 思考能带到下一轮，DeepSeek 不带。llm-chat 下 GPT 不再带 `~/.codex/AGENTS.md`。
 - **新协议下给法复测**（`results/batch6-real-presentation.md`，opus high 387 次、sol high 174 次，只能看方向）：默认给法不改。中国象棋 opus 仍是只给清单最好，sol 三档分不开；国际象棋 opus all 对 board 分不开。不报将军后没看到变差，首答非法全是走法没套对，和被将军无关。
+- **opus 对 sol 首局**（`results/game-opus-vs-sol-1.md`，xhigh，每种棋 1 盘，只能看个样子）：两盘都是 opus 执先将死 sol，双方 0 非法、0 工具调用、0 异常；互相送子漏吃明显。opus 在新协议下每步思考中位只有 143（国际象棋）/ 2386（中国象棋）token，比第二批无状态 xhigh 低一到两个数量级，值得单独看。
 - 冒烟：opus 对 fsf、sol 对 opus 各一盘（medium，6 个半回合），会话续接、用量、工具调用兜底都正常；非法计数、重选、判负、续跑用离线测试桩验证。
 
 ## 已完成
@@ -90,4 +91,4 @@
 - Codex 升级后要重新抓请求，确认工具数还是 0（0.158.0 已核实为 0）。
 - DeepSeek 在 high 下每题 12–21 分钟。
 - 局面题用 sol 跑批时，codex 从 WebSockets 退到 HTTPS 的错误提示（「Connection reset by peer」「request timed out」「lookup address」）会被当成工具调用、整批退出（第六批崩了两次、第五批补测三档各崩一次，续跑补齐）；`codex_cli` 只放过了重连提示。
-- 整盘新协议还没跑过正式对局；DeepSeek 整盘只接通、没冒烟。
+- DeepSeek 整盘只接通、没冒烟（整盘新协议已跑过 opus 对 sol 两盘）。
