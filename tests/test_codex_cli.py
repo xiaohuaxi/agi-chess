@@ -82,6 +82,26 @@ class Parse(unittest.TestCase):
         self.assertTrue(d['is_error'])
         self.assertEqual(d['result'], 'stream disconnected')
 
+    def test_reconnect_notice_is_not_error(self):
+        # DeepSeek 实录：流被 max_output_tokens 截断，codex 自己重连后照常答完
+        note = 'Reconnecting... 1/5 (stream disconnected before completion: Incomplete response returned, ' \
+               'reason: max_output_tokens)'
+        d = X.parse(events('着法: d3f4', extra=[{'type': 'error', 'message': note}]))
+        self.assertFalse(d['is_error'])
+        self.assertEqual(d['result'], '着法: d3f4')
+        self.assertEqual(d['reconnects'], [note])
+        self.assertEqual(d['errors'], [])
+
+    def test_reconnect_then_failed_is_error(self):
+        ev = [{'type': 'thread.started', 'thread_id': 'th-3'}, {'type': 'turn.started'}]
+        ev += [{'type': 'error', 'message': 'Reconnecting... %d/5 (stream disconnected)' % i} for i in range(1, 6)]
+        ev += [{'type': 'turn.failed', 'error': {'message': 'stream disconnected'}}]
+        d = X.parse('\n'.join(json.dumps(e) for e in ev))
+        self.assertTrue(d['is_error'])
+        self.assertEqual(len(d['reconnects']), 5)
+        # 重连提示之后断流、没有 turn.completed：也算失败
+        self.assertTrue(X.parse('\n'.join(json.dumps(e) for e in ev[:3]))['is_error'])
+
     def test_empty_or_truncated(self):
         self.assertIsNone(X.parse(''))
         self.assertIsNone(X.parse('Reading additional input from stdin...\n'))
@@ -253,6 +273,13 @@ class CallThroughClaudeCli(unittest.TestCase):
         self.assertEqual(d['result'], '着法: e2e4')
         self.assertEqual(len(seen), 2)
         self.assertEqual(seen[0][-1], 'P')
+
+    def test_reconnect_notice_not_retried(self):
+        out = events('着法: e2e4', extra=[{'type': 'error', 'message': 'Reconnecting... 1/5 (x)'}])
+        (d, _), seen = self.run_seq([subprocess.CompletedProcess([], 0, stdout=out,
+                                                                 stderr='Reading additional input from stdin...\n')])
+        self.assertEqual(d['result'], '着法: e2e4')
+        self.assertEqual(len(seen), 1)
 
     def test_tool_use_propagates(self):
         bad = events(extra=[{'type': 'item.started', 'item': {'type': 'command_execution', 'command': 'ls'}}])

@@ -36,6 +36,7 @@ OFF = ('include_permissions_instructions=false', 'include_apps_instructions=fals
 NO_TOOLS = {'shell_type': 'disabled', 'tool_mode': 'direct', 'multi_agent_version': 'disabled',
             'experimental_supported_tools': [], 'apply_patch_tool_type': None}
 TEXT_ITEMS = ('agent_message', 'reasoning')
+RECONNECT = re.compile(r'Reconnecting\.\.\. \d+/\d+')   # codex exec 流断后自动重连时发的 error 事件
 
 
 class ToolUsed(RuntimeError):
@@ -206,8 +207,10 @@ def version():
 def parse(out):
     """把 --json 事件流（JSONL）收成和 claude -p 结果相近的 dict：result（最后一条 agent_message）、is_error、
     usage（turn.completed 原样）、thread_id、items（各条目类型，按出现顺序）。一行事件都没有返回 None（调用方按调不通处理）。
-    出现 agent_message / reasoning 以外的条目就抛 ToolUsed。"""
-    d = {'result': '', 'is_error': False, 'usage': None, 'thread_id': None, 'items': [], 'errors': []}
+    出现 agent_message / reasoning 以外的条目就抛 ToolUsed。
+    「Reconnecting... n/5 (...)」这种 error 事件是 codex 流断了（DeepSeek 常见 reason: max_output_tokens）自己重连的提示，
+    之后照常出答案和 turn.completed，只记进 reconnects、不算失败；重连用尽会接 turn.failed，照旧按失败算。"""
+    d = {'result': '', 'is_error': False, 'usage': None, 'thread_id': None, 'items': [], 'errors': [], 'reconnects': []}
     n = 0
     for line in (out or '').splitlines():
         try:
@@ -228,6 +231,8 @@ def parse(out):
                     d['result'] = it.get('text') or ''
         elif t == 'turn.completed':
             d['usage'] = e.get('usage') or {}
+        elif t == 'error' and RECONNECT.match(e.get('message') or ''):
+            d['reconnects'].append(e.get('message'))   # codex 自己重连的提示，不算失败；成败看后面有没有 turn.completed
         elif t in ('turn.failed', 'error'):
             d['is_error'] = True
             msg = (e.get('error') or {}).get('message') if t == 'turn.failed' else e.get('message')
