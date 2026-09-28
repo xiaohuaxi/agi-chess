@@ -454,9 +454,27 @@ def exports(st, cfg, end, summary_lines, meta=None):
     g.headers['White'], g.headers['Black'] = cfg['players']['w'], cfg['players']['b']
     g.headers['Result'] = '1-0' if end['winner'] == 'w' else '0-1' if end['winner'] == 'b' else '1/2-1/2'
     g.headers['Termination'] = end['reason']
+    head = str(g).split('\n\n', 1)[0]           # 标签部分用 python-chess 的；着法部分自己排，评注要按词折行
+    return {'record.txt': '\n'.join(lines) + '\n', 'game.pgn': head + '\n\n' + _pgn_movetext(g, meta or {}) + '\n\n'}
+
+
+def _pgn_movetext(g, meta):
+    """PGN 着法部分：每步后跟 { 元信息与说明文字 }（records.meta_tokens），评注后的黑方着法补「N...」；
+    所有词（评注里的也拆开）按导出格式每行不到 80 个字符贪心折行。python-chess 的导出把整段评注当一个词、不折行，
+    带说明文字后一行会长过导入格式的 255 字符上限，所以不用它排着法。"""
+    toks, after_comment = [], True
     for ply, node in enumerate(g.mainline(), 1):
-        node.comment = records.meta_comment((meta or {}).get(ply))
-    return {'record.txt': '\n'.join(lines) + '\n', 'game.pgn': str(g) + '\n'}
+        b = node.parent.board()
+        if b.turn == chess.WHITE:
+            toks.append('%d.' % b.fullmove_number)
+        elif after_comment:
+            toks.append('%d...' % b.fullmove_number)
+        toks.append(node.san())
+        c = records.meta_tokens(meta.get(ply))
+        toks += ['{'] + c + ['}'] if c else []
+        after_comment = bool(c)
+    toks.append(g.headers['Result'])
+    return records.wrap(toks, 79)
 
 
 # ---------------------------------------------------------------- 引擎对手

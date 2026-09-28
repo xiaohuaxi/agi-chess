@@ -118,8 +118,57 @@ class ExportsWithMeta(unittest.TestCase):
             X.push(st, mv)
         cfg = {'tag': 't', 'players': {'w': 'claude:opus', 'b': 'engine:fsf'}}
         txt = X.exports(st, cfg, {'winner': None, 'reason': 'x'}, [], self.META)['record.txt']
-        self.assertIn('1. %s {[%%emt 0:00:12] [%%think 280] [%%out 300] [%%in 2] [%%cacheread 100] '
-                      '[%%cachewrite 50] [%%illegal 1]}　%s' % (st['record'][0], st['record'][1]), txt)
+        self.assertIn('1. %s {[%%emt 0:00:12] [%%think 280] [%%out 300] [%%in 2] [%%cacheread 100]\n'
+                      '[%%cachewrite 50] [%%illegal 1]}\n1... %s\n' % (st['record'][0], st['record'][1]), txt)
+
+    def test_xiangqi_without_meta_keeps_pair_lines(self):
+        st = X.start()
+        for mv in ['h2e2', 'h9g7']:
+            X.push(st, mv)
+        cfg = {'tag': 't', 'players': {'w': 'random', 'b': 'random'}}
+        txt = X.exports(st, cfg, {'winner': None, 'reason': 'x'}, [])['record.txt']
+        self.assertIn('1. %s　%s\n' % tuple(st['record']), txt)
+
+    def test_chess_reason_text_escaped_and_wrapped(self):
+        why = ('I play e4 to grab the centre {and keep 50% of options} [%fake 1]\n\n' + '中路控制很重要，' * 30)
+        meta = {1: dict(self.META[1], why=why), 2: dict(self.META[1], illegal=0)}
+        st = C.start()
+        for mv in ['e2e4', 'e7e5', 'g1f3']:
+            C.push(st, mv)
+        cfg = {'tag': 't', 'players': {'w': 'claude:opus', 'b': 'claude:opus'}}
+        pgn = C.exports(st, cfg, {'winner': None, 'reason': 'x'}, [], meta)['game.pgn']
+        for line in pgn.splitlines():
+            self.assertLess(records.cols(line), 80, line)       # 全角字符算 2 列
+            self.assertLess(len(line.encode('utf-8')), 255, line)
+        flat = ' '.join(pgn.split())
+        self.assertIn('｛and keep 50％ of options｝ [％fake 1]', flat)
+        self.assertNotIn('[%fake', pgn)
+        g = chess.pgn.read_game(io.StringIO(pgn))
+        nodes = list(g.mainline())
+        self.assertEqual([n.san() for n in nodes], ['e4', 'e5', 'Nf3'])
+        self.assertEqual(nodes[0].emt(), 12)
+        self.assertIn('中路控制很重要', nodes[0].comment)
+        self.assertEqual(nodes[1].emt(), 12)
+        self.assertEqual(nodes[2].comment, '')
+        self.assertIn('2. Nf3', pgn)
+        self.assertIn('1... e5', pgn)          # 评注后面的黑方着法补「N...」
+
+
+class ExtractReason(unittest.TestCase):
+    def test_cuts_at_last_move_marker(self):
+        from llmchess import memory
+        self.assertEqual(memory.extract_reason('先出车，Nf3 也可以。\n\n**着法: e2e4**'), '先出车，Nf3 也可以。')
+        self.assertEqual(memory.extract_reason('应当写皇后的着法：\n\n着法: g3e3'), '应当写皇后的着法：')
+        self.assertEqual(memory.extract_reason('Develop.\nMove: Nf3'), 'Develop.')
+        self.assertEqual(memory.extract_reason('Develop the knight.\nNf3'), 'Develop the knight.')
+        self.assertIsNone(memory.extract_reason('着法: e2e4'))
+        self.assertIsNone(memory.extract_reason('e2e4'))
+
+    def test_move_meta_takes_reason_from_legal_attempt(self):
+        bad = chat_attempt(1, 'w', CLAUDE_META, CLAUDE_U, 1.0, legal=False, move=None, reply='乱写\n着法: z9')
+        good = chat_attempt(1, 'w', CLAUDE_META, CLAUDE_U, 1.0, move='m1', reply='出子。\n着法: m1')
+        m = records.move_meta([bad, good, move(1, 'w', illegal=1)])[1]
+        self.assertEqual(m['why'], '出子。')
 
 
 class ExportCommand(unittest.TestCase):

@@ -97,6 +97,27 @@ def extract_move(reply, loose=False):
     return None
 
 
+_TAIL = re.compile(r'[\s*`>#_\-]+\Z')
+
+
+def extract_reason(reply):
+    """回复里着法前面的文字（棋手自己写的说明，比如旧协议「可以先写简短的思路」下写的；导出棋谱时放进评注）；没有返回 None。
+    切点和 extract_move(loose=True) 找着法的次序一致：最后一处「着法:」、再英文「Move:」，都从这个标记处切（同一行里
+    标记前面的话也算）；都没有就去掉最后一个非空行。末尾残留的 markdown 记号去掉。"""
+    text = reply or ''
+    cut = None
+    for rx in (_MOVE, _MOVE_EN):
+        hits = list(rx.finditer(text))
+        if hits:
+            cut = hits[-1].start()
+            break
+    if cut is None:
+        lines = text.rstrip().rsplit('\n', 1)
+        cut = len(lines[0]) if len(lines) == 2 else 0
+    why = _TAIL.sub('', text[:cut]).strip()
+    return why or None
+
+
 def extract_note(reply):
     """回复里最后一段「便条: …」（到「着法:」那行为止）；没有返回 None。"""
     hits = _NOTE.findall(reply or '')

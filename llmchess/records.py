@@ -3,7 +3,9 @@
 type：config / attempt（每次调用或引擎出棋）/ move（落定的一步）/ flag（安全分类器拦截）/ pause / resume /
 forfeit（重试用完判负）/ end（结果与每方统计）。每条带 t（本地时间）。
 """
-import datetime, json, statistics
+import datetime, json, statistics, unicodedata
+
+from . import memory
 
 SUM_KEYS = ('in', 'cache_read', 'cache_write', 'out', 'think', 'text_out')
 
@@ -138,7 +140,8 @@ def move_meta(recs):
     一步里可能调了几次（非法重选、被拦、空回复），各项是本步所有 attempt 的合计：
       emt：各次调用的用时之和（秒，只算成功回来的那次子进程，不含调不通的重试和等额度）；
       think / out / in / cache_read / cache_write：token 合计，本步任一次调用后端没给这一项就记 None（不部分相加、不补 0）；
-      calls：调用次数；illegal / flagged / empty：非法、被拦、空回复次数（取 move.stat，和统计口径一致）。"""
+      calls：调用次数；illegal / flagged / empty：非法、被拦、空回复次数（取 move.stat，和统计口径一致）；
+      why：落定那次回复里着法前面的文字（棋手自己写的说明文字，memory.extract_reason），没有为 None。"""
     moves = {r['ply']: r for r in recs if r.get('type') == 'move' and not r.get('opening')}
     out = {}
     for r in recs:
@@ -150,6 +153,8 @@ def move_meta(recs):
         m = out.setdefault(r['ply'], dict({k: 0 for k in META_KEYS}, emt=0.0, calls=0))
         m['calls'] += 1
         m['emt'] += r.get('elapsed') or 0
+        if r.get('legal') and r.get('move') == mv.get('move'):
+            m['why'] = memory.extract_reason(r.get('reply'))
         u, known = r.get('usage') or {}, _known(r)
         for k in META_KEYS:
             if m[k] is not None:
@@ -166,11 +171,51 @@ def emt(seconds):
     return '%d:%02d:%02d' % (s // 3600, s % 3600 // 60, s % 60)
 
 
-def meta_comment(m):
-    """一步的元信息写成 PGN 评注里的内嵌命令（[%名 参数]，名只用字母数字，规范补充的要求）。
+# 评注正文里要换掉的字符：PGN 的花括号评注没有转义写法（「}」一出现评注就结束），「%」在行首会让整行被当成转义行
+# 忽略、「[%」会被当成内嵌命令，所以换成对应的全角字符（看得懂、不丢意思）。
+COMMENT_SUB = {'{': '｛', '}': '｝', '%': '％'}
+WIDTH = 76      # 评注折行宽度（显示列）：PGN 导出格式每行不到 80 个字符（导入格式硬上限 255），留出「{ 」「 }」的位置
+
+
+def comment_text(text):
+    """棋手写的文字放进评注：换掉 COMMENT_SUB 里的字符，空白（含换行）压成一个空格。"""
+    return ' '.join(''.join(COMMENT_SUB.get(c, c) for c in text).split())
+
+
+def cols(s):
+    """显示宽度：中日韩全角字符算 2 列。按列折行，中文行不会比英文行宽一倍（UTF-8 下字节数也压在 255 以内）。"""
+    return sum(2 if unicodedata.east_asian_width(c) in 'WF' else 1 for c in s)
+
+
+def chunks(w, width=WIDTH):
+    """一个没有空格的长串按显示宽度切成不超过 width 列的几段。"""
+    out, cur = [], ''
+    for c in w:
+        if cur and cols(cur + c) > width:
+            out.append(cur)
+            cur = ''
+        cur += c
+    return out + ([cur] if cur else [])
+
+
+def wrap(tokens, width=WIDTH):
+    """把一串不可拆的词贪心排成不超过 width 列的行（单个词本身超宽时独占一行）。"""
+    lines, cur = [], ''
+    for w in tokens:
+        if cur and cols(cur) + 1 + cols(w) > width:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = cur + ' ' + w if cur else w
+    return '\n'.join(lines + ([cur] if cur else []))
+
+
+def meta_tokens(m):
+    """一步的评注拆成词：先是内嵌命令（[%名 参数]，名只用字母数字，规范补充的要求；每条整段不拆），后面是棋手写的
+    说明文字（comment_text 处理后按空格分词，没有空格的长串——比如中文整句——按 WIDTH 硬切）。
     %emt 是规范补充里的标准命令；其余是自定义的，标准阅读器按规范补充会原样保留、不做处理。没给的项整条省掉。"""
     if not m:
-        return ''
+        return []
     parts = ['[%%emt %s]' % emt(m['emt'])]
     for k, name in (('think', 'think'), ('out', 'out'), ('in', 'in'), ('cache_read', 'cacheread'),
                     ('cache_write', 'cachewrite')):
@@ -179,4 +224,11 @@ def meta_comment(m):
     for k in ('illegal', 'flagged', 'empty'):
         if m.get(k):
             parts.append('[%%%s %d]' % (k, m[k]))
-    return ' '.join(parts)
+    for w in comment_text(m.get('why') or '').split(' '):
+        parts += chunks(w) if w else []
+    return parts
+
+
+def meta_comment(m):
+    """一步的评注正文（不含花括号），按 WIDTH 折行（评注里换行合法）；没有元信息返回空串。"""
+    return wrap(meta_tokens(m))

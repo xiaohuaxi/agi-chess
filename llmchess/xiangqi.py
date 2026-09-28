@@ -701,18 +701,21 @@ def recite_score(st, reply):
 # ---------------------------------------------------------------- 棋谱
 def exports(st, cfg, end, summary_lines, meta=None):
     """meta：{半回合号: 元信息}（records.move_meta）。record.txt 不是哪种通行格式，每步元信息照 PGN 评注的写法
-    跟在着法后面：{[%emt h:mm:ss] [%think N] …}（design.md 第四节，自定义）。"""
+    跟在着法后面：{[%emt h:mm:ss] [%think N] … 说明文字}（design.md 第四节，自定义）。有评注时一个半回合一行，
+    黑方照 PGN 写「N...」；没有评注时照旧一回合一行。"""
     res = ('%s胜' % SIDES[end['winner']] if end['winner'] else '和棋') + '（%s）' % end['reason']
     lines = ['中国象棋 · 模型对弈 · %s' % cfg['tag'],
              '红方：%s　黑方：%s' % (cfg['players']['w'], cfg['players']['b']),
              '结果：%s，共 %d 个半回合' % (res, len(st['moves'])), '']
     rec = st['record']
 
-    def one(i):
-        c = records.meta_comment((meta or {}).get(i + 1))
-        return rec[i] + (' {%s}' % c if c else '')
-    for i in range(0, len(rec), 2):
-        lines.append('%d. %s%s' % (i // 2 + 1, one(i), '　' + one(i + 1) if i + 1 < len(rec) else ''))
+    if meta:
+        for i, text in enumerate(rec):
+            c = records.meta_comment(meta.get(i + 1))
+            lines.append('%d%s %s%s' % (i // 2 + 1, '.' if i % 2 == 0 else '...', text, ' {%s}' % c if c else ''))
+    else:
+        for i in range(0, len(rec), 2):
+            lines.append('%d. %s%s' % (i // 2 + 1, rec[i], '　' + rec[i + 1] if i + 1 < len(rec) else ''))
     lines += ['', 'ICCS：' + ' '.join(st['moves']), ''] + summary_lines
     return {'record.txt': '\n'.join(lines) + '\n'}
 
