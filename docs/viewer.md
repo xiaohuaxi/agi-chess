@@ -42,7 +42,8 @@
 
 **棋盘。**
 - 国际象棋：cm-chessboard 画棋盘（MIT，源码是相对路径引用的 ES 模块、无依赖，可直接放 vendor；已实测按网址参数读 g1 棋谱走完 95 个半回合、2 倍截图清晰）；chess.js 按记谱走子、判将军（BSD-2-Clause，用 npm 发布包里的单文件 `dist/esm/chess.js`，本机克隆只有 TS 源码不能直接用）。
-- 中国象棋：自己画 SVG 棋盘，棋子取 xiangqi-setup 里 CC0 的纯路径 SVG 素材（不含文字，不受字体影响；逐个文件核实许可）；自己写中文记谱解析（结合当前局面认出是哪个子）和将军判断，只为显示，不校验合法性。
+  - 棋子用 cm-chessboard 自带的 `standard.svg`，许可是 **CC BY-SA 3.0**（Cburnett 等人的 Wikimedia 棋子，shaack 改过），要署名；发出去的视频里带着这套棋子，要不要换一套见「方案前提」表。另一套 `staunty.svg` 是 CC BY-NC-SA（禁商用），没放进 vendor。
+- 中国象棋：自己画 SVG 棋盘，棋子取 xiangqi-setup 里 CC0 的纯路径 SVG 素材（不含文字，不受字体影响），用 `playok_2014_chinese_noshadow` 这套（正方形、无阴影；红方俥傌帥、黑方將車馬砲用繁体或异体字，是象棋软件的常见写法）。这套 SVG 没有 `viewBox`，页面加载时补上再用；每个文件里的渐变、滤镜 id 重名，不能直接内联进同一个 SVG，按独立图片（`<image>` + blob 网址）放；自己写中文记谱解析（结合当前局面认出是哪个子）和将军判断，只为显示，不校验合法性。
   - 这是有意的例外：项目规定「规则判定照搬旧实现」，那是指对局程序判定输赢和合法性。阅读器只画面上提示「将军」，不影响任何结论，所以用 JS 自写；正确性靠与 `game.jsonl` 里（pyffish 判出的）将军标记逐步对照来保证。
 - 两边共用一个自己写的 PGN 分词器（标签、着法、评注、标注、结果；变着先跳过不显示）。PGN 结构简单、规范写死，约一百行，比引一个只认国际象棋记谱的解析库省事。
 - 走子动画：中国象棋自己写，用 CSS / Web Animations（可以按进度定格，逐帧截图能录出滑动）。cm-chessboard 自带的动画是 `requestAnimationFrame` 手写的（已读源码），不能定格，录制时关掉它的动画；国际象棋要滑动的话在上层自己补一段，列为可选、放最后。
@@ -138,7 +139,7 @@
 
 注：Playwright 自带的录像功能（recordVideo）不用——按网页逻辑尺寸录，放大后画面只占一角，帧率固定 25、码率低、格式 webm（本机实测，`viewer-survey/recording.md`）。
 
-**开发期依赖。** `viewer/package.json` 只放 playwright-core，**锁精确版本**，浏览器路径可用环境变量指定（本机缓存只有 chromium-1208，而 playwright-core 1.61.1 默认要 1228；实验脚本是写死路径跑起来的）。`.gitignore` 加 `node_modules/`。
+**开发期依赖。** `viewer/package.json` 只放 playwright-core，**锁精确版本 1.58.2**：它配套的正是本机缓存里的 chromium-1208（1.58.0–1.58.2 都是 1208，1.59 起换 1217），不用下载浏览器。缓存里没有配套浏览器的机器，用环境变量 `VIEWER_CHROMIUM` 指到任一 Chromium / Chrome 可执行文件。`.gitignore` 加 `node_modules/`。
 
 ## 仓库里的配套改动（`llmchess/`）
 
@@ -168,6 +169,7 @@
 1. **导出**：深度标签、中国象棋 PGN（含 xqbase 记谱生成）、折行。验收：离线测试全过，新增测试覆盖折行、深度标签、象棋 PGN 和多路兵记谱；重导 `runs/g1-c-opus-sol`、`runs/g1-x-opus-sol`，两份都读得到双方 `xhigh`，肉眼抽查。然后批量重导本机所有已结束的对局（规则见上）。
 2. **解析**（纯 JS，不碰浏览器）：PGN 分词器、评注命令解析、中文记谱解析、将军判断。验收：两份样例逐步走完、终局局面和记录一致；所有重导出的象棋 PGN 逐步走完，每步走出的坐标与 `game.jsonl` 的 `move`、将军与 `check` 一致；第 1 步造的多路兵局面往返一致（导出生成 → 页面解析 → 同一步）。读 `runs/` 的回归测试在本机没有这些数据时跳过，入库的测试只用自带的小样例。
 3. **打样**（在页面外壳之前，先钉死画面风险）：装好 playwright-core，两种棋盘各出一张 2 倍无头截图，带一行中文记谱文字，看棋子清晰度和字体。
+   - 2026-09-29 已做：打样页 `viewer/sample.html`（`?game=chess|xiangqi`）、截图脚本 `node viewer/shot.mjs <输出目录>`（自起绑 127.0.0.1 的服务）。两种棋子 2 倍下边缘锐利，PingFang 中文、全角数字、繁体字都正常；同一浏览器重跑截图逐字节一致。第 4 步页面外壳接手后这两个文件删掉。
 4. **页面**：两种版式、播放控制、连播、比分、标题画面、录制接口。录屏画面先做静态版式、出截图（开局、轮到上方 / 下方、将军、终局各一张，两种棋都出）给用户看，定了再接播放逻辑。验收：宽版、窄版各截一张图看；用无头浏览器调 `viewer.next()` 走完一盘、`kind` 顺序和 `hold` 对；键盘和点着法跳步手动试。
 5. **录制脚本**：两种棋各出一段 3:4 视频，ffprobe 核对编码（H.264、yuv420p）、帧率（30 恒定）、分辨率、时长（各格 `hold` 之和），抽几帧看清晰度。
 6. （可选）国际象棋滑动动画。
@@ -183,9 +185,9 @@
 | xqbase 规范细节 | 已核实 | 审查时读了原文，要点见上文「输入」 |
 | `game.jsonl` 每步有坐标、中文记谱、将军标记，`config` 有双方深度 | 已核实 | 抽看两份样例；Codex 审查核对 |
 | cm-chessboard 动画不能定格 | 已核实 | 读源码：`requestAnimationFrame` 驱动 |
-| 象棋棋子素材逐个文件是 CC0、中文字体截图正常 | 部分核实 | 棋子是纯路径 SVG，无头截图中文显示正常；逐文件许可在第 3 步核 |
-| cm-chessboard 棋子素材的许可 | 待验证 | 第 3 步读它的素材许可 |
-| 能锁定一个与本机 chromium-1208 配套的 playwright-core 版本 | 待验证 | 不行就用环境变量指浏览器路径（实验已这样跑通） |
+| 象棋棋子素材逐个文件是 CC0、中文字体截图正常 | 已核实 | 第 3 步：`playok_2014_chinese_noshadow` 的 LICENSE.txt / LICENSE.json 与 README 主题列表都是 CC0-1.0，14 个 SVG 逐个看过，元数据里没有另写许可，无 `<text>`、无外部引用（`viewer/vendor/xiangqi-pieces/SOURCE.md`）；打样截图里中文（含全角数字、繁体）正常 |
+| cm-chessboard 棋子素材的许可 | 已核实，**待用户定** | `standard.svg` 是 CC BY-SA 3.0（文件头注释和 README 一致），要署名、改了要同许可；`staunty.svg` 是 CC BY-NC-SA 4.0，不用。项目许可政策没把 CC BY-SA 列进禁用，但视频里带这套棋子要不要署名、要不要换一套，请用户定。可选的换法：Commons 上 Cburnett 原件是 GFDL / CC BY-SA 3.0 / BSD / GPL 多许可任选（`File:Chess_klt45.svg`），可按 BSD 取原件自做精灵图（`viewer/vendor/cm-chessboard/SOURCE.md`） |
+| 能锁定一个与本机 chromium-1208 配套的 playwright-core 版本 | 已核实 | 1.58.2，查各版 `browsers.json`；打样脚本不指路径就跑通，`VIEWER_CHROMIUM` 指到缓存里的完整版 Chrome 也跑通 |
 | 中文记谱解析在多路兵等少见局面正确 | 待验证 | 第 1、2 步用造的局面往返测 |
 
 ## 以后再说
