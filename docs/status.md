@@ -1,6 +1,6 @@
 # 进度与待办
 
-更新：2026-09-29（整盘会话里思考量偏低的诊断：不是 bug，主因是会话连续和开局背谱）。
+更新：2026-09-29（整盘默认着法前写理由；opus 对 astra 两盘国际象棋）。
 
 **总结论**：`results/summary-round1.md`。一句话：下得臭主要是想得不够深、判断错，不是看不清棋盘，也不是思考接不上；调高思考深度最管用，提示技巧作用有限。以下各批摘要只留要点，数字看各批结论文档。
 
@@ -38,6 +38,7 @@
 - **棋手走 llm-chat**（`llmchess/chat.py`）：`claude:opus`、`codex:sol`（gpt-6-sol）、`deepseek:deepseek-v4-pro` 三路都支持连续会话。隔离与跨轮思考实测（`results/llm-chat-isolation.md`）：Claude、DeepSeek 零工具；**GPT 请求里仍挂着 4 个 code mode 工具，执行层关着、调出来也落空**，程序每轮查它的会话记录，出现工具调用就暂停；Claude、GPT 思考能带到下一轮，DeepSeek 不带。llm-chat 下 GPT 不再带 `~/.codex/AGENTS.md`。
 - **新协议下给法复测**（`results/batch6-real-presentation.md`，opus high 387 次、sol high 174 次，只能看方向）：默认给法不改。中国象棋 opus 仍是只给清单最好，sol 三档分不开；国际象棋 opus all 对 board 分不开。不报将军后没看到变差，首答非法全是走法没套对，和被将军无关。
 - **opus 对 sol 首局**（`results/game-opus-vs-sol-1.md`，xhigh，每种棋 1 盘，只能看个样子）：两盘都是 opus 执先将死 sol，双方 0 非法、0 工具调用、0 异常；互相送子漏吃明显。opus 每步思考中位 143（国际象棋）/ 2,386（中国象棋）token。
+- **opus 对 astra 首轮**（`results/game-opus-vs-astra-1.md`，国际象棋 xhigh 2 盘互换先后，标准开局，着法前写理由，只能看个样子）：1 比 1，都是执白一方将死；0 工具调用、0 故障、0 续跑，非法 4 次都一次改对。每步平均亏损、大失误两边分不开（opus 35.1 / 50.7，astra 51.8 / 37.1）。思考中位 opus 276 / 599、astra 110 / 217 token；opus 花费 $4.14 / $2.74。理由 230 步全写、全进棋谱评注，opus 中位约 115 字、astra 约 26 字。astra 工具情况和 sol 同配置，诱导不调，兜底检查生效。
 - **整盘会话里思考量偏低的诊断**（`results/thinking-in-session.md`，国际象棋 12 个局面，只能看方向）：不是 bug，effort 已传到。主因是会话连续本身少想（同局面约为新会话的四分之一），加上那盘从标准开局背谱、后段一边倒残局；新提示只少一到两成。之前「低一到两个数量级」是拿错了基准（5,700–10,000 是中国象棋 stateless；国际象棋 xhigh 整盘 stateless 1,265–1,432、session 710–809）。没看出想得少带来稳定的质量下降，整盘默认仍用 xhigh。
 - 冒烟：opus 对 fsf、sol 对 opus 各一盘（medium，6 个半回合），会话续接、用量、工具调用兜底都正常；非法计数、重选、判负、续跑用离线测试桩验证。
 
