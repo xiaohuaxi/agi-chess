@@ -183,6 +183,50 @@ def notation(fen, mv):
         return mv
 
 
+def pgn_move(fen, mv):
+    """PGN 用的中文纵线记谱，照 xqbase《中国象棋电脑应用规范(二)：着法表示》第四节（www.xqbase.com/protocol/cchess_move.htm），
+    任何局面都写得出、且无歧义。只是记谱格式，不涉及棋规（着法合法与否由 pyffish 判）。record.txt 仍用 notation()，旧记录不变。
+      - 数字：红方纵线从红方右手起「一」到「九」，黑方从黑方右手起全角「１」到「９」；进退格数同样红汉字、黑全角。
+      - 车马炮同一纵线两个：「前」「后」代替纵线号（前车进一）；仕相同线不写前后，照常写纵线号（能退的在前、能进的在后，不会混）。
+      - 兵卒（前 = 朝对方底线的方向）：
+        一条纵线上两个 →「前」「后」；三个 →「前」「中」「后」；四五个 → 从前往后「一」「二」「三」「四」「五」；
+        有两条纵线各有两个以上 → 这两条线上的兵一起编号「一」到「五」：先按纵线号从小到大（即走棋方的右边先），
+        同一线从前到后；其余纵线上的兵不参与编号、照常写（原文例局：四线、六线各两兵，四线前兵为「一兵」，六线后兵为「四兵」，
+        五线单兵仍写「兵五进一」）。原文说明里「即先看最左边一列」和「先从右到左」及例局不符，以例局为准。
+      - 黑方编号用的「一二三四五」和「前中后」一样仍写汉字（原文：例局红黑互换写作「一卒平５」）。
+    同一纵线同种子数：车马炮最多两个，兵卒最多五个；兵卒同时有两条多兵纵线时最多各 2+2 或 3+2，不会有三条。"""
+    board, _ = board_of(fen)
+    fr, to = mv[:2], mv[2:4]
+    p = board[fr]
+    red, kind = is_red(p), p.lower()
+    (x1, y1), (x2, y2) = xy(fr), xy(to)
+    num = _RED_NUM if red else _BLACK_NUM
+    fnum = (lambda x: 9 - x) if red else (lambda x: x + 1)
+    ahead = (lambda y: -y) if red else (lambda y: y)        # 排序键：越靠前（越接近对方底线）越小
+    name = CN_NAME[p]
+    head = name + num[fnum(x1)]
+    if kind in 'rncp':
+        files = {}
+        for sq, q in board.items():
+            if q == p:
+                files.setdefault(xy(sq)[0], []).append(xy(sq)[1])
+        mine = sorted(files[x1], key=ahead)
+        multi = sorted((x for x, ys in files.items() if len(ys) >= 2), key=fnum)
+        if kind == 'p' and len(multi) >= 2 and x1 in multi:
+            order = [(x, y) for x in multi for y in sorted(files[x], key=ahead)]
+            head = '一二三四五'[order.index((x1, y1))] + name
+        elif len(mine) == 2:
+            head = '前后'[mine.index(y1)] + name
+        elif len(mine) == 3:
+            head = '前中后'[mine.index(y1)] + name
+        elif len(mine) >= 4:
+            head = '一二三四五'[mine.index(y1)] + name
+    dy = (y2 - y1) * (1 if red else -1)
+    op = '平' if dy == 0 else ('进' if dy > 0 else '退')
+    dest = abs(dy) if (kind in 'rcpk' and dy != 0) else fnum(x2)
+    return head + op + num[dest]
+
+
 # ---------------------------------------------------------------- 违规分类（boards.violation 的中国象棋分支）
 VIOLATIONS = {
     'own': '目标格有己方子', 'shape': '不合这个子的走法', 'palace': '出九宫', 'river': '相过河',
@@ -717,7 +761,29 @@ def exports(st, cfg, end, summary_lines, meta=None):
         for i in range(0, len(rec), 2):
             lines.append('%d. %s%s' % (i // 2 + 1, rec[i], '　' + rec[i + 1] if i + 1 < len(rec) else ''))
     lines += ['', 'ICCS：' + ' '.join(st['moves']), ''] + summary_lines
-    return {'record.txt': '\n'.join(lines) + '\n'}
+    return {'record.txt': '\n'.join(lines) + '\n', 'game.pgn': pgn(st, cfg, end, meta or {})}
+
+
+def pgn(st, cfg, end, meta):
+    """xqbase PGN（www.xqbase.com/protocol/cchess_pgn.htm）：Game 标签必须在第一个；双方是 Red / Black；
+    不写 Format，着法默认即中文纵线记谱（pgn_move）；RedEffort / BlackEffort 是本项目自定义标签（只给模型棋手）。
+    每步评注写法和国际象棋一致（records.meta_tokens）。评注后面的黑方着法照规范原文例子直接接着写，不补「N...」。
+    起始局面都是标准开局（随机开局那几步也是着法），所以不写 FEN 标签。"""
+    res = '1-0' if end['winner'] == 'w' else '0-1' if end['winner'] == 'b' else '1/2-1/2'
+    eff = records.efforts(cfg)
+    tags = [('Game', 'Chinese Chess'), ('Event', 'llm-chess %s' % cfg['tag']),
+            ('Red', cfg['players']['w']), ('Black', cfg['players']['b'])]
+    tags += [(('RedEffort' if side == 'w' else 'BlackEffort'), eff[side]) for side in 'wb' if side in eff]
+    tags += [('Result', res), ('Termination', end['reason'])]
+    toks = []
+    for i, mv in enumerate(st['moves']):
+        if i % 2 == 0:
+            toks.append('%d.' % (i // 2 + 1))
+        toks.append(pgn_move(st['fens'][i], mv))
+        c = records.meta_tokens(meta.get(i + 1))
+        toks += ['{'] + c + ['}'] if c else []
+    toks.append(res)
+    return '\n'.join(records.pgn_tag(k, v) for k, v in tags) + '\n\n' + records.wrap(toks, 79) + '\n\n'
 
 
 # ---------------------------------------------------------------- 引擎对手

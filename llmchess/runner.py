@@ -388,7 +388,7 @@ def finish(ctx):
 
 
 def write_exports(ctx):
-    """按记录写棋谱文件（record.txt，国际象棋另有 game.pgn），原子替换。终局时 finish 调；已结束的盘也可以
+    """按记录写棋谱文件（record.txt、game.pgn），原子替换。终局时 finish 调；已结束的盘也可以
     用 `python3 -m llmchess export <目录>` 重新导出（load 重放后调这里，不写任何记录）。返回 {文件名: 内容}。"""
     G, cfg, st, end = ctx['G'], ctx['cfg'], ctx['st'], ctx['end']
     summ = records.summary(ctx['stats'], cfg['players'])

@@ -31,7 +31,7 @@
   两个都给报错，一方单设的覆盖公共的那个。每方实际用的 show 记在 config 的 sides 里（自定义 view 记 null）。
 随机开局 --opening random:N：前 N 个半回合由程序替双方走（引擎浅搜 MultiPV 3、分差 ≤50 厘兵的着法按 --opening-seed 抽），
   开局写进 config、续跑照记录重放；模型只在着法历史里看到这几步。--dry-run 打印的是开局走完后模型方第一步的提示。
-记录在 runs/<tag>/（不入库）：game.jsonl、record.txt，国际象棋另有 game.pgn。棋谱里每步带评注
+记录在 runs/<tag>/（不入库）：game.jsonl、record.txt、game.pgn（中国象棋是 xqbase PGN）。棋谱里每步带评注
   {[%emt 用时] [%think 思考 token] [%out 输出 token] …}（design.md 第四节）。
 暂停（--on-limit pause 时撞额度、连续调不通、--stop-after、停止信号）退出码 3。
 --timeout：单次 claude -p 调用的超时秒数（默认 3600），记进 config，resume 沿用（resume --timeout 只改这次续跑）；

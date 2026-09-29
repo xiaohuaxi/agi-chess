@@ -188,35 +188,75 @@ def comment_text(text):
 
 def cols(s):
     """显示宽度：中日韩全角字符算 2 列。按列折行，中文行不会比英文行宽一倍（UTF-8 下字节数也压在 255 以内）。"""
-    return sum(2 if unicodedata.east_asian_width(c) in 'WF' else 1 for c in s)
+    return sum(2 if wide(c) else 1 for c in s)
+
+
+def wide(c):
+    return unicodedata.east_asian_width(c) in 'WF'
+
+
+# 这些全角标点后面优先断行（中文句子里没有空格，只能在字与字之间断）
+CJK_BREAK_AFTER = set('，。、；：！？）」』】》…—～')
+
+
+class Glue(str):
+    """紧接前一个词、中间没有空格的一段（一个没有空格的长串切开后的第二段起）。wrap 排版时和前一段同行就直接相接，
+    放不下才换行。只在两边都是全角字符（east_asian_width 为 W/F）处切，阅读器读回来时按「换行两边都是全角字符就不补空格」
+    还原原文；找不到这样的切点（比如很长的英文串）才在别处硬切，那样读回来会多一个空格，和折行前的老行为一样。"""
 
 
 def chunks(w, width=WIDTH):
-    """一个没有空格的长串按显示宽度切成不超过 width 列的几段。"""
-    out, cur = [], ''
-    for c in w:
-        if cur and cols(cur + c) > width:
-            out.append(cur)
-            cur = ''
+    """一个没有空格的词切成几段（第二段起是 Glue）：优先在全角标点后切，其次在两个全角字符之间，每段不超过 width 列；
+    都找不到才硬切。短词也在全角标点后切开，好让中文长句逐段填满每一行。"""
+    segs, cur = [], ''
+    for i, c in enumerate(w):
         cur += c
-    return out + ([cur] if cur else [])
+        nxt = w[i + 1] if i + 1 < len(w) else None
+        if c in CJK_BREAK_AFTER and nxt is not None and wide(nxt):
+            segs.append(cur)
+            cur = ''
+    if cur:
+        segs.append(cur)
+    out = []
+    for seg in segs:
+        while cols(seg) > width:
+            cut = _cut(seg, width)
+            out.append(seg[:cut])
+            seg = seg[cut:]
+        out.append(seg)
+    return [out[0]] + [Glue(x) for x in out[1:]] if out else []
+
+
+def _cut(seg, width):
+    """seg 超宽时从哪里切：不超过 width 列的最长前缀，切点尽量落在两个全角字符之间。"""
+    n, w = 0, 0
+    while n < len(seg) and w + cols(seg[n]) <= width:
+        w += cols(seg[n])
+        n += 1
+    n = max(n, 1)
+    for k in range(n, 0, -1):
+        if k < len(seg) and wide(seg[k - 1]) and wide(seg[k]):
+            return k
+    return n
 
 
 def wrap(tokens, width=WIDTH):
-    """把一串不可拆的词贪心排成不超过 width 列的行（单个词本身超宽时独占一行）。"""
+    """把一串词贪心排成不超过 width 列的行（单个词本身超宽时独占一行）。Glue 段和前一个词之间不加空格。"""
     lines, cur = [], ''
     for w in tokens:
-        if cur and cols(cur) + 1 + cols(w) > width:
+        glue = isinstance(w, Glue)
+        sep = '' if glue else ' '
+        if cur and cols(cur) + len(sep) + cols(w) > width:
             lines.append(cur)
-            cur = w
+            cur = str(w)
         else:
-            cur = cur + ' ' + w if cur else w
+            cur = cur + sep + w if cur else str(w)
     return '\n'.join(lines + ([cur] if cur else []))
 
 
 def meta_tokens(m):
     """一步的评注拆成词：先是内嵌命令（[%名 参数]，名只用字母数字，规范补充的要求；每条整段不拆），后面是棋手写的
-    说明文字（comment_text 处理后按空格分词，没有空格的长串——比如中文整句——按 WIDTH 硬切）。
+    说明文字（comment_text 处理后按空格分词，没有空格的串——比如中文整句——再按 chunks 切段，折行时不添空格）。
     %emt 是规范补充里的标准命令；其余是自定义的，标准阅读器按规范补充会原样保留、不做处理。没给的项整条省掉。"""
     if not m:
         return []
@@ -238,3 +278,20 @@ def meta_tokens(m):
 def meta_comment(m):
     """一步的评注正文（不含花括号），按 WIDTH 折行（评注里换行合法）；没有元信息返回空串。"""
     return wrap(meta_tokens(m))
+
+
+def efforts(cfg):
+    """{方: 思考深度}，只给模型棋手（引擎、随机、人没有这一项，config 里的 effort 对它们无意义）。
+    写进棋谱标签 WhiteEffort / BlackEffort（中国象棋 RedEffort / BlackEffort），本项目自定义，见 docs/viewer.md。"""
+    from .runner import MODEL_KINDS, player_kind          # runner 引用了本模块，这里延后导入
+    out = {}
+    for side in 'wb':
+        sc = (cfg.get('sides') or {}).get(side) or {}
+        if sc.get('effort') and player_kind(str(cfg['players'][side])) in MODEL_KINDS:
+            out[side] = sc['effort']
+    return out
+
+
+def pgn_tag(name, value):
+    """一行 PGN 标签；值里的反斜杠和双引号按 PGN 规范转义。"""
+    return '[%s "%s"]' % (name, str(value).replace('\\', '\\\\').replace('"', '\\"'))

@@ -454,6 +454,8 @@ def exports(st, cfg, end, summary_lines, meta=None):
     g.headers['White'], g.headers['Black'] = cfg['players']['w'], cfg['players']['b']
     g.headers['Result'] = '1-0' if end['winner'] == 'w' else '0-1' if end['winner'] == 'b' else '1/2-1/2'
     g.headers['Termination'] = end['reason']
+    for side, e in records.efforts(cfg).items():   # 自定义标签，只给模型棋手（docs/viewer.md「仓库里的配套改动」）
+        g.headers['WhiteEffort' if side == 'w' else 'BlackEffort'] = e
     head = str(g).split('\n\n', 1)[0]           # 标签部分用 python-chess 的；着法部分自己排，评注要按词折行
     return {'record.txt': '\n'.join(lines) + '\n', 'game.pgn': head + '\n\n' + _pgn_movetext(g, meta or {}) + '\n\n'}
 
