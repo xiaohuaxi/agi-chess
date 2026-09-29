@@ -49,7 +49,7 @@ export class Chessboard {
                 aspectRatio: 1, // height/width of the board
                 pieces: {
                     type: PIECES_FILE_TYPE.svgSprite, // pieces are in an SVG sprite, no other type supported for now
-                    file: "pieces/standard.svg", // the filename of the sprite in `assets/pieces/` or an absolute url like `https://…` or `/…`
+                    file: "pieces/cburnett.svg", // llm-chess: was "pieces/standard.svg" (CC BY-SA, removed); cburnett.svg is BSD, see vendor/cburnett-pieces/. the filename of the sprite in `assets/pieces/` or an absolute url like `https://…` or `/…`
                     tileSize: 40 // the tile size in the sprite
                 },
                 animationDuration: 300 // pieces animation duration in milliseconds. Disable all animations with `0`
