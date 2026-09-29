@@ -14,7 +14,7 @@ import json, os, re, shutil
 import cchess
 import pyffish as sf
 
-from . import records
+from . import memory, records
 
 XQ = 'xiangqi'
 START = sf.start_fen(XQ)
@@ -650,8 +650,8 @@ ILLEGAL_RULE = '每步给出着法后，着法不合法或认不出会告诉你�
 
 
 def system_real(side, sc, memory_text):
-    """「模型就是真实棋手」的系统提示（design.md 第九节）：不要求中文、不要求说理由，只需给出着法；
-    赛制（禁着退回、非法重选上限）预先讲清。"""
+    """「模型就是真实棋手」的系统提示（design.md 第九节）：不要求中文；reason=on（默认）时着法之前简短写出这步的理由，
+    off 时只需给出着法（memory.answer_lead）；赛制（禁着退回、非法重选上限）预先讲清。"""
     s = ['你在下一盘中国象棋，执%s。对手是另一位棋手。目标是赢棋。' % SIDES[side],
          '规则按标准中国象棋：将死或困毙对方为胜；不许长将、长捉，走出这类着法按不合法退回；同一局面出现三次且不属于长将、'
          '长捉判和；连续一百个半回合没有吃子判和；满 %d 个半回合仍未分胜负判和。' % sc['max_plies'] +
@@ -660,7 +660,7 @@ def system_real(side, sc, memory_text):
          memory_text]
     if sc['selfcheck'] == 'on':
         s.append(SELFCHECK)
-    s.append('回答格式：只需给出着法，写成一行「着法: 」加着法，用 ICCS 坐标（例如 着法: h2e2），'
+    s.append('回答格式：' + memory.answer_lead(sc) + '用 ICCS 坐标（例如 着法: h2e2），'
              '也可以用中文记谱（例如 着法: 炮二平五）。')
     if sc.get('threats') == 'on':
         s.append(THREATS_ASK)

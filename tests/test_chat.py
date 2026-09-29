@@ -189,6 +189,40 @@ class FakeChat(unittest.TestCase):
         self.assertIn('还可重选 2 次', c[1]['stdin'])
 
 
+    def test_reason_default_on_and_goes_into_pgn_comment(self):
+        # 默认请棋手在着法前写理由；理由里提到别的着法（Nf3、d4）不影响读着法，落定那次的理由进该步评注
+        self.plan([{'text': '也可以 Nf3，但我想先占中心，d4 留到下一步。\n\n着法: e2e4'},
+                   {'text': '中心已经有兵了，再出马。\nMove: g1f3'}])
+        rc = self.play(['--game', 'chess', '--tag', 'rs', '--black', 'random', '--max-plies', '3', '--seed', '2'])
+        self.assertEqual(rc, 0)
+        recs = self.recs('rs')
+        cfg = recs[0]['cfg']
+        self.assertEqual(cfg['sides']['w']['reason'], 'on')
+        self.assertIn(memory.ANSWER_LEAD['on'], cfg['system']['w'])
+        self.assertIn(memory.ANSWER_LEAD['on'], self.calls()[0]['argv'][self.calls()[0]['argv'].index('--system') + 1])
+        moves = [r['move'] for r in recs if r['type'] == 'move' and r['side'] == 'w']
+        self.assertEqual(moves, ['e2e4', 'g1f3'])
+        with open(os.path.join(self.tmp, 'rs', 'game.pgn')) as f:
+            pgn = f.read()
+        self.assertIn('我想先占中心，d4 留到下一步。', pgn)
+        self.assertIn('中心已经有兵了，再出马。', pgn)
+
+    def test_xiangqi_reason_goes_into_record(self):
+        self.plan([{'text': '先架中炮，马八进七也可以。\n着法: h2e2'}])
+        self.play(['--game', 'xiangqi', '--tag', 'rx', '--black', 'random', '--max-plies', '2', '--seed', '4'])
+        with open(os.path.join(self.tmp, 'rx', 'record.txt')) as f:
+            self.assertIn('先架中炮，马八进七也可以。', f.read())
+        self.assertEqual([r['move'] for r in self.recs('rx') if r['type'] == 'move'][0], 'h2e2')
+
+    def test_reason_off_keeps_old_prompt(self):
+        self.plan([{'text': '着法: h2e2'}])
+        self.play(['--game', 'xiangqi', '--tag', 'ro', '--black', 'random', '--max-plies', '2', '--reason', 'off'])
+        cfg = self.recs('ro')[0]['cfg']
+        self.assertEqual(cfg['sides']['w']['reason'], 'off')
+        self.assertIn('回答格式：只需给出着法，写成一行「着法: 」加着法，', cfg['system']['w'])
+        self.assertNotIn('理由', cfg['system']['w'])
+
+
 class RealProtocolPrompts(unittest.TestCase):
     def test_legacy_prompt_unchanged_without_protocol(self):
         sc = {'memory': 'stateless', 'selfcheck': 'off', 'max_plies': 200}
@@ -208,6 +242,32 @@ class RealProtocolPrompts(unittest.TestCase):
         self.assertEqual(memory.extract_move('**e2e4**', loose=True), 'e2e4')
         self.assertIsNone(memory.extract_move('Move: Nf3'))
         self.assertIsNone(memory.extract_move('a' * 40, loose=True))
+
+    def test_reason_switch_per_side_and_old_records(self):
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            cli.main(['play', '--game', 'chess', '--b', 'reason=off', '--dry-run'])
+        w, b = out.getvalue().split('== 系统提示（黑方')[:2]
+        self.assertIn(memory.ANSWER_LEAD['on'], w)
+        self.assertIn(memory.ANSWER_LEAD['off'], b)
+        # 改之前的 real 记录 config 里没有 reason：按 off 走，提示和原来逐字相同
+        sc = {'protocol': 'real', 'memory': 'session', 'selfcheck': 'off', 'max_plies': 200, 'retries': 3}
+        self.assertIn('回答格式：只需给出着法，', X.system_prompt('w', sc, memory.system_text(sc)))
+
+    def test_reason_rejected_under_legacy_and_not_recorded(self):
+        with self.assertRaises(SystemExit):
+            with contextlib.redirect_stdout(io.StringIO()):
+                cli.main(['play', '--game', 'chess', '--protocol', 'legacy', '--reason', 'on', '--dry-run'])
+        a = mock.Mock(protocol='legacy', **{k: None for k in cli.SIDE_KEYS})
+        a.configure_mock(effort='medium', memory=None, history=-1, legal='none', selfcheck='off', recite='off',
+                         notes_keep=1, session_view='full', retries=3)
+        self.assertNotIn('reason', cli.side_cfg(a, C, None, 200))
+
+    def test_quiz_real_reason_not_doubled(self):
+        from llmchess import quiz
+        sc = dict(quiz.side_cfg(C, 'high', {'reason': 'on'}), protocol='real', retries=3)
+        s = quiz.system_of(C, 'w', sc)
+        self.assertIn(quiz.REASON_ASK, s)
+        self.assertNotIn(memory.ANSWER_LEAD['on'], s)
 
     def test_real_rejects_legal_list(self):
         with self.assertRaises(SystemExit):

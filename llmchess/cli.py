@@ -9,8 +9,8 @@
     python3 -m llmchess export runs/x1                                                  # 已结束的盘重新导出棋谱
 
 协议 --protocol（默认 real）：real 是「模型就是真实棋手」（design.md 第九节）——每方一段连续会话（memory 默认 session），
-  只给局面、轮到谁、对方上一步，不报将军、不给合法着法；非法着法只告诉它不合法、让它重选（每步最多 retries+1 次，
-  用完判负）；模型调用走 llm-chat（chat.py）。legacy 是改协议之前的提示和调用（claude -p 直调，memory 默认 stateless），
+  只给局面、轮到谁、对方上一步，不报将军、不给合法着法；默认请棋手在着法之前简短写出理由（reason=off 关掉）；
+  非法着法只告诉它不合法、让它重选（每步最多 retries+1 次，用完判负）；模型调用走 llm-chat（chat.py）。legacy 是改协议之前的提示和调用（claude -p 直调，memory 默认 stateless），
   用来续跑、复现旧实验；旧记录的 config 里没有 protocol，resume 自动按旧的走。
 棋手：claude:<模型>（默认 claude:opus）/ codex:<GPT 模型，如 sol 或 gpt-6-sol> / deepseek:<模型，默认 deepseek-v4-pro>
   （后两种只在 real 下）/ engine:<引擎>[:参数] / random。
@@ -18,7 +18,8 @@
   中国象棋引擎 fsf[:nodes=N|depth=N|movetime=毫秒]（Fairy-Stockfish，默认 nodes=1000）。
 模型相关变量（公共值用 --变量，一方单设用 --w / --b 变量=值，w 是先走的红方 / 白方）：
   effort medium|high|xhigh|max、memory stateless|notes|session、show、view（逗号分隔）、history（-1 全部 / 0 / N）、
-  legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、notes_keep N、session_view full|move。
+  legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、notes_keep N、session_view full|move、
+  reason on|off（只在 real 下，默认 on：着法之前用自己的话简短写出这步的理由，导出棋谱时进该步评注；off 只需给出着法）。
 局面怎么呈现：show all|board|pieces|fen|boardpieces（boardpieces 只有中国象棋），和局面题的 --set show 同一套（棋种模块的
   SHOWS）。不给时用棋种默认给法：中国象棋 pieces（只给子力清单）、国际象棋 all（FEN + 字母棋盘），第 4P2 批定的；
   --show all 回到改默认之前的提示（中国象棋棋盘 + 清单 + FEN）。view 是自定义组合，和 show 二选一：同一层（公共 / 一方单设）
@@ -42,7 +43,7 @@ RUNS = ROOT / 'runs'
 GAMES = {'xiangqi': 'llmchess.xiangqi', 'chess': 'llmchess.chess_'}
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
 SIDE_KEYS = {'effort': str, 'memory': str, 'show': str, 'view': str, 'history': int, 'legal': str, 'selfcheck': str,
-             'recite': str, 'notes_keep': int, 'session_view': str}
+             'recite': str, 'notes_keep': int, 'session_view': str, 'reason': str}
 
 
 def game_module(name):
@@ -89,6 +90,12 @@ def side_cfg(a, G, overrides, max_plies):
             raise SystemExit('real 协议下不给合法着法（legal=none）、每步都给完整局面（session_view=full）；要用请 --protocol legacy')
         sc['protocol'] = 'real'
         sc['retries'] = a.retries
+        sc['reason'] = sc['reason'] or 'on'       # 着法之前写理由，默认开（用户 2026-09-29 定）
+        if sc['reason'] not in ('on', 'off'):
+            raise SystemExit('reason 只能是 on/off，收到 %r' % sc['reason'])
+    else:
+        if sc.pop('reason') is not None:          # 旧协议的 config 里没有这一项，保持逐字不变
+            raise SystemExit('reason 只在 real 协议下可用（legacy 的理由要求写在它自己的提示里）')
     return sc
 
 
@@ -283,6 +290,7 @@ def main(argv=None):
     p.add_argument('--recite', default='off')
     p.add_argument('--notes-keep', dest='notes_keep', type=int, default=1)
     p.add_argument('--session-view', dest='session_view', default='full')
+    p.add_argument('--reason', default=None, help='on（real 默认）：着法之前用自己的话简短写出这步的理由；off：只需给出着法')
     p.add_argument('--w', action='append', metavar='变量=值', help='只改先走一方（红 / 白），可重复')
     p.add_argument('--b', action='append', metavar='变量=值', help='只改黑方，可重复')
     p.add_argument('--retries', type=int, default=3)

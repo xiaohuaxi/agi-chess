@@ -182,7 +182,7 @@ def with_default_show(G, sets):
 def side_cfg(G, effort, sets=None):
     """和 cli.side_cfg 默认值一致，只把 history 设成 0、effort 按档位；sets 是分档的覆盖值（parse_sets 的结果）。
     sets 按记录里的含义解读：没有 show / view 就是 all（旧给法）；新跑的默认给法由 cmd_run 先经 with_default_show 补进 sets。
-    max_plies 只用来拼系统提示里那句整盘规则。threats / attackmap / reason 只有局面题有。"""
+    max_plies 只用来拼系统提示里那句整盘规则。threats / attackmap 只有局面题有；reason 是局面题自己的 REASON_ASK（system_of）。"""
     sc = {'effort': effort, 'memory': 'stateless', 'view': G.ALL_VIEW.split(','), 'history': 0, 'legal': 'none',
           'selfcheck': 'off', 'recite': 'off', 'threats': 'off', 'attackmap': 'off', 'reason': 'off', 'notes_keep': 1,
           'session_view': 'full', 'max_plies': 200}
@@ -203,8 +203,10 @@ REASON_ASK = ('下棋的人每走一步都有自己的依据，可能是一个�
 
 
 def system_of(G, side, sc):
-    """局面题的系统提示：棋种的整盘系统提示，reason=on 时末尾加 REASON_ASK。"""
-    s = G.system_prompt(side, sc, memory.system_text(sc))
+    """局面题的系统提示：棋种的整盘系统提示，reason=on 时末尾加 REASON_ASK。
+    棋种的 real 系统提示也认 reason（整盘的「着法前写理由」，memory.answer_lead）；局面题沿用自己的 REASON_ASK，
+    所以交给棋种时按 off 传，已有局面题档的提示逐字不变。"""
+    s = G.system_prompt(side, dict(sc, reason='off'), memory.system_text(sc))
     return s + '\n\n' + REASON_ASK if sc.get('reason') == 'on' else s
 
 

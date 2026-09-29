@@ -10,7 +10,7 @@ import os, re, shutil
 import chess
 import chess.pgn
 
-from . import records
+from . import memory, records
 
 SIDES = {'w': '白方', 'b': '黑方'}
 ALL_VIEW = 'fen,ascii'            # show=all：FEN + 字母棋盘（国际象棋默认 view 里本来没有子力清单）
@@ -423,7 +423,7 @@ def system_real(side, sc, memory_text):
          memory_text]
     if sc['selfcheck'] == 'on':
         s.append(SELFCHECK)
-    s.append('回答格式：只需给出着法，写成一行「着法: 」加着法，用 UCI 坐标写起点加终点（例如 着法: e2e4；升变在后面加棋子字母，'
+    s.append('回答格式：' + memory.answer_lead(sc) + '用 UCI 坐标写起点加终点（例如 着法: e2e4；升变在后面加棋子字母，'
              '如 e7e8q；易位写王的走法，如 e1g1），也可以用 SAN（例如 着法: Nf3、着法: O-O）。')
     if sc.get('threats') == 'on':
         s.append(THREATS_ASK)
