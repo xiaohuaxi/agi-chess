@@ -49,6 +49,7 @@
 
 - 程序在 `llmchess/`，用法看 `python3 -m llmchess --help`；对局记录落在 `runs/<tag>/`（被 git 忽略）。
 - 验证命令：`python3 -m unittest discover -s tests -t .`（离线，不调 `claude`；会起本机引擎）。
+- 棋谱阅读器（`viewer/`）的 JS 测试：`node --test 'viewer/test/*.test.js'`（不引依赖；读本机 `runs/` 的回归没有数据时跳过，往返测试要调 `python3`）。
 - 冒烟和实验会调 `claude -p` 吃订阅额度：冒烟只用 medium，半回合数压到个位数。
 
 ## 硬约束
