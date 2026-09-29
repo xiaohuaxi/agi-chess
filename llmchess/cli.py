@@ -10,7 +10,7 @@
 
 协议 --protocol（默认 real）：real 是「模型就是真实棋手」（design.md 第九节）——每方一段连续会话（memory 默认 session），
   只给局面、轮到谁、对方上一步，不报将军、不给合法着法；默认请棋手在着法之前简短写出理由（reason=off 关掉）；
-  非法着法只告诉它不合法、让它重选（每步最多 retries+1 次，用完判负）；模型调用走 llm-chat（chat.py）。legacy 是改协议之前的提示和调用（claude -p 直调，memory 默认 stateless），
+  非法着法只告诉它不合法、让它重选（每步最多 retries+1 次，用完判负；real 默认 3 次）；模型调用走 llm-chat（chat.py）。legacy 是改协议之前的提示和调用（claude -p 直调，memory 默认 stateless），
   用来续跑、复现旧实验；旧记录的 config 里没有 protocol，resume 自动按旧的走。
 棋手：claude:<模型>（默认 claude:opus）/ codex:<GPT 模型，如 sol 或 gpt-6-sol> / deepseek:<模型，默认 deepseek-v4-pro>
   （后两种只在 real 下）/ engine:<引擎>[:参数] / random。
@@ -127,8 +127,16 @@ def commit():
         return '? (%s)' % e
 
 
+def default_retries(protocol):
+    """一步里能重选几次（不含第一次）。real 下一手棋最多 3 次、第 3 次仍非法判负（用户 2026-09-29 定，本项目自定的赛制，
+    不是任何正式规则）；legacy 保持改之前的 4 次，旧实验照旧复现。已开局的记录续跑按 config 里记的值，不受影响。"""
+    return 2 if protocol == 'real' else 3
+
+
 def build_cfg(a):
     G = game_module(a.game)
+    if a.retries is None:
+        a.retries = default_retries(a.protocol)
     players = {'w': a.red or a.white or 'claude:opus', 'b': a.black or 'claude:opus'}
     for s in 'wb':
         if players[s] == 'deepseek':
@@ -293,7 +301,8 @@ def main(argv=None):
     p.add_argument('--reason', default=None, help='on（real 默认）：着法之前用自己的话简短写出这步的理由；off：只需给出着法')
     p.add_argument('--w', action='append', metavar='变量=值', help='只改先走一方（红 / 白），可重复')
     p.add_argument('--b', action='append', metavar='变量=值', help='只改黑方，可重复')
-    p.add_argument('--retries', type=int, default=3)
+    p.add_argument('--retries', type=int, default=None,
+                   help='一步里还能重选几次（一步最多 retries+1 次，用完判负）；默认 real 2（一步最多 3 次）、legacy 3')
     p.add_argument('--max-plies', dest='max_plies', type=int, default=200)
     p.add_argument('--seed', type=int, help='随机走子的种子，默认随机取一个并记进 config')
     p.add_argument('--opening', help='random:N：前 N 个半回合由程序替双方走（随机开局），默认不用')

@@ -312,6 +312,8 @@ def cmd_run(a):
     cli.check_player(G, a.player, a.protocol)
     if a.memory is None:
         a.memory = 'session' if a.protocol == 'real' else 'stateless'
+    if a.retries is None:
+        a.retries = cli.default_retries(a.protocol)
     opps = [full_spec(o) for o in a.opp]
     for o in opps:
         cli.check_player(G, o, a.protocol)
@@ -529,7 +531,7 @@ def main(argv=None):
     p.add_argument('--memory', default=None, help='默认 real 下 session、legacy 下 stateless')
     p.add_argument('--set', action='append', metavar='变量=值', help='只加在我方的变量（同 play 的 --w / --b），可重复')
     p.add_argument('--max-plies', dest='max_plies', type=int, default=200)
-    p.add_argument('--retries', type=int, default=3)
+    p.add_argument('--retries', type=int, default=None, help='同 play 的 --retries，默认 real 2、legacy 3')
     p.add_argument('--jobs', type=int, default=4, help='并发盘数')
     p.add_argument('--timeout', type=int, help='透传给每盘 play / resume 的 --timeout（claude -p 单次调用的秒数）；'
                    '不给时新盘用 play 的默认 3600，续跑沿用该盘 config')

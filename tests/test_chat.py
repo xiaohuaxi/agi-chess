@@ -121,7 +121,7 @@ class FakeChat(unittest.TestCase):
             self.assertEqual(c['argv'][c['argv'].index('--effort') + 1], 'medium')   # 思考深度每次显式传
         # 重选提示只说不合法，不说越子；局面提示里不报将军、第二步不重给着法记录
         self.assertIn('这步不合法', calls[1]['stdin'])
-        self.assertIn('本步还可重选 3 次', calls[1]['stdin'])
+        self.assertIn('本步还可重选 2 次', calls[1]['stdin'])
         self.assertNotIn('越子', calls[1]['stdin'])
         for c in (calls[0], calls[2]):
             self.assertNotIn('将军', c['stdin'])
@@ -142,15 +142,46 @@ class FakeChat(unittest.TestCase):
         end = [r for r in recs if r['type'] == 'end'][0]
         self.assertEqual(end['summary']['w']['illegal'], 1)
 
-    def test_forfeit_after_four_illegal(self):
-        self.plan([{'text': '着法: a0a9'}, {'text': '没想好'}, {'text': 'Move: zz'}, {'text': '着法: a0a9'}])
+    def test_forfeit_after_three_illegal(self):
+        # real 下一手棋最多 3 次（用户 2026-09-29 定）：第 3 次仍非法直接判负，不再调第 4 次
+        self.plan([{'text': '着法: a0a9'}, {'text': '没想好'}, {'text': 'Move: zz'}, {'text': '着法: h2e2'}])
         rc = self.play(['--game', 'xiangqi', '--tag', 'f', '--black', 'random', '--max-plies', '4'])
         self.assertEqual(rc, 0)
         calls = self.calls()
-        self.assertEqual(len(calls), 4)
+        self.assertEqual(len(calls), 3)
+        self.assertIn('本步还可重选 2 次', calls[1]['stdin'])
         self.assertIn('这步的写法认不出来', calls[2]['stdin'])            # 「没想好」按最后一行读，认不出
-        end = [r for r in self.recs('f') if r['type'] == 'forfeit'][0]['end']
+        self.assertIn('本步还可重选 1 次', calls[2]['stdin'])
+        recs = self.recs('f')
+        self.assertEqual(recs[0]['cfg']['retries'], 2)
+        self.assertIn('一步里连续 3 次都没给出合法着法判负', recs[0]['cfg']['system']['w'])   # 赛制预先写进系统提示
+        end = [r for r in recs if r['type'] == 'forfeit'][0]['end']
         self.assertEqual(end['winner'], 'b')
+        self.assertIn('连续 3 次', end['reason'])
+
+    def test_legacy_keeps_four_attempts(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            cli.main(['play', '--out', self.tmp, '--game', 'chess', '--tag', 'lg', '--protocol', 'legacy',
+                      '--white', 'random', '--black', 'random', '--max-plies', '2', '--seed', '1'])
+        self.assertEqual(self.recs('lg')[0]['cfg']['retries'], 3)
+
+    def test_old_record_resumes_with_its_own_limit(self):
+        # 改之前开的 real 盘 config 里记的是 retries=3（一步 4 次）：续跑照记录，系统提示和余下次数都不变
+        self.plan([{'text': '着法: a0a9'}])
+        with mock.patch.object(runner.claude_cli, '_wait', lambda s: True):
+            rc = self.play(['--game', 'xiangqi', '--tag', 'o', '--black', 'random', '--max-plies', '2',
+                            '--retries', '3'])
+        self.assertEqual(rc, 3)
+        self.assertIn('一步里连续 4 次', self.recs('o')[0]['cfg']['system']['w'])
+        self.plan([{'text': '着法: a0a9'}, {'text': '着法: a0a9'}, {'text': '着法: a0a9'}])
+        os.remove(os.path.join(self.tmp, 'calls.jsonl'))
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = cli.main(['resume', os.path.join(self.tmp, 'o')])
+        self.assertEqual(rc, 0)
+        c = self.calls()
+        self.assertEqual(len(c), 3)
+        self.assertIn('还可重选 3 次', c[0]['stdin'])
+        self.assertIn('连续 4 次', [r for r in self.recs('o') if r['type'] == 'forfeit'][0]['end']['reason'])
 
     def test_refusal_on_first_turn_resends_full_prompt(self):
         # 第一轮被拦时 llm-chat 不存会话：重问要带系统提示和完整局面，不能只发「请重新回答」
@@ -185,8 +216,8 @@ class FakeChat(unittest.TestCase):
         self.assertEqual(rc, 0)
         c = self.calls()
         self.assertIn('--session', c[0]['argv'])
-        self.assertIn('还可重选 3 次', c[0]['stdin'])            # 暂停前用掉的一次照记录接上
-        self.assertIn('还可重选 2 次', c[1]['stdin'])
+        self.assertIn('还可重选 2 次', c[0]['stdin'])            # 暂停前用掉的一次照记录接上
+        self.assertIn('还可重选 1 次', c[1]['stdin'])
 
 
     def test_reason_default_on_and_goes_into_pgn_comment(self):
