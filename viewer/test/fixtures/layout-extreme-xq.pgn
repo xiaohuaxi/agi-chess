@@ -1,0 +1,113 @@
+% 版式极限用的造局（docs/viewer.md「录屏画面」）：最长的名字、三位数回合、带升变的记谱、百万级 token、两位数加半分的比分、
+% 最长的结束原因。前 10 盘只有结果、用来垫比分，第 11 盘几步就结束。局面是摆的，不是真实对局。
+
+[Game "Chinese Chess"]
+[Event "layout extreme 1"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Game "Chinese Chess"]
+[Event "layout extreme 2"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Game "Chinese Chess"]
+[Event "layout extreme 3"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Game "Chinese Chess"]
+[Event "layout extreme 4"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Game "Chinese Chess"]
+[Event "layout extreme 5"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Game "Chinese Chess"]
+[Event "layout extreme 6"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Game "Chinese Chess"]
+[Event "layout extreme 7"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Game "Chinese Chess"]
+[Event "layout extreme 8"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Game "Chinese Chess"]
+[Event "layout extreme 9"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Game "Chinese Chess"]
+[Event "layout extreme 10"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Game "Chinese Chess"]
+[Event "layout extreme 11"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[FEN "4k4/9/9/9/9/9/9/9/9/R2K5 b - - 0 149"]
+[Result "1/2-1/2"]
+[Termination "满 200 个半回合（研究设的上限），判和"]
+
+149... 将５平６ { [%think 877000] } 150. 车九进九 { [%think 999999] } 1/2-1/2

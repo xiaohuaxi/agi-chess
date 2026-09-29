@@ -1,0 +1,104 @@
+% 版式极限用的造局（docs/viewer.md「录屏画面」）：最长的名字、三位数回合、带升变的记谱、百万级 token、两位数加半分的比分、
+% 最长的结束原因。前 10 盘只有结果、用来垫比分，第 11 盘几步就结束。局面是摆的，不是真实对局。
+
+[Event "layout extreme 1"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Event "layout extreme 2"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Event "layout extreme 3"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Event "layout extreme 4"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Event "layout extreme 5"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Event "layout extreme 6"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Event "layout extreme 7"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Event "layout extreme 8"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Event "layout extreme 9"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Event "layout extreme 10"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1-0
+
+[Event "layout extreme 11"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[FEN "3qk3/4P3/8/8/8/8/1r6/4K3 b - - 0 121"]
+[SetUp "1"]
+[Result "1/2-1/2"]
+[Termination "满 200 个半回合（研究设的上限），判和"]
+
+121... Rb3 { [%think 877000] } 122. Kf2 { [%think 912345] } Rb2+ { [%think 77777] }
+123. Kg3 { [%think 88888] } Rb6 { [%think 99999] } 124. exd8=Q+ { [%think 99999] } 1/2-1/2

@@ -1,0 +1,104 @@
+/*
+  录屏画面（窄版）的版式，docs/viewer.md「录屏画面（窄版）的版式」。页面按 540×720 设计（2 倍截图 = 1080×1440）。
+  颜色、字号、间距都是初值，待用户看截图定；逐项实测（每行实际高度、加总是否 720、最长名字会不会挤）
+  由 viewer/shot.mjs --measure 在页面里量，结果不写死在这里，以最近一次实测表为准。
+
+  竖向分配（720）：顶部细条 24 + 两条棋手条平分剩下的 + 棋盘区 544。
+  单盘（没有细条）时细条的 24 自动分给两条棋手条（棋手条是 flex: 1）。9:16 同理，多出的高度分给两条。
+*/
+:root {
+  /* ---- 审美取值（待用户定） ---- */
+  --bg: #262421;              /* 页面底色 */
+  --bar-bg: #2e2b28;          /* 棋手条：没轮到 */
+  --bar-active-bg: #3b3733;   /* 棋手条：轮到走棋 */
+  --accent: #e8a33d;          /* 强调色：轮到方竖条、本步 token 增量 */
+  --accent-w: 4px;            /* 轮到方左边竖条宽 */
+  --text: #ece8e1;            /* 名字、比分 */
+  --text-weak: #9d968c;       /* 思考深度、第二行 */
+  --dim: 0.55;                /* 没轮到那条的文字不透明度 */
+  --tag-bg: #c0392b;          /* 「将军」小标签底色 */
+  --win-bg: #3f8f4f;          /* 「胜」标签底色 */
+  --disc-red: #d23c32; --disc-black: #111; --disc-white: #f4f1ea; --disc-ring: #8a847b;
+  --strip-h: 24px;  --strip-size: 13px;
+  --board-h: 544px;
+  --pad-x: 16px;              /* 棋手条左右内边距（左边另加竖条宽） */
+  --row1-size: 24px; --row1-lh: 32px;  /* 名字 */
+  --effort-size: 20px;                 /* +xhigh */
+  --score-size: 28px;                  /* 比分，粗体 */
+  --row2-size: 17px; --row2-lh: 24px;  /* 第二行：着法、思考 token */
+  --delta-size: 15px;                  /* +3.4k */
+  --tag-size: 13px;
+  --row-gap: 2px;
+  --disc: 14px;                        /* 执子方圆片直径 */
+  --banner-bg: rgba(20, 18, 16, 0.78); --banner-size: 26px; --banner-why-size: 19px;
+  /* 棋盘 */
+  --xq-bg: #e8c98f; --xq-line: #4a3520;
+  --last-fill: rgba(246, 208, 64, 0.5);   /* 国际象棋上一步起止格 */
+  --xq-last: #2a6fdb;                     /* 中国象棋上一步：起点圆点、落点方框 */
+  --xq-check: rgba(220, 40, 30, 0.55);
+}
+
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+  -webkit-font-smoothing: antialiased; }
+body { overflow: hidden; }
+
+#stage.compact { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+
+#strip { flex: none; height: var(--strip-h); line-height: var(--strip-h); font-size: var(--strip-size);
+  text-align: center; color: var(--text-weak); }
+#strip[hidden] { display: none; }
+
+/* ---- 棋手条 ---- */
+.bar { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: var(--row-gap);
+  padding: 0 var(--pad-x) 0 calc(var(--pad-x) + var(--accent-w)); background: var(--bar-bg);
+  position: relative; box-sizing: border-box; overflow: hidden; }
+.bar > .row1, .bar > .row2 { opacity: var(--dim); }
+.bar.active { background: var(--bar-active-bg); }
+.bar.active > .row1, .bar.active > .row2, .bar.done > .row1, .bar.done > .row2 { opacity: 1; }
+.bar.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--accent-w); background: var(--accent); }
+
+.row1, .row2 { display: flex; align-items: center; white-space: nowrap; min-width: 0; }
+.row1 { height: var(--row1-lh); line-height: var(--row1-lh); font-size: var(--row1-size); }
+.row2 { height: var(--row2-lh); line-height: var(--row2-lh); font-size: var(--row2-size); color: var(--text-weak);
+  justify-content: space-between; gap: 12px; }
+
+.disc { flex: none; width: var(--disc); height: var(--disc); border-radius: 50%; margin-right: 10px;
+  box-shadow: 0 0 0 1px var(--disc-ring); }
+.disc.red { background: var(--disc-red); } .disc.black { background: var(--disc-black); } .disc.white { background: var(--disc-white); }
+.name { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+.effort { flex: none; font-size: var(--effort-size); color: var(--text-weak); }
+.win { flex: none; margin-left: 10px; font-size: var(--tag-size); line-height: 1; padding: 4px 6px; border-radius: 4px;
+  background: var(--win-bg); color: #fff; }
+.score { flex: none; margin-left: auto; padding-left: 12px; font-size: var(--score-size); font-weight: 700;
+  font-variant-numeric: tabular-nums; }
+
+.move { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; }
+.move .mv { overflow: hidden; text-overflow: ellipsis; }
+.move .tag { flex: none; margin-left: 8px; font-size: var(--tag-size); line-height: 1; padding: 3px 5px; border-radius: 4px;
+  background: var(--tag-bg); color: #fff; }
+.think { flex: none; font-variant-numeric: tabular-nums; }
+.think .delta { font-size: var(--delta-size); line-height: 1; color: var(--accent); margin-left: 4px; }
+
+/* ---- 棋盘区 ---- */
+#board-area { flex: none; height: var(--board-h); position: relative; display: flex; align-items: center; justify-content: center; }
+.board[hidden] { display: none; }
+#board-chess { width: min(100vw, var(--board-h)); height: min(100vw, var(--board-h)); }
+#board-xq { height: var(--board-h); aspect-ratio: 9 / 10; }
+#board-xq svg { display: block; width: 100%; height: 100%; }
+.cm-chessboard .markers .marker.marker-last { fill: var(--last-fill); opacity: 1; }
+
+.xq-bg { fill: var(--xq-bg); }
+.xq-lines line { stroke: var(--xq-line); stroke-width: 0.022; }
+.xq-frame { fill: none; stroke: var(--xq-line); stroke-width: 0.045; }
+.xq-river { font-size: 0.48px; fill: var(--xq-line); text-anchor: middle; dominant-baseline: central; }
+.xq-check { fill: var(--xq-check); }
+.xq-last-from { fill: var(--xq-last); }
+.xq-last-to { fill: none; stroke: var(--xq-last); stroke-width: 0.04; }
+
+#banner { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); padding: 14px 24px;
+  background: var(--banner-bg); color: #fff; font-size: var(--banner-size); line-height: 1.35; text-align: center; font-weight: 600; }
+#banner[hidden] { display: none; }
+#banner:not(.split) { white-space: nowrap; }
+#banner.split .sep { display: none; }
+#banner.split .why { display: block; font-size: var(--banner-why-size); font-weight: 400; white-space: normal; }
