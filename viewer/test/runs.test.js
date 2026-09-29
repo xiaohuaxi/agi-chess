@@ -1,8 +1,10 @@
 // 回归：读本机 runs/ 里全部已结束（game.jsonl 有 end 行）的对局，把 game.pgn 逐步走完，
-// 每步坐标、将军与 game.jsonl 的 move / check 一致，步数与结果和 end 行一致。本机没有 runs/ 时跳过。
+// 每步坐标、将军与 game.jsonl 的 move / check 一致，步数与结果和 end 行一致；每步读出的理由文字与导出端
+// （python3 现场按 game.jsonl 算 records.move_meta）逐字一致，折行不丢、不多空格。本机没有 runs/ 时跳过。
 // 对局目录：环境变量 VIEWER_RUNS 优先；worktree（.agents/worktrees/<名>）里默认用主检出的 runs/。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,6 +38,23 @@ function finished() {
 
 const RESULT = { w: '1-0', b: '0-1' };
 
+// 导出端眼里每步的理由文字：{目录: {半回合号: 文字}}（空白压成一个空格，和 parseComment 的 text 同一口径）。
+// python3 跑不起来时为 null，只跳过这一项核对。
+const PY_WHY = `
+import json, sys
+from llmchess import records
+out = {}
+for d in json.load(sys.stdin):
+    meta = records.move_meta(records.read(d + '/game.jsonl'))
+    out[d] = {p: ' '.join(records.comment_text(m.get('why') or '').split()) for p, m in meta.items()}
+print(json.dumps(out, ensure_ascii=False))
+`;
+
+function reasons(dirs) {
+  const py = spawnSync('python3', ['-c', PY_WHY], { cwd: ROOT, input: JSON.stringify(dirs), encoding: 'utf8', maxBuffer: 1 << 28 });
+  return py.status === 0 ? JSON.parse(py.stdout) : null;
+}
+
 function check(rec) {
   const games = parsePgn(decodeText(readFileSync(join(rec.dir, 'game.pgn'))));
   assert.equal(games.length, 1, rec.dir);
@@ -52,6 +71,7 @@ function check(rec) {
     const note = moveNote(g.moves[i]);                  // 我们导出的评注命令都认得
     assert.deepEqual(note.unknown, [], `${rec.dir} 第 ${i + 1} 步评注`);
     assert.ok(!note.text.includes('[%'), `${rec.dir} 第 ${i + 1} 步评注`);
+    if (WHY) assert.equal(note.text, WHY[rec.dir][i + 1] || '', `${rec.dir} 第 ${i + 1} 步理由文字`);
   });
   assert.deepEqual(r.steps.map((s) => s.move), rec.end.moves, rec.dir);
   assert.equal(g.result, RESULT[rec.end.end.winner] || '1/2-1/2', rec.dir);
@@ -61,6 +81,7 @@ function check(rec) {
 
 const have = existsSync(RUNS);
 const recs = have ? finished() : [];
+const WHY = have ? reasons(recs.map((r) => r.dir)) : null;
 
 for (const kind of ['xiangqi', 'chess']) {
   test(`runs 回归：${kind} 已结束对局逐步与 game.jsonl 一致`, { skip: have ? false : `没有 ${RUNS}` }, (t) => {

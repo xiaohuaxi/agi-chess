@@ -206,7 +206,7 @@ class Glue(str):
 
 
 def chunks(w, width=WIDTH):
-    """一个没有空格的词切成几段（第二段起是 Glue）：优先在全角标点后切，其次在两个全角字符之间，每段不超过 width 列；
+    """一个词（words 分出来的，除「中文 空格 中文」外没有空格）切成几段（第二段起是 Glue）：优先在全角标点后切，其次在两个全角字符之间，每段不超过 width 列；
     都找不到才硬切。短词也在全角标点后切开，好让中文长句逐段填满每一行。"""
     segs, cur = [], ''
     for i, c in enumerate(w):
@@ -237,6 +237,9 @@ def _cut(seg, width):
     for k in range(n, 0, -1):
         if k < len(seg) and wide(seg[k - 1]) and wide(seg[k]):
             return k
+    for k in range(n, 0, -1):          # 没有全角切点（长英文串）：别切在空格旁，免得行首行尾留空格
+        if k < len(seg) and seg[k - 1] != ' ' and seg[k] != ' ':
+            return k
     return n
 
 
@@ -256,7 +259,7 @@ def wrap(tokens, width=WIDTH):
 
 def meta_tokens(m):
     """一步的评注拆成词：先是内嵌命令（[%名 参数]，名只用字母数字，规范补充的要求；每条整段不拆），后面是棋手写的
-    说明文字（comment_text 处理后按空格分词，没有空格的串——比如中文整句——再按 chunks 切段，折行时不添空格）。
+    说明文字（comment_text 处理后按 words 分词，每个词再按 chunks 切段，折行时不添空格）。
     %emt 是规范补充里的标准命令；其余是自定义的，标准阅读器按规范补充会原样保留、不做处理。没给的项整条省掉。"""
     if not m:
         return []
@@ -270,9 +273,24 @@ def meta_tokens(m):
             parts.append('[%%%s %d]' % (k, m[k]))
     if m.get('dropped') is not None:           # 只有开了去掉思考的一方有，0 也写（续接轮为 0 是要看的异常）
         parts.append('[%%dropped %d]' % m['dropped'])
-    for w in comment_text(m.get('why') or '').split(' '):
-        parts += chunks(w) if w else []
+    for w in words(comment_text(m.get('why') or '')):
+        parts += chunks(w)
     return parts
+
+
+def words(text):
+    """按空格分词，但「中文 空格 中文」的空格不当分词处，两边连成一个词（词里留着这个空格）：阅读器按「换行两边都是
+    全角字符就不补空格」还原，在这种空格处断行读回来会少一个空格，所以它永远不当断点。断点优先级因此是
+    全角标点后（chunks）> 其余空格（这里的分词处）> 两个全角字符之间硬切（chunks / _cut）。"""
+    out = []
+    for w in text.split(' '):
+        if not w:
+            continue
+        if out and wide(out[-1][-1]) and wide(w[0]):
+            out[-1] += ' ' + w
+        else:
+            out.append(w)
+    return out
 
 
 def meta_comment(m):

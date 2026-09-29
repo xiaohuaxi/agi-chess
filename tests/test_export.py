@@ -61,6 +61,21 @@ class Wrap(unittest.TestCase):
             self.assertLessEqual(records.cols(line), records.WIDTH)
         self.assertEqual(unwrap(c), '[%emt 0:00:01] ' + why)
 
+    def test_space_between_chinese_is_never_a_break(self):
+        why = ('红方 中炮 过河 以后，黑方 必须 马上 应对，否则 中卒 丢掉 就 很 被动 了 ' * 6).strip()
+        for width in (30, 40, 57, records.WIDTH, 79):     # meta_tokens 按 WIDTH 切段，窄于它时只看往返
+            text = records.wrap(records.meta_tokens({'emt': 1, 'why': why}), width)
+            for line in text.split('\n'):
+                if width >= records.WIDTH:
+                    self.assertLessEqual(records.cols(line), width, line)
+                self.assertEqual(line, line.strip())
+            self.assertEqual(unwrap(text), '[%emt 0:00:01] ' + why, width)
+
+    def test_mixed_spaces_break_at_plain_space_first(self):
+        why = '走 Nf3 之后 看 e5 的 反应 再 决定' * 3
+        c = records.meta_comment({'emt': 1, 'why': why})
+        self.assertEqual(unwrap(c), '[%emt 0:00:01] ' + why)
+
     def test_old_behaviour_inserted_space(self):
         # 回归：旧导出在中文字中间断行，读回来多一个空格
         c = records.meta_comment({'emt': 1, 'why': '中路控制很重要，' * 30})
