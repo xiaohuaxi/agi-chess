@@ -1,0 +1,29 @@
+<!doctype html><meta charset=utf-8>
+<style>
+html,body{margin:0;background:#1b1b1f;color:#eee;font-family:-apple-system,"PingFang SC",sans-serif}
+#stage{width:540px;height:960px;position:relative;overflow:hidden}
+#title{position:absolute;top:40px;left:0;right:0;text-align:center;font-size:28px}
+#board{position:absolute;left:20px;top:140px;width:500px;height:500px;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr)}
+.sq{display:block}.l{background:#f0d9b5}.d{background:#b58863}
+.pc{position:absolute;width:62.5px;height:62.5px;font-size:48px;line-height:62.5px;text-align:center;transition:transform .6s ease-in-out}
+#cmt{position:absolute;top:680px;left:30px;right:30px;font-size:22px;line-height:1.4}
+@media (min-aspect-ratio:1/1){#stage{width:960px;height:540px}#board{left:20px;top:20px}#title{left:540px;top:40px;text-align:left;font-size:26px}#cmt{left:540px;top:120px;right:20px}}
+</style>
+<div id=stage><div id=title>Move <span id=n>0</span> · 象棋/Chess 测试</div>
+<div id=board></div><div id=cmt></div></div>
+<script>
+const b=document.getElementById('board');
+for(let r=0;r<8;r++)for(let c=0;c<8;c++){const s=document.createElement('i');s.className='sq '+((r+c)%2?'d':'l');b.appendChild(s)}
+const pcs={};
+function mk(id,ch,r,c){const e=document.createElement('div');e.className='pc';e.textContent=ch;b.appendChild(e);pcs[id]=e;place(id,r,c)}
+function place(id,r,c){pcs[id].style.transform=`translate(${c*62.5}px,${r*62.5}px)`}
+mk('K','♔',7,4);mk('P','♙',6,4);mk('n','♞',0,1);mk('p','♟',1,4);
+const moves=[['P',4,4,'1. e4 中路开局，占中心。'],['p',3,4,'1... e5 对称回应。'],['K',6,4,'2. Ke2 走王（测试用）。']];
+window.renderStep=function(k){ // k=0..3, jump to state after k moves, then animate last move if animate
+  document.getElementById('n').textContent=k;
+  document.getElementById('cmt').textContent=k?moves[k-1][3]:'开始';
+};
+window.applyMove=function(k){ // triggers CSS transition for move k (1-based)
+  const [id,r,c,t]=moves[k-1];place(id,r,c);document.getElementById('n').textContent=k;document.getElementById('cmt').textContent=t;
+};
+</script>
