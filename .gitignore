@@ -3,3 +3,4 @@
 .agents/settings.local.json
 .agents/scheduled_tasks.lock
 runs/
+node_modules/
