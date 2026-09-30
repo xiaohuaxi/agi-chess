@@ -42,6 +42,7 @@
 
 - `docs/status.md`：现在做到哪、下一步、还等用户拍板的事。**开工先读它，收工前更新它。**
 - `docs/design.md`：程序设计、变量、记录格式、第一批实验，以及前提核实（含 `claude -p` 的思考深度、token 字段）。
+- 录棋局视频、用阅读器看棋谱：项目 skill `.agents/skills/replay-video/SKILL.md`（怎么用）；实现与方案在 `docs/viewer.md`。
 - `docs/thinking-carryover.md`：各家模型跨轮是否保留思考（文档加实测）。「同一会话连续下」这档靠它成立。
 - 上游研究，在另一个仓库：`~/repos/ai-research/topics/llm-board-games-survey.md`（别人怎么让模型下棋，有出处）、`~/repos/ai-research/topics/llm-xiangqi-play.md`（第一轮 Opus 对 Opus：读盘全对，昏招集中在「谁能吃到谁」）。
 
