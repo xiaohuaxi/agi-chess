@@ -106,6 +106,7 @@ def model_turn(ctx, side, moves, ban):
     system = cfg['system'][side]
     mem = sc['memory']
     via_chat = cfg.get('backend') == 'llm-chat'
+    drop = via_chat and sc.get('drop_thinking') == 'on'     # 旧记录没有这一项，按关
     real = memory.real(sc)
     codex = kind in codex_cli.KINDS and not via_chat
     if codex and mem == 'session':
@@ -142,7 +143,7 @@ def model_turn(ctx, side, moves, ban):
             new = False
             sid = ctx['sessions'].get(side) if mem == 'session' else None
             cmd = chat.command(cfg['models'][side], sc['effort'], None if sid else system, sid,
-                               cfg.get('timeout') or claude_cli.TIMEOUT)
+                               cfg.get('timeout') or claude_cli.TIMEOUT, drop_thinking=drop and not sid)
         elif codex:
             new, sid = False, None
             files = codex_cli.prepare(kind, model, sc['effort'], system, ctx['cwd'])
@@ -169,9 +170,16 @@ def model_turn(ctx, side, moves, ban):
             # 撞额度在程序里等解除：开始、结束各一条，同样落进这盘（这题）自己的记录
             log(ctx, dict({'type': 'limit_wait', 'ply': ply, 'side': side, 'attempt': k + 1}, **ctx.get('tags', {}),
                           **info))
+        extra = {}
         if via_chat:
+            resumed = bool(sid)
             d, dt = chat.call(cmd, prompt, on_fail=on_fail, on_wait=on_wait)
             u = chat.usage(d, kind)
+            if drop and d.get('meta') is not None:
+                extra['thinking_dropped'] = d['meta'].get('thinking_dropped')
+                if resumed and not extra['thinking_dropped']:
+                    drop_warn(ctx, side, ply, k, sid, extra['thinking_dropped'])
+                ctx.setdefault('last_think', {})[side] = u['think'] if d['meta'].get('reasoning_tokens') is not None else None
             if mem == 'session' and d.get('meta'):
                 sid = ctx['sessions'][side] = d['meta']['session']
             if sid:
@@ -223,7 +231,7 @@ def model_turn(ctx, side, moves, ban):
                 log(ctx, {'type': 'flag', 'ply': ply, 'side': side, 'source': 'result', 'session': sid, 'text': reply[:500]})
             log(ctx, {'type': 'attempt', 'ply': ply, 'side': side, 'try': k + 1, 'player': cfg['players'][side],
                       'session': sid, 'prompt': prompt, 'reply': reply, 'flagged': blocked, 'empty': empty,
-                      'usage': u, 'elapsed': round(dt, 1), 'claude': d})
+                      'usage': u, 'elapsed': round(dt, 1), 'claude': d, **extra})
             print('  ！%s 回复%s（本步第 %d 次，不扣重试次数）' % (
                 G.SIDES[side], '被安全分类器拦下' if blocked else '正文为空', flags), flush=True)
             if flags > MAX_FLAGS:
@@ -243,7 +251,7 @@ def model_turn(ctx, side, moves, ban):
         log(ctx, {'type': 'attempt', 'ply': ply, 'side': side, 'try': k + 1, 'player': cfg['players'][side],
                   'session': sid, 'prompt': prompt, 'reply': reply, 'move_text': text, 'move': mv,
                   'legal': why is None, 'reason': why, 'feedback': fb, 'note': note, 'recite': rs, 'transcript_flags': transcript,
-                  'usage': u, 'elapsed': round(dt, 1), 'claude': d})
+                  'usage': u, 'elapsed': round(dt, 1), 'claude': d, **extra})
         print('  %s 第 %d 次：%s → %s%s（%.0fs，输出 %d tok，思考 %d，$%.3f）' % (
             G.SIDES[side], k + 1, text, mv, '' if why is None else ' 非法：' + why, dt, u['out'], u['think'],
             u['cost']), flush=True)
@@ -254,6 +262,18 @@ def model_turn(ctx, side, moves, ban):
         bad.append((text or '（没写）', why, fb))
         k += 1
     return None, stat, None
+
+
+def drop_warn(ctx, side, ply, k, sid, n):
+    """开了去掉思考的一方，续接轮 llm-chat 报的 thinking_dropped 应该 ≥1（删掉了上一轮的思考）。拿到 0 或没给就告警：
+    写一条 drop_warn、终端提示，不中断对局。可能的原因：上一轮本来没思考（prev_think 为 0 时多半是这个）、
+    claude 升级后思考换了存法、llm-chat 没按开关走（blockR 最终回报）。prev_think 是本次运行里这方上一次调用的思考 token，
+    续跑后的第一步不知道，记 None。"""
+    prev = (ctx.get('last_think') or {}).get(side)
+    log(ctx, {'type': 'drop_warn', 'ply': ply, 'side': side, 'attempt': k + 1, 'session': sid,
+              'thinking_dropped': n, 'prev_think': prev})
+    print('  ！%s 开了去掉思考，但这次续接 thinking_dropped=%s（上一轮思考 %s token%s），记下接着下' % (
+        ctx['G'].SIDES[side], n, '?' if prev is None else prev, '，多半是上一轮没思考' if prev == 0 else ''), flush=True)
 
 
 def engine_turn(ctx, side, moves, ban):

@@ -9,7 +9,7 @@
     python3 -m llmchess export runs/x1                                                  # 已结束的盘重新导出棋谱
 
 协议 --protocol（默认 real）：real 是「模型就是真实棋手」（design.md 第九节）——每方一段连续会话（memory 默认 session），
-  只给局面、轮到谁、对方上一步，不报将军、不给合法着法；默认请棋手在着法之前详细写出理由（reason=off 关掉）；
+  只给局面、轮到谁、对方上一步，不报将军、不给合法着法；默认请棋手在着法之前写出理由（reason=off 关掉）；
   非法着法只告诉它不合法、让它重选（每步最多 retries+1 次，用完判负；real 默认 3 次）；模型调用走 llm-chat（chat.py）。legacy 是改协议之前的提示和调用（claude -p 直调，memory 默认 stateless），
   用来续跑、复现旧实验；旧记录的 config 里没有 protocol，resume 自动按旧的走。
 棋手：claude:<模型>（默认 claude:opus）/ codex:<GPT 模型，如 sol 或 gpt-6-sol> / deepseek:<模型，默认 deepseek-v4-pro>
@@ -19,7 +19,10 @@
 模型相关变量（公共值用 --变量，一方单设用 --w / --b 变量=值，w 是先走的红方 / 白方）：
   effort medium|high|xhigh|max、memory stateless|notes|session、show、view（逗号分隔）、history（-1 全部 / 0 / N）、
   legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、notes_keep N、session_view full|move、
-  reason on|off（只在 real 下，默认 on：着法之前用自己的话详细写出这步的理由，导出棋谱时进该步评注；off 只需给出着法）。
+  reason brief|detailed|off（只在 real 下：着法之前用自己的话简短 / 详细写出这步的理由，导出棋谱时进该步评注；off 只需给出着法）、
+  drop_thinking on|off（只在 real、memory=session 下，只有 Claude 棋手能开，默认 off：续接时不带此前几轮的思考，
+  llm-chat --drop-thinking）。reason 不给时跟着 drop_thinking 走：关 brief、开 detailed（去掉思考后，前几步写下的理由
+  是它唯一的记忆）。例：--w drop_thinking=on 让白方去掉思考、写详细理由，黑方照旧带思考、写简短理由。
 局面怎么呈现：show all|board|pieces|fen|boardpieces（boardpieces 只有中国象棋），和局面题的 --set show 同一套（棋种模块的
   SHOWS）。不给时用棋种默认给法：中国象棋 pieces（只给子力清单）、国际象棋 all（FEN + 字母棋盘），第 4P2 批定的；
   --show all 回到改默认之前的提示（中国象棋棋盘 + 清单 + FEN）。view 是自定义组合，和 show 二选一：同一层（公共 / 一方单设）
@@ -43,7 +46,7 @@ RUNS = ROOT / 'runs'
 GAMES = {'xiangqi': 'llmchess.xiangqi', 'chess': 'llmchess.chess_'}
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
 SIDE_KEYS = {'effort': str, 'memory': str, 'show': str, 'view': str, 'history': int, 'legal': str, 'selfcheck': str,
-             'recite': str, 'notes_keep': int, 'session_view': str, 'reason': str}
+             'recite': str, 'notes_keep': int, 'session_view': str, 'reason': str, 'drop_thinking': str}
 
 
 def game_module(name):
@@ -90,12 +93,25 @@ def side_cfg(a, G, overrides, max_plies):
             raise SystemExit('real 协议下不给合法着法（legal=none）、每步都给完整局面（session_view=full）；要用请 --protocol legacy')
         sc['protocol'] = 'real'
         sc['retries'] = a.retries
-        sc['reason'] = sc['reason'] or 'on'       # 着法之前写理由，默认开（用户 2026-09-29 定）
-        if sc['reason'] not in ('on', 'off'):
-            raise SystemExit('reason 只能是 on/off，收到 %r' % sc['reason'])
+        # 续接时去掉此前几轮的思考（llm-chat --drop-thinking），默认关；只有 Claude 棋手能开，在 build_cfg 里按棋手查
+        sc['drop_thinking'] = sc['drop_thinking'] or 'off'
+        if sc['drop_thinking'] not in ('on', 'off'):
+            raise SystemExit('drop_thinking 只能是 on/off，收到 %r' % sc['drop_thinking'])
+        if sc['drop_thinking'] == 'on' and sc['memory'] != 'session':
+            raise SystemExit('drop_thinking=on 只对连续会话（memory=session）有意义，收到 memory=%s' % sc['memory'])
+        # 着法之前写理由（用户 2026-09-29 定要写）；措辞默认跟着 drop_thinking 走（用户 2026-09-30 定）：带着前几步思考的
+        # 用「简短」，去掉思考的用「详细」（前几步写下的理由是它唯一的记忆）；显式给了就照给的
+        if sc['reason'] is None:
+            sc['reason'] = 'detailed' if sc['drop_thinking'] == 'on' else 'brief'
+        if sc['reason'] == 'on':
+            raise SystemExit('reason 现在分 brief（简短）/ detailed（详细）/ off，不再收 on；'
+                             '不给时按 drop_thinking 定：关 brief、开 detailed')
+        if sc['reason'] not in memory.REASONS:
+            raise SystemExit('reason 只能是 %s，收到 %r' % ('/'.join(memory.REASONS), sc['reason']))
     else:
-        if sc.pop('reason') is not None:          # 旧协议的 config 里没有这一项，保持逐字不变
-            raise SystemExit('reason 只在 real 协议下可用（legacy 的理由要求写在它自己的提示里）')
+        for k in ('reason', 'drop_thinking'):     # 旧协议的 config 里没有这两项，保持逐字不变
+            if sc.pop(k) is not None:
+                raise SystemExit('%s 只在 real 协议下可用' % k)
     return sc
 
 
@@ -143,6 +159,12 @@ def build_cfg(a):
             players[s] = 'deepseek:' + chat.DEEPSEEK_DEFAULT
         check_player(G, players[s], a.protocol)
     sides = {'w': side_cfg(a, G, a.w, a.max_plies), 'b': side_cfg(a, G, a.b, a.max_plies)}
+    for s in 'wb':
+        kind = runner.player_kind(players[s])
+        # 去掉此前思考只有 Claude 路支持（llm-chat：GPT 一给就报错，DeepSeek 本来就不回传思考）；引擎、随机不看这一项
+        if sides[s].get('drop_thinking') == 'on' and kind in runner.MODEL_KINDS and kind != 'claude':
+            raise SystemExit('%s（%s）不能开 drop_thinking：只有 Claude 棋手支持去掉此前思考；只给一方开用 --w / --b '
+                             'drop_thinking=on' % (G.SIDES[s], players[s]))
     cfg = {'game': a.game, 'tag': a.tag, 'players': players, 'sides': sides, 'retries': a.retries,
            'max_plies': a.max_plies, 'seed': a.seed if a.seed is not None else random.randrange(10 ** 9),
            'forfeit': runner.FORFEIT_NOTE, 'timeout': a.timeout}
@@ -158,7 +180,8 @@ def build_cfg(a):
                 raise SystemExit('DeepSeek 只有 %s 三档思考，收到 %r' % ('/'.join(chat.DEEPSEEK_EFFORTS), sides[s]['effort']))
             cfg['models'][s] = chat.model_id(kind, name)
         cfg['llm_chat'] = chat.script_info()
-        cfg['commands'] = {s: chat.shown(cfg['models'][s], sides[s]['effort']) for s in models}
+        cfg['commands'] = {s: chat.shown(cfg['models'][s], sides[s]['effort'], sides[s]['drop_thinking'] == 'on')
+                           for s in models}
     else:
         cfg['commands'] = {s: claude_cli.shown(claude_cli.command(players[s].split(':', 1)[1], sides[s]['effort'], '-'))
                            for s in models}
@@ -298,7 +321,10 @@ def main(argv=None):
     p.add_argument('--recite', default='off')
     p.add_argument('--notes-keep', dest='notes_keep', type=int, default=1)
     p.add_argument('--session-view', dest='session_view', default='full')
-    p.add_argument('--reason', default=None, help='on（real 默认）：着法之前用自己的话详细写出这步的理由；off：只需给出着法')
+    p.add_argument('--reason', default=None, help='brief / detailed：着法之前用自己的话简短 / 详细写出这步的理由；off：只需给出着法。'
+                   '不给时 drop_thinking 关的一方 brief、开的一方 detailed')
+    p.add_argument('--drop-thinking', dest='drop_thinking', default=None,
+                   help='on：续接时不带此前几轮的思考（llm-chat --drop-thinking，只有 Claude 棋手）；默认 off')
     p.add_argument('--w', action='append', metavar='变量=值', help='只改先走一方（红 / 白），可重复')
     p.add_argument('--b', action='append', metavar='变量=值', help='只改黑方，可重复')
     p.add_argument('--retries', type=int, default=None,

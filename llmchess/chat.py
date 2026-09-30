@@ -68,17 +68,20 @@ def model_id(kind, model, slugs=None):
     return full
 
 
-def command(model, effort, system=None, session=None, timeout=claude_cli.TIMEOUT):
-    """一次调用的命令。第一次调用给 system（新会话），续接给 session；两个都不给不行。"""
+def command(model, effort, system=None, session=None, timeout=claude_cli.TIMEOUT, drop_thinking=False):
+    """一次调用的命令。第一次调用给 system（新会话），续接给 session；两个都不给不行。
+    drop_thinking：续接时不带此前几轮的思考。llm-chat 在会话首轮定下、存进会话，之后省略即沿用（中途加上会报错），
+    所以只在新会话那次传；续接轮不传。"""
     cmd = [sys.executable, SCRIPT, '-m', model, '--effort', effort, '--timeout', str(timeout)]
     if session:
         return cmd + ['--session', session]
     assert system is not None, '新会话要系统提示'
-    return cmd + ['--system', system]
+    return cmd + (['--drop-thinking'] if drop_thinking else []) + ['--system', system]
 
 
-def shown(model, effort):
-    return 'python3 %s -m %s --effort %s [--system <系统提示> | --session <会话>] < <用户提示>' % (SCRIPT, model, effort)
+def shown(model, effort, drop_thinking=False):
+    return 'python3 %s -m %s --effort %s [%s--system <系统提示> | --session <会话>] < <用户提示>' % (
+        SCRIPT, model, effort, '--drop-thinking ' if drop_thinking else '')
 
 
 def run(cmd, prompt, cwd, env, timeout):

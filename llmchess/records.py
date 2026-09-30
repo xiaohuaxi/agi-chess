@@ -1,7 +1,8 @@
 """对局记录：runs/<tag>/game.jsonl，一行一条 JSON（design.md 第四节）。
 
 type：config / attempt（每次调用或引擎出棋）/ move（落定的一步）/ flag（安全分类器拦截）/ pause / resume /
-forfeit（重试用完判负）/ end（结果与每方统计）。每条带 t（本地时间）。
+forfeit（重试用完判负）/ drop_warn（开了去掉思考的一方续接轮 thinking_dropped 为 0）/ end（结果与每方统计）。
+每条带 t（本地时间）。
 """
 import datetime, json, statistics, unicodedata
 
@@ -141,7 +142,8 @@ def move_meta(recs):
       emt：各次调用的用时之和（秒，只算成功回来的那次子进程，不含调不通的重试和等额度）；
       think / out / in / cache_read / cache_write：token 合计，本步任一次调用后端没给这一项就记 None（不部分相加、不补 0）；
       calls：调用次数；illegal / flagged / empty：非法、被拦、空回复次数（取 move.stat，和统计口径一致）；
-      why：落定那次回复里着法前面的文字（棋手自己写的说明文字，memory.extract_reason），没有为 None。"""
+      why：落定那次回复里着法前面的文字（棋手自己写的说明文字，memory.extract_reason），没有为 None；
+      dropped：开了去掉思考的一方，本步各次调用 llm-chat 报的 thinking_dropped 之和（没开的不给这一项）。"""
     moves = {r['ply']: r for r in recs if r.get('type') == 'move' and not r.get('opening')}
     out = {}
     for r in recs:
@@ -153,6 +155,8 @@ def move_meta(recs):
         m = out.setdefault(r['ply'], dict({k: 0 for k in META_KEYS}, emt=0.0, calls=0))
         m['calls'] += 1
         m['emt'] += r.get('elapsed') or 0
+        if 'thinking_dropped' in r:
+            m['dropped'] = (m.get('dropped') or 0) + (r['thinking_dropped'] or 0)
         if r.get('legal') and r.get('move') == mv.get('move'):
             m['why'] = memory.extract_reason(r.get('reply'))
         u, known = r.get('usage') or {}, _known(r)
@@ -224,6 +228,8 @@ def meta_tokens(m):
     for k in ('illegal', 'flagged', 'empty'):
         if m.get(k):
             parts.append('[%%%s %d]' % (k, m[k]))
+    if m.get('dropped') is not None:           # 只有开了去掉思考的一方有，0 也写（续接轮为 0 是要看的异常）
+        parts.append('[%%dropped %d]' % m['dropped'])
     for w in comment_text(m.get('why') or '').split(' '):
         parts += chunks(w) if w else []
     return parts
