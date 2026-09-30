@@ -1,11 +1,14 @@
 // 回归：读本机 runs/ 里全部已结束（game.jsonl 有 end 行）的对局，把 game.pgn 逐步走完，
 // 每步坐标、将军与 game.jsonl 的 move / check 一致，步数与结果和 end 行一致；每步读出的理由文字与导出端
 // （python3 现场按 game.jsonl 算 records.move_meta）逐字一致，折行不丢、不多空格。本机没有 runs/ 时跳过。
+// 还在下的盘（没有 end 行）一律不读。导出不是本代码写法的盘跳过并计数、不算失败：game.pgn 缺失、比 game.jsonl 旧，
+// 或与本代码现场导出的（runner.render_exports）不一致——对局可能在本检出之外刚结束，用的是那边的旧导出写法。
+// 这样跳过的盘在输出里报数；要读它们，先用本检出的代码 `python3 -m llmchess export <目录>` 重导。
 // 对局目录：环境变量 VIEWER_RUNS 优先；worktree（.agents/worktrees/<名>）里默认用主检出的 runs/。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { decodeText, moveNote, parsePgn } from '../lib/pgn.js';
@@ -31,22 +34,30 @@ function finished() {
     if (!end) continue;                                 // 还在下的盘不碰
     const cfg = rows.find((r) => r.type === 'config').cfg;
     const moves = rows.filter((r) => r.type === 'move').sort((a, b) => a.ply - b.ply);
-    out.push({ dir: d, game: cfg.game, end, moves });
+    const pgn = join(d, 'game.pgn');
+    const stale = !existsSync(pgn) ? '导出缺失'
+      : statSync(pgn).mtimeMs < statSync(join(d, 'game.jsonl')).mtimeMs ? '导出比记录旧' : null;
+    out.push({ dir: d, game: cfg.game, end, moves, stale });
   }
   return out;
 }
 
 const RESULT = { w: '1-0', b: '0-1' };
 
-// 导出端眼里每步的理由文字：{目录: {半回合号: 文字}}（空白压成一个空格，和 parseComment 的 text 同一口径）。
-// python3 跑不起来时为 null，只跳过这一项核对。
+// 导出端眼里的每一盘：{目录: {why: {半回合号: 文字}, current: 盘上 game.pgn 是否与本代码现场导出的一致}}
+// （理由文字空白压成一个空格，和 parseComment 的 text 同一口径）。python3 跑不起来时为 null，只跳过这两项核对。
 const PY_WHY = `
 import json, sys
-from llmchess import records
+from llmchess import cli, records, runner
 out = {}
 for d in json.load(sys.stdin):
     meta = records.move_meta(records.read(d + '/game.jsonl'))
-    out[d] = {p: ' '.join(records.comment_text(m.get('why') or '').split()) for p, m in meta.items()}
+    cfg = records.read(d + '/game.jsonl')[0]['cfg']
+    fresh = runner.render_exports(runner.load(cli.game_module(cfg['game']), d))['game.pgn']
+    with open(d + '/game.pgn', encoding='utf-8') as f:
+        current = f.read() == fresh
+    out[d] = {'why': {p: ' '.join(records.comment_text(m.get('why') or '').split()) for p, m in meta.items()},
+              'current': current}
 print(json.dumps(out, ensure_ascii=False))
 `;
 
@@ -71,7 +82,7 @@ function check(rec) {
     const note = moveNote(g.moves[i]);                  // 我们导出的评注命令都认得
     assert.deepEqual(note.unknown, [], `${rec.dir} 第 ${i + 1} 步评注`);
     assert.ok(!note.text.includes('[%'), `${rec.dir} 第 ${i + 1} 步评注`);
-    if (WHY) assert.equal(note.text, WHY[rec.dir][i + 1] || '', `${rec.dir} 第 ${i + 1} 步理由文字`);
+    if (WHY) assert.equal(note.text, WHY[rec.dir].why[i + 1] || '', `${rec.dir} 第 ${i + 1} 步理由文字`);
   });
   assert.deepEqual(r.steps.map((s) => s.move), rec.end.moves, rec.dir);
   assert.equal(g.result, RESULT[rec.end.end.winner] || '1/2-1/2', rec.dir);
@@ -81,12 +92,18 @@ function check(rec) {
 
 const have = existsSync(RUNS);
 const recs = have ? finished() : [];
-const WHY = have ? reasons(recs.map((r) => r.dir)) : null;
+const WHY = have ? reasons(recs.filter((r) => !r.stale).map((r) => r.dir)) : null;
+if (WHY) for (const r of recs) if (!r.stale && !WHY[r.dir].current) r.stale = '不是本代码的导出写法';
 
 for (const kind of ['xiangqi', 'chess']) {
   test(`runs 回归：${kind} 已结束对局逐步与 game.jsonl 一致`, { skip: have ? false : `没有 ${RUNS}` }, (t) => {
-    const mine = recs.filter((r) => r.game === kind);
-    assert.ok(mine.length > 0, '没有已结束的对局');
+    const all = recs.filter((r) => r.game === kind);
+    const mine = all.filter((r) => !r.stale);
+    const why = {};
+    for (const r of all) if (r.stale) why[r.stale] = (why[r.stale] || 0) + 1;
+    const skipped = Object.entries(why).map(([k, n]) => `${k} ${n}`).join('、');
+    if (skipped) t.diagnostic(`${kind}：跳过 ${all.length - mine.length} 盘（${skipped}），先用本检出重导才读`);
+    assert.ok(mine.length > 0, '没有可读的已结束对局');
     let plies = 0, checks = 0;
     for (const rec of mine) {
       const s = check(rec);
@@ -100,6 +117,7 @@ for (const kind of ['xiangqi', 'chess']) {
 test('runs 回归：国际象棋样例 g1-c-opus-sol', { skip: existsSync(join(RUNS, 'g1-c-opus-sol')) ? false : '没有这盘' }, () => {
   const rec = recs.find((r) => r.dir === join(RUNS, 'g1-c-opus-sol'));
   assert.ok(rec, 'g1-c-opus-sol 没结束');
+  assert.ok(!rec.stale, `g1-c-opus-sol ${rec.stale}，先重导`);
   const s = check(rec);
   assert.equal(s.plies, 95);
 });
