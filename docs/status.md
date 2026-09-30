@@ -1,6 +1,6 @@
 # 进度与待办
 
-更新：2026-09-30（整盘接入「去掉此前思考」开关，理由措辞按棋手分简短 / 详细；opus xhigh 对 astra：国际象棋 xhigh 补到 6 盘、max 补到 4 盘；中国象棋 astra max 4 盘）。
+更新：2026-09-30（整盘接入「去掉此前思考」开关，理由措辞按棋手分简短 / 详细；opus xhigh 对 astra：国际象棋 xhigh 补到 6 盘、max 补到 4 盘；中国象棋 astra max 4 盘；棋谱阅读器第 1–5 步在 `viewer` 分支做完）。
 
 **总结论**：`results/summary-round1.md`。一句话：下得臭主要是想得不够深、判断错，不是看不清棋盘，也不是思考接不上；调高思考深度最管用，提示技巧作用有限。以下各批摘要只留要点，数字看各批结论文档。
 
@@ -54,6 +54,7 @@
 - 第一至四批全部实验和结论文档，第一轮总结论 `results/summary-round1.md`，棋力人群对照 `results/rating-reference.md`。原始数据都在被忽略的 `runs/`。
 - 棋谱每步带元信息（2026-09-28）：`game.pgn` / `record.txt` 每步评注里写 `[%emt 用时]`（PGN 标准命令）和自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite]`、非法 / 被拦 / 空回复次数，后端没给的项省掉不补 0（`design.md` 第四节）。已结束的盘不用重下：`python3 -m llmchess export runs/<tag>`。
 - 局面给法开关 `show`（all / board / pieces / fen / boardpieces），整盘和局面题共用，默认按第四批结论。
+- 棋谱阅读器（`docs/viewer.md`，2026-09-30）：方案第 1–5 步（导出、解析、打样、页面含窄版 / 宽版 / 播放 / 录制接口、录制脚本 `viewer/record.mjs`）已在 `viewer` 分支（worktree `.agents/worktrees/viewer`）实施完，**未合回 main**。一条命令出 3:4 mp4，用法见项目 skill `.agents/skills/replay-video/`。第 6 步国际象棋滑动动画没做（可选）。合回 main 后要用新代码把 g5 等在旧代码下结束的对局重导一遍（`python3 -m llmchess export runs/<tag>`），它们的导出还是旧的折行写法。
 
 ## 已拍板
 
@@ -88,7 +89,7 @@
 
 - opus 整盘会话要不要改成「只带可见文字、不带此前思考」（`results/missed-captures.md` 建议先下几盘对照再定；这和 9/29 定的连续会话、以及「思考延续是核心变量」的假设相关）。llm-chat 开关与整盘接入都已完成（`drop_thinking`，默认关），下一步是开对照局，看结果再定要不要改默认。
 - 下一步做哪个方向，或者就此收工。
-- 棋谱阅读器（独立会话负责，2026-09-29）：方案已定（`viewer.md`）：本仓库自写网页阅读器，读国际象棋 PGN、中国象棋 xqbase PGN，录屏走脚本出片（mp4 + H.264，3:4）。下一步按方案「实施顺序」开工。
+- 棋谱阅读器（2026-09-30）：`viewer` 分支合不合回 main；标题画面上棋手名要不要去掉「GPT」「Claude」厂商前缀；标题画面最终用不用（不用就出片时一律 `--no-title`，或改默认）。
 
 ## 遗留
 
