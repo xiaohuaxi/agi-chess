@@ -1,6 +1,7 @@
 - [用中文交互](reply-in-chinese.md) — 回答、进度播报一律中文；代码与英文原文保持原样。
 - [尽力而为、别做成大工程](best-effort-not-big-project.md) — 事不可为就停；额度充裕，可开 xhigh/max。
-- [思考延续是核心变量](thinking-carryover-is-key.md) — 用户假设每步丢思考是下得臭的根源；两家跨轮保留已核实。
+- [思考延续的假设与现状](thinking-carryover-is-key.md) — 丢思考不是根源；用户仍认为带思考才对，对弈默认带。
 - [本轮范围与额度](round1-scope-and-quota.md) — 跑到方向性结论；冒烟后不等用户；Codex 额度紧，sol 可当棋手但要省。
-- [尽早收敛基础设施、棋手当真人](converge-infra-real-player.md) — 只给局面、不给提示与理由、会话连续下；只剩棋盘给法待定。
+- [基础设施定案、棋手当真人](converge-infra-real-player.md) — 只给局面、写理由（不修饰）、会话带思考、连错 3 次判负。
 - [每批汇报附总览表](report-with-tally-table.md) — 各组合 × 棋种的局数、比分、关键指标，一眼看清进度。
+- [对弈双方思考方式一致](fair-thinking-carryover.md) — Claude 对 GPT 双方都带思考；测单模型棋力时才用对它最好的方式。
