@@ -66,7 +66,7 @@
   - 配色照 lichess 默认的 brown 主题：浅格 `#f0d9b5`、深格 `#b58863`（取自 lila 的 `public/images/board/brown.png`），上一步起止两格盖 `rgba(155,199,0,0.41)`，被将军的王所在格垫红色径向渐变（两者照 chessground 的 `chessground.brown.css`）。
   - 棋子不用 cm-chessboard 自带的（`standard.svg` 是 CC BY-SA 3.0、`staunty.svg` 禁商用），改用 Wikimedia Commons 上 Cburnett 的 12 个原件、取 BSD 许可（用户 2026-09-29 定），照 `standard.svg` 的结构拼成精灵图 `vendor/cm-chessboard/assets/pieces/cburnett.svg`；画面上不用署名。来源和生成脚本在 `vendor/cburnett-pieces/`。
 - 中国象棋：棋盘和棋子都自己画成 SVG，照主流象棋软件的样子（用户 2026-09-30 要求；参照 xqbase 的象棋巫师截图与象棋小巫师 `xqbase/xqwlight` 的图片素材，腾讯天天象棋也是「经典木纹界面」）：浅木色棋盘、双线外框、炮位兵位画「花」、上下标路数（黑方 1–9 在上、红方 九–一 在下）；棋子是木色圆子，红方红字红圈、黑方黑字黑圈（红方俥傌相仕帥炮兵、黑方車馬象士將砲卒，象棋软件的常见写法）；上一步在起点和落点各画四个蓝色角框；被将军的将 / 帅外圈一圈红晕，被将死的变灰（象棋巫师的做法）。
-  - 为什么不用素材：xiangqi-setup 里许可干净（CC0）的三套棋子都是实心红 / 黑圆底，不是主流样子；其余几套是 CC BY / CC BY-SA / 禁商用。原先那套 `vendor/xiangqi-pieces/`（playok，CC0）页面已不再用，定稿后删。
+  - 为什么不用素材：xiangqi-setup 里许可干净（CC0）的三套棋子都是实心红 / 黑圆底，不是主流样子；其余几套是 CC BY / CC BY-SA / 禁商用。原先那套 `vendor/xiangqi-pieces/`（playok，CC0）页面不再用，2026-09-30 已从仓库删除（来源与许可核对记录随之删除，要找回看删除前的提交）。
   - 棋子上的字用页面字体现画（楷体：`Kaiti SC` / `STKaiti` 等，本机是系统自带的），不拷任何字体文件，也不把字形描成路径，所以没有字体再分发的权利问题；代价是换一台没有楷体的机器会退回别的中文字体，出片在本机做，不受影响。第一帧之前用 `document.fonts.load` 等楷体就绪，本机冷启动重跑截图逐字节一致。
   - 自己写中文记谱解析（结合当前局面认出是哪个子）和将军判断，只为显示，不校验合法性。
   - 这是有意的例外：项目规定「规则判定照搬旧实现」，那是指对局程序判定输赢和合法性。阅读器只画面上提示「将军」，不影响任何结论，所以用 JS 自写；正确性靠与 `game.jsonl` 里（pyffish 判出的）将军标记逐步对照来保证。
@@ -221,7 +221,7 @@
 | xqbase 规范细节 | 已核实 | 审查时读了原文，要点见上文「输入」 |
 | `game.jsonl` 每步有坐标、中文记谱、将军标记，`config` 有双方深度 | 已核实 | 抽看两份样例；Codex 审查核对 |
 | cm-chessboard 动画不能定格 | 已核实 | 读源码：`requestAnimationFrame` 驱动 |
-| 象棋棋子素材逐个文件是 CC0、中文字体截图正常 | 已核实（第 4 步改为自画棋子，素材不再用） | 第 3 步：`playok_2014_chinese_noshadow` 的 LICENSE.txt / LICENSE.json 与 README 主题列表都是 CC0-1.0，14 个 SVG 逐个看过，元数据里没有另写许可，无 `<text>`、无外部引用（`viewer/vendor/xiangqi-pieces/SOURCE.md`）；打样截图里中文（含全角数字、繁体）正常 |
+| 象棋棋子素材逐个文件是 CC0、中文字体截图正常 | 已核实（第 4 步改为自画棋子，素材不再用、已删） | 第 3 步：`playok_2014_chinese_noshadow` 的 LICENSE.txt / LICENSE.json 与 README 主题列表都是 CC0-1.0，14 个 SVG 逐个看过，元数据里没有另写许可，无 `<text>`、无外部引用（当时的 `viewer/vendor/xiangqi-pieces/SOURCE.md`，已随素材删除）；打样截图里中文（含全角数字、繁体）正常 |
 | cm-chessboard 棋子素材的许可 | 已核实 | 自带的 `standard.svg` 是 CC BY-SA 3.0，已移除；改用 Cburnett 原件（Commons `File:Chess_{k,q,r,b,n,p}{l,d}t45.svg`）按 BSD 三条款：12 个文件页逐个看过，许可段都是 `{{self|GFDL|migration=relicense|BSD|GPL}}`、作者 Cburnett，下载文件的 SHA-1 与 Commons 记录一致（`viewer/vendor/cburnett-pieces/SOURCE.md`）；换后 2 倍截图与原来一样清晰 |
 | 能锁定一个与本机 chromium-1208 配套的 playwright-core 版本 | 已核实 | 1.58.2，查各版 `browsers.json`；打样脚本不指路径就跑通，`VIEWER_CHROMIUM` 指到缓存里的完整版 Chrome 也跑通 |
 | 中文记谱解析在多路兵等少见局面正确 | 已核实 | 第 1 步：导出端按原文例局和造的局面（多路兵、同线三至五兵、同线车马炮、仕相同线）出记谱，每个局面全部合法着法写出来互不相同；136 盘已结束象棋对局 11596 步与 record.txt 逐步一致、每个局面无重复记谱。第 2 步：页面解析把导出端写出的 4147 步（153 个局面）全部解析回同一坐标，走完的将军与 pyffish 一致 |
