@@ -152,12 +152,12 @@
 之前怎么录的（post-studio 调研，`viewer-survey/post-studio-recording.md`）：已发布的 007、008 是 ChatGPT 桌面端操作真 Chrome、把窗口拖窄，用 macOS 自带的 `screencapture` 录屏幕上那块区域，再剪辑。后来 post-studio 自己做了只录单个窗口的工具（`recwin.swift`）和剪辑脚本（`media.py`）。踩过的坑：锁屏时录了近 10 分钟锁屏壁纸；录像窗口被关、正式赛两度中断；agent 光标和提示条叠进画面；思考时画面长时间静止只能加速；录出来是变帧率要转码。发布比例后来定为 **3:4、1080×1440**（9:16 在小红书会被裁窄）。
 
 **做法。** 录制脚本（Node + playwright-core，放 `viewer/record.mjs`）：
-1. 自己起、关一个绑本机的静态服务（仓库根目录）。
+1. 自己起、关一个绑本机的静态服务。站点根是个空目录，只供给 `/viewer/` 和命令行点名的那几个棋谱文件（映射成 `/rec/1.pgn`…），棋谱可以在本机任何地方，所在目录的其他文件不外露。
 2. 无头浏览器打开 `/viewer/?rec=1&files=…`，视口 540×720、2 倍像素（= 1080×1440；9:16、16:9 换视口尺寸即可）。
-3. 等 `viewer.ready`，循环调 `viewer.next()`：静止画面截一张、记下 `hold`；有动画时把动画暂停、按 1/30 秒逐格拨进度逐格截图。
-4. 写 ffmpeg concat 列表（最后一张重复写一次，否则它的时长被忽略），拼接后用 `-t` 截到应有时长（实验里末尾多出约 0.3 秒）。
+3. 等 `viewer.ready`，循环调 `viewer.next()`：静止画面截一张、记下 `hold`；有动画时按 1/30 秒逐格拨进度逐格截图。**动画的约定**（页面做动画时照此实现）：`anim > 0` 时 `next()` 兑现那一刻动画已经开始、暂停在起点；脚本对 `document.getAnimations()` 逐格设 `currentTime`（0、1/30 秒…共 `round(anim×30)` 格），截完调 `finish()` 再等两帧，截静止画面停 `hold`。这一格总长 = 动画 + `hold`。
+4. 写 ffmpeg concat 列表（最后一张重复写一次，否则它的时长被忽略），拼接后截到应有长度（实验里末尾多出约 0.3 秒）。实际做法：各格秒数按累计时刻取整成帧数（总帧数 = round(总秒数×30)，误差不随格数累积），用 `-frames:v` 截到这个帧数，比 `-t` 更准。
 
-**输出规格**（和 post-studio `media.py` 的默认一致，拿去剪辑、上传不用再转）：mp4 封装，H.264（libx264，High），yuv420p，30 帧恒定帧率，`+faststart`，默认 1080×1440。ffmpeg 用 Homebrew 的（Playwright 缓存里带的那个在本机跑不起来）。
+**输出规格**（和 post-studio `media.py` 的默认一致，拿去剪辑、上传不用再转）：mp4 封装，H.264（libx264，High），yuv420p，30 帧恒定帧率，`+faststart`，默认 1080×1440。ffmpeg 用 Homebrew 的（Playwright 缓存里带的那个在本机跑不起来）。颜色：截图是全范围 RGB，转换时显式用 bt709 矩阵转成有限范围 yuv420p，并在码流里标 bt709（实验命令只标了没指定矩阵，ffmpeg 默认按 bt601 转，颜色会偏；而且本机 ffmpeg 9 实测 `-color_primaries` 这类输出选项没生效、被滤镜输出的帧属性盖掉，要在滤镜里用 `setparams` 标）。
 
 **相比实时录窗口**：不用屏幕录制权限，不怕锁屏、窗口被挡或被关，用户同时用 Mac 也不受影响；每步时长分毫不差、不丢步、没有空等；画面里只有棋局；比实时快，同一盘录几次结果一样，可以批量出片。
 
@@ -166,6 +166,31 @@
 **备选：实时录窗口。** 页面在普通 Chrome 窗口里本来就能自动播放，post-studio 那套（`recwin.swift` + `media.py`）直接可用。脚本万一卡住就退回这条，阅读器不用改。
 
 注：Playwright 自带的录像功能（recordVideo）不用——按网页逻辑尺寸录，放大后画面只占一角，帧率固定 25、码率低、格式 webm（本机实测，`viewer-survey/recording.md`）。
+
+**用法**（`node viewer/record.mjs --help` 同样内容）：
+
+```
+node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -o <输出.mp4>
+node viewer/record.mjs ~/repos/llm-chess/runs/g1-c-opus-sol -o /tmp/g1.mp4                 # 单盘，默认时长
+node viewer/record.mjs runs/a/game.pgn runs/b/game.pgn -o /tmp/ab.mp4 --gap 1.5 --no-title  # 连播，末尾总比分
+node viewer/record.mjs runs/g1-x-opus-sol -o /tmp/g1x-916.mp4 --aspect 9:16
+```
+
+| 参数 | 默认 | 作用 |
+|---|---|---|
+| `<棋谱>` | — | 本机任意路径，可多个，按给出顺序连播；给目录时取其中 `game.pgn` |
+| `-o` / `--out` | 必填 | 输出 mp4；目录须已存在；先写同目录临时文件，成功再改名 |
+| `--gap` / `--titlehold` / `--resulthold` / `--summaryhold` | 页面默认（2.5 / 3 / 4 / 5） | 透传给页面同名网址参数；脚本不自己算时长，只照 `next()` 的 `hold` |
+| `--no-title` | 有标题 | 透传 `title=0` |
+| `--aspect` | `3:4` | `3:4` 视口 540×720、`9:16` 540×960、`16:9` 960×540 |
+| `--scale` | 2 | 像素倍数（3:4 默认出 1080×1440） |
+| `--set 名=值` | — | 再透传任意网址参数（可多次）；`rec`、`files` 由脚本给，不许改 |
+| `--chromium` | `VIEWER_CHROMIUM`，再默认 playwright-core 配套的缓存浏览器 | 浏览器可执行文件 |
+| `--ffmpeg` | `VIEWER_FFMPEG`，再默认 `/opt/homebrew/bin/ffmpeg` | ffmpeg |
+
+成功时打印时长、帧数、截图张数、各类格数和用时；失败打印中文原因、退出码 1；Ctrl-C / SIGTERM 时先杀 ffmpeg、关浏览器和服务、删中间帧和半截输出再退（退出码 130）。开工前先查完棋谱、输出目录、ffmpeg、浏览器路径、画幅，查不过不起浏览器。
+
+**实测**（2026-09-30，本机）：出片耗时主要花在截图（每格约 0.1–0.15 秒）和编码（按视频长度），默认时长下约每分钟视频 6 秒（国际象棋 95 步、244.5 秒视频用时 24 秒；象棋 33 步、89.5 秒用时 9.5 秒）。9:16 每张图大、稍慢。测试 `viewer/test/record.test.js`：自带样例、停留时长调小，ffprobe 核对编码、帧率、分辨率、faststart、时长；没有浏览器或 ffmpeg / ffprobe（`VIEWER_FFPROBE`，默认与 ffmpeg 同目录）时跳过。
 
 **开发期依赖。** `viewer/package.json` 只放 playwright-core，**锁精确版本 1.58.2**：它配套的正是本机缓存里的 chromium-1208（1.58.0–1.58.2 都是 1208，1.59 起换 1217），不用下载浏览器。缓存里没有配套浏览器的机器，用环境变量 `VIEWER_CHROMIUM` 指到任一 Chromium / Chrome 可执行文件。`.gitignore` 加 `node_modules/`。
 
@@ -208,6 +233,7 @@
    - 2026-09-30 播放与录制接口已做（宽版另派）：`lib/play.js` 排顺序，`app.js` 接自动播放、连播、标题画面、播完标记、`rec=1`、`viewer.next()`、拖文件；参数与接口见上文「播放」。验收入库为 `viewer/test/play.test.js`（`node --test` 里一起跑）：无头浏览器调 `viewer.next()` 走完单盘（默认参数、自定时长）和连播（一个文件 12 盘 + 另一文件的象棋、`title=0`），逐格核对 `kind` 与 `hold`，并核对 `result` 那格才出横幅、`end` 画总比分、播完标记、拖文件换棋谱、自动播放能播完。没装 playwright-core 或起不来浏览器时这几项跳过。
    - 2026-09-30 宽版已做（做法与快捷键见「版式」）：新增 `lib/panel.js`（着法列表的行、评注数字的中文标签、标注说法，纯函数）；`shot.mjs` 加 `--size 宽x高`，网址参数里写了 `layout=` 就不再补 `layout=compact`。验收入库为 `viewer/test/wide.test.js`：版式自动切换与强制、窗口改大小跟着切；键盘单步（含连按不丢步）、首尾、跨盘、PgUp / PgDn 与下拉框换盘；点着法跳步、按钮与空格播放暂停（从跳到的那步往下播、暂停后真停）；评注面板的标签、标注、将军、非法重选、不认识的命令。窄版 10 张截图（两种棋的标题、中局、终局、连播、总比分、版式极限造局）改动前后逐字节一致。
 5. **录制脚本**：两种棋各出一段 3:4 视频，ffprobe 核对编码（H.264、yuv420p）、帧率（30 恒定）、分辨率、时长（各格 `hold` 之和），抽几帧看清晰度。
+   - 2026-09-30 已做：`viewer/record.mjs`（用法见「录屏：脚本出片」）；`serve.mjs` 加了单文件精确映射。本机真实对局出片：象棋 `g3-x-opus-astra`（33 步）gap 1 和默认 2.5 各一段（40 / 89.5 秒）、国际象棋 `g1-c-opus-sol`（95 步）gap 1 和默认各一段（102 / 244.5 秒）、两盘连播 9:16 一段（83 秒，1080×1920），ffprobe 全部 H.264 High、yuv420p、30/1 恒定、尺寸对、时长与各格 `hold` 之和一致（按帧取整后分毫不差）；抽帧看棋子和中文清晰，颜色与直接截图比平均差 1–2 级。入库测试 `viewer/test/record.test.js`。走子动画那段（`anim > 0`）页面还没有，代码按上面的约定写好但没跑过。
 6. （可选）国际象棋滑动动画。
 
 ## 方案前提

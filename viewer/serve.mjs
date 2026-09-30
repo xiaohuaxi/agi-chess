@@ -12,11 +12,17 @@ const TYPES = {
 };
 
 // → { port, close() }
-export async function serve(root, mounts = {}) {
+// files 把单个网址精确映射到单个本机文件（录制脚本用：只供给命令行点名的棋谱，不连带它所在的目录）。
+export async function serve(root, mounts = {}, files = {}) {
   const bases = Object.entries(mounts).sort((a, b) => b[0].length - a[0].length);
   const server = http.createServer(async (req, res) => {
     try {
       let rel = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+      if (Object.hasOwn(files, rel)) {
+        const body = await readFile(files[rel]);
+        res.writeHead(200, { 'content-type': TYPES[path.extname(files[rel])] || 'application/octet-stream' }).end(body);
+        return;
+      }
       if (rel.endsWith('/')) rel += 'index.html';
       let base = root;
       for (const [prefix, dir] of bases) {
