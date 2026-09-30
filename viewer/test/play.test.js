@@ -1,0 +1,154 @@
+// 播放顺序与录制接口（docs/viewer.md「播放」）。
+// 前半是 lib/play.js 的纯函数；后半用无头浏览器打开页面，调 window.viewer.next() 一格一格走完一盘单盘和几组连播，
+// 核对 kind 顺序、hold（随 gap 等网址参数变）、播完标记、拖文件进页面、自动播放。
+// 浏览器部分要 viewer/node_modules 里的 playwright-core 和它配套的 Chromium（或 VIEWER_CHROMIUM），没有就跳过。
+import { after, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { DEFAULTS, playOptions, sequence } from '../lib/play.js';
+import { decodeText, parsePgn } from '../lib/pgn.js';
+import { replay } from '../lib/replay.js';
+import { serve } from '../serve.mjs';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const FIX = '/viewer/test/fixtures/';
+
+test('播放设置：默认值、自定、不合法回默认', () => {
+  const o = playOptions(new URLSearchParams(''));
+  assert.deepEqual(o, { ...DEFAULTS, title: true });
+  assert.equal(o.gap, 2.5);
+  const p = playOptions(new URLSearchParams('gap=1.5&titlehold=0&resulthold=x&summaryhold=-1&title=0'));
+  assert.deepEqual(p, { gap: 1.5, titlehold: 0, resulthold: DEFAULTS.resulthold, summaryhold: DEFAULTS.summaryhold, title: false });
+});
+
+test('播放顺序：单盘 title → move… → result → end(0)；多盘 end 停 summaryhold；没结果的盘没有 result', () => {
+  const opt = { gap: 2, titlehold: 3, resulthold: 4, summaryhold: 5, title: true };
+  const one = sequence([{ plies: 2, over: true }], opt);
+  assert.deepEqual(one.map((f) => [f.kind, f.ply, f.hold]),
+    [['title', 0, 3], ['move', 1, 2], ['move', 2, 2], ['result', 2, 4], ['end', null, 0]]);
+  const two = sequence([{ plies: 1, over: false }, { plies: 0, over: true }], { ...opt, title: false });
+  assert.deepEqual(two.map((f) => [f.kind, f.game, f.ply, f.hold]),
+    [['move', 0, 0, 2], ['move', 0, 1, 2], ['move', 1, 0, 2], ['result', 1, 0, 4], ['end', null, null, 5]]);
+});
+
+// ---------------------------------------------------------------- 浏览器
+const plies = (file) => parsePgn(decodeText(readFileSync(join(ROOT, FIX, file)))).map((g) => replay(g).steps.length);
+
+// 不看实现，照方案手写的期望：[kind, hold]。
+function expected(counts, { gap = 2.5, titlehold = 3, resulthold = 4, summaryhold = 5, title = true } = {}) {
+  const out = [];
+  for (const n of counts) {
+    out.push(title ? ['title', titlehold] : ['move', gap]);
+    for (let i = 0; i < n; i++) out.push(['move', gap]);
+    out.push(['result', resulthold]);                    // 样例每盘都有结果
+  }
+  out.push(['end', counts.length > 1 ? summaryhold : 0]);
+  return out;
+}
+
+let pw = null;
+try { pw = await import('playwright-core'); } catch { /* 没装开发依赖 */ }
+let browser = null, skip = pw ? false : '没有 playwright-core（cd viewer && npm ci）';
+if (pw) {
+  try { browser = await pw.chromium.launch({ executablePath: process.env.VIEWER_CHROMIUM || undefined }); }
+  catch (e) { skip = `起不来浏览器：${e.message.split('\n')[0]}`; }
+}
+
+async function withPage(query, fn) {
+  const server = await serve(ROOT);
+  const page = await browser.newPage({ viewport: { width: 540, height: 720 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  try {
+    await page.goto(`http://127.0.0.1:${server.port}/viewer/?${query}`);
+    await page.evaluate(() => window.viewer.ready);
+    await fn(page);
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+    await server.close();
+  }
+}
+
+// 调 next() 走到 end 为止（多给几格余量防死循环），返回 [kind, hold] 列表；anim 现在恒为 0。
+async function walk(page) {
+  return page.evaluate(async () => {
+    const out = [];
+    for (let i = 0; i < 2000; i++) {
+      const r = await window.viewer.next();
+      if (r.anim !== 0) throw new Error('anim ' + r.anim);
+      out.push([r.kind, r.hold]);
+      if (r.kind === 'end') break;
+    }
+    return out;
+  });
+}
+
+test('录制接口：单盘默认参数', { skip }, async () => {
+  await withPage(`rec=1&files=${FIX}chess-sample.pgn`, async (page) => {
+    const res = await page.evaluate(() => ({
+      sprite: !!document.getElementById('cm-chessboard-sprite'), fonts: document.fonts.status,
+      done: window.viewer.done, title: !document.getElementById('title').hidden,
+    }));
+    assert.deepEqual(res, { sprite: true, fonts: 'loaded', done: false, title: true });   // ready 时第一格（标题）已画好
+    assert.deepEqual(await walk(page), expected(plies('chess-sample.pgn')));
+    assert.equal(await page.evaluate(() => document.body.dataset.done), '1');
+    assert.deepEqual(await page.evaluate(() => window.viewer.next()), { kind: 'end', hold: 0, anim: 0 });
+  });
+});
+
+test('录制接口：单盘自定时长，result 那格才出横幅', { skip }, async () => {
+  await withPage(`rec=1&gap=1.5&titlehold=2&resulthold=6&files=${FIX}xq-sample.pgn`, async (page) => {
+    const n = plies('xq-sample.pgn')[0];
+    const seen = await page.evaluate(async (n) => {
+      const banner = () => !document.getElementById('banner').hidden;
+      const out = [];
+      for (let i = 0; i < n + 3; i++) { const r = await window.viewer.next(); out.push([r.kind, r.hold, banner()]); }
+      return out;
+    }, n);
+    const want = expected([n], { gap: 1.5, titlehold: 2, resulthold: 6 }).map(([k, h]) => [k, h, k === 'result' || k === 'end']);
+    assert.deepEqual(seen, want);
+  });
+});
+
+test('录制接口：连播（一个文件多盘 + 多个文件、两种棋），title=0，end 画总比分', { skip }, async () => {
+  const files = ['layout-extreme-chess.pgn', 'xq-sample.pgn'];
+  await withPage(`rec=1&title=0&gap=0.5&resulthold=1&summaryhold=7&files=${files.map((f) => FIX + f).join(',')}`, async (page) => {
+    const counts = files.flatMap(plies);
+    assert.equal(counts.length, 13);
+    assert.deepEqual(await walk(page), expected(counts, { title: false, gap: 0.5, resulthold: 1, summaryhold: 7 }));
+    const end = await page.evaluate(() => ({
+      summary: document.getElementById('stage').classList.contains('summary'),
+      kind: document.querySelector('#summary .s-kind').textContent, done: window.viewer.done,
+    }));
+    assert.deepEqual(end, { summary: true, kind: '国际象棋 / 中国象棋', done: true });
+  });
+});
+
+test('拖文件进页面：换成拖进来的棋谱、从头播', { skip }, async () => {
+  await withPage(`rec=1&files=${FIX}chess-sample.pgn`, async (page) => {
+    await page.evaluate(() => window.viewer.next());
+    const texts = ['xq-sample.pgn', 'chess-sample.pgn'].map((f) => readFileSync(join(ROOT, FIX, f), 'utf8'));
+    const dt = await page.evaluateHandle(([a, b]) => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([a], 'b.pgn'));          // 按文件名排序：a.pgn（国际象棋）在前
+      dt.items.add(new File([b], 'a.pgn'));
+      return dt;
+    }, texts);
+    await page.dispatchEvent('body', 'drop', { dataTransfer: dt });
+    await page.waitForFunction(() => document.querySelector('#title .t-head')?.textContent.startsWith('国际象棋 · 第 1 局 · 共 2 局'));
+    assert.deepEqual(await walk(page), expected([...plies('chess-sample.pgn'), ...plies('xq-sample.pgn')]));
+  });
+});
+
+test('自动播放：按 gap 等参数一格格播完，置播完标记', { skip }, async () => {
+  await withPage(`autoplay=1&gap=0.01&titlehold=0.01&resulthold=0.01&summaryhold=0.01&files=${FIX}xq-sample.pgn,${FIX}chess-sample.pgn`,
+    async (page) => {
+      await page.waitForFunction(() => document.body.dataset.done === '1', null, { timeout: 20000 });
+      assert.equal(await page.evaluate(() => document.getElementById('stage').classList.contains('summary')), true);
+    });
+});
+
+after(() => browser?.close());

@@ -2,13 +2,20 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { decodeText, moveNote, parsePgn } from '../lib/pgn.js';
-import { cleanReason, fmtTokens, playerOf, resultText, scoresBefore, startMoveNumber, thinkTotals, totals } from '../lib/match.js';
+import { cleanReason, fmtTokens, fullName, playerOf, resultText, scoresBefore, startMoveNumber, thinkTotals, totals } from '../lib/match.js';
 
 test('棋手显示名：模型取冒号后小写并带深度，引擎照原名', () => {
   const g = { tags: { Red: 'claude:Opus', Black: 'engine:fsf:nodes=100', RedEffort: 'XHigh' } };
   assert.deepEqual(playerOf(g, 'w'), { name: 'opus', effort: 'xhigh', key: 'opus+XHigh' });
   assert.equal(playerOf(g, 'b').name, 'engine:fsf:nodes=100');
   assert.equal(playerOf({ tags: { White: 'codex:astra', WhiteEffort: 'max' } }, 'w').name, 'astra');
+});
+
+test('标题画面全称：补厂商，认不出的照原名', () => {
+  const g = { tags: { White: 'codex:astra', Black: 'claude:opus', WhiteEffort: 'max' } };
+  assert.deepEqual(fullName(g, 'w'), { name: 'GPT astra', effort: 'max' });
+  assert.deepEqual(fullName(g, 'b'), { name: 'Claude opus', effort: '' });
+  assert.equal(fullName({ tags: { Red: 'engine:fsf:nodes=100' } }, 'w').name, 'engine:fsf:nodes=100');
 });
 
 test('token 写法', () => {

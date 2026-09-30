@@ -2,7 +2,7 @@
 <!--
   棋谱阅读器（docs/viewer.md）。经本机静态服务打开：仓库根目录 python3 -m http.server --bind 127.0.0.1 8000，
   再开 http://127.0.0.1:8000/viewer/?files=/runs/a/game.pgn,/runs/b/game.pgn
-  现在只有窄版（录屏画面）的静态渲染：&game=第几盘（从 1 起）&ply=半回合数或 end；多盘时 &summary=1 显示播完后的总比分画面。播放、宽版、标题画面在后续步骤接。
+  也可以把棋谱文件拖进页面。播放、录制接口与网址参数见 app.js 开头和 docs/viewer.md「播放」；现在只有窄版（录屏画面）。
 -->
 <html lang="zh-CN">
 <head>
@@ -30,9 +30,11 @@
     <div id="board-chess" class="board" hidden></div>
     <div id="board-xq" class="board" hidden></div>
     <div id="banner" hidden></div>
+    <div id="title" hidden></div>
   </div>
   <div class="bar" id="bar-bottom"></div>
   <div id="summary" hidden></div>
+  <div id="hint"></div>
 </div>
 <script type="module" src="app.js"></script>
 </body>

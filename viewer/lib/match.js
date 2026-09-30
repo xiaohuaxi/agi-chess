@@ -15,6 +15,17 @@ export function playerOf(game, side) {
   return { name: short, effort: model ? effort.toLowerCase() : effort, key: short + '+' + effort };
 }
 
+// 标题画面用的全称：观众不一定知道 astra 是哪家，前面补上厂商（「claude:opus」→「Claude opus」、「codex:astra」→「GPT astra」）。
+// 认不出的后端照原名；深度同 playerOf。
+const VENDORS = { claude: 'Claude', codex: 'GPT', gpt: 'GPT', openai: 'GPT', deepseek: 'DeepSeek', gemini: 'Gemini', grok: 'Grok' };
+
+export function fullName(game, side) {
+  const p = playerOf(game, side);
+  const t = game.tags, raw = side === 'w' ? (t.Red ?? t.White ?? '?') : (t.Black ?? '?');
+  const vendor = VENDORS[raw.slice(0, Math.max(0, raw.indexOf(':'))).toLowerCase()];
+  return { name: vendor ? `${vendor} ${p.name}` : p.name, effort: p.effort };
+}
+
 // 起始局面的回合数（FEN 第 6 段），没有就是 1。
 export function startMoveNumber(game) {
   const f = (game.tags.FEN || '').trim().split(/\s+/);
