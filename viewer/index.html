@@ -2,7 +2,9 @@
 <!--
   棋谱阅读器（docs/viewer.md）。经本机静态服务打开：仓库根目录 python3 -m http.server --bind 127.0.0.1 8000，
   再开 http://127.0.0.1:8000/viewer/?files=/runs/a/game.pgn,/runs/b/game.pgn
-  也可以把棋谱文件拖进页面。播放、录制接口与网址参数见 app.js 开头和 docs/viewer.md「播放」；现在只有窄版（录屏画面）。
+  也可以把棋谱文件拖进页面。播放、录制接口与网址参数见 app.js 开头和 docs/viewer.md「播放」。
+  版式按窗口宽度自动选（layout=compact / wide 强制）：窄版（录屏画面）只有棋手条和棋盘；宽版右边多一栏 #side
+  （对局信息、播放按钮、着法列表、这步的评注和数字、快捷键提示），窄版里它不显示。
 -->
 <html lang="zh-CN">
 <head>
@@ -33,6 +35,20 @@
     <div id="title" hidden></div>
   </div>
   <div class="bar" id="bar-bottom"></div>
+  <aside id="side">
+    <div id="s-head"></div>
+    <div id="s-players"></div>
+    <div id="s-ctrl">
+      <button type="button" data-act="first" title="本盘开头（Home）">⏮</button>
+      <button type="button" data-act="prev" title="上一步（←）">◀</button>
+      <button type="button" data-act="play" id="s-play" title="播放 / 暂停（空格）">播放</button>
+      <button type="button" data-act="next" title="下一步（→）">▶</button>
+      <button type="button" data-act="last" title="本盘结尾（End）">⏭</button>
+    </div>
+    <div id="s-moves"></div>
+    <div id="s-note"></div>
+    <div id="s-keys"><span><b>←</b> <b>→</b> 单步</span><span><b>空格</b> 播放 / 暂停</span><span><b>Home</b> <b>End</b> 本盘首尾</span><span><b>PgUp</b> <b>PgDn</b> 换盘</span><span>点着法跳到那步</span></div>
+  </aside>
   <div id="summary" hidden></div>
   <div id="hint"></div>
 </div>

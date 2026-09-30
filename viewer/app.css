@@ -163,3 +163,76 @@ body { overflow: hidden; }
 #stage.empty > :not(#hint) { display: none; }
 #stage.empty > #hint { display: flex; flex: 1; align-items: center; justify-content: center; padding: 0 32px;
   text-align: center; white-space: pre-line; font-size: var(--row2-size); line-height: 1.6; color: var(--text-weak); }
+
+/* ================================================================ 宽版（给人读棋谱；docs/viewer.md「版式」）
+  左边沿用窄版的棋手条 + 棋盘 + 棋手条（字号配色同上），右边一栏 #side：对局信息、播放按钮、着法列表、这步的评注和数字。
+  棋盘边长随窗口高度变：100vh 减上下留白、两条棋手条和顶部细条。窄版里 #side 不显示，窄版的取值一概不动。 */
+#side { display: none; }
+#stage.wide {
+  --wide-bar-h: 76px; --wide-pad: 16px; --side-w: 460px; --side-gap: 20px;
+  --board-h: clamp(360px, calc(100vh - 2 * var(--wide-pad) - 2 * var(--wide-bar-h) - var(--strip-h)), 1000px);
+  --side-bg: #2e2b28; --side-line: #3d3935; --side-cur: #4a4540;
+  height: 100vh; box-sizing: border-box; padding: var(--wide-pad);
+  display: grid; justify-content: center; align-content: start; column-gap: var(--side-gap);
+  grid-template-columns: var(--board-h) minmax(300px, var(--side-w));
+  grid-template-rows: auto var(--wide-bar-h) var(--board-h) var(--wide-bar-h);
+}
+#stage.wide > #strip { grid-column: 1; grid-row: 1; }
+#stage.wide > #bar-top { grid-column: 1; grid-row: 2; }
+#stage.wide > #board-area { grid-column: 1; grid-row: 3; }
+#stage.wide > #bar-bottom { grid-column: 1; grid-row: 4; }
+#stage.wide > #summary { grid-column: 1; grid-row: 1 / 5; }
+#stage.wide > #side { grid-column: 2; grid-row: 1 / 5; display: flex; min-height: 0; }
+#stage.wide.empty { display: flex; }
+#stage.wide.summary > #strip { display: none; }
+
+#side { flex-direction: column; gap: 12px; min-width: 0; font-size: 15px; line-height: 1.5; color: var(--text); }
+#side button { font: inherit; color: var(--text); background: var(--side-bg); border: 1px solid var(--side-line);
+  border-radius: 6px; cursor: pointer; }
+#side button:hover { background: var(--side-cur); }
+#s-head { display: flex; align-items: center; gap: 8px; color: var(--text-weak); }
+#s-head select { font: inherit; color: var(--text); background: var(--side-bg); border: 1px solid var(--side-line);
+  border-radius: 6px; padding: 4px 6px; min-width: 0; max-width: 100%; }
+#s-players { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; background: var(--side-bg); border-radius: 8px; }
+#s-players .p { display: flex; align-items: center; white-space: nowrap; min-width: 0; }
+#s-players .p .disc { width: 12px; height: 12px; margin-right: 8px; }
+#s-players .p .pname { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#s-players .p .eff { flex: none; margin-left: 10px; font-size: 13px; color: var(--text-weak); }
+#s-players .p .eff b { font-weight: 400; color: var(--text); }
+#s-players .res { color: var(--text-weak); font-size: 14px; margin-top: 4px; }
+#s-ctrl { display: flex; gap: 6px; }
+#s-ctrl button { flex: 1; height: 36px; font-size: 15px; }
+#s-ctrl #s-play { flex: 2; }
+#s-ctrl #s-play.on { background: var(--bar-active-bg); box-shadow: inset 0 -2px 0 var(--accent); }
+
+#s-moves { position: relative; flex: 1 1 0; min-height: 120px; overflow-y: auto; background: var(--side-bg); border-radius: 8px; padding: 6px 0;
+  font-variant-numeric: tabular-nums; }
+#s-moves .r { display: grid; grid-template-columns: 44px 1fr 1fr; align-items: center; }
+#s-moves .no { color: var(--text-weak); text-align: right; padding-right: 10px; font-size: 13px; }
+#s-moves .m { padding: 2px 8px; margin: 1px 4px; border-radius: 4px; cursor: pointer; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+#s-moves .m:hover { background: var(--side-line); }
+#s-moves .m.cur { background: var(--side-cur); box-shadow: inset 3px 0 0 var(--accent); }
+#s-moves .m.bad { color: #f08a7e; } #s-moves .m.good { color: #8fd19e; }
+#s-moves .start { grid-column: 2 / 4; color: var(--text-weak); }
+#s-moves .end { padding: 4px 12px 2px; color: var(--text-weak); font-size: 14px; }
+
+#s-note { flex: 0 1 auto; max-height: 42%; overflow-y: auto; background: var(--side-bg); border-radius: 8px; padding: 10px 12px; }
+#s-note .n-head { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+#s-note .n-head .who { font-weight: 400; font-size: 14px; color: var(--text-weak); margin-left: 8px; }
+#s-note .nag { display: inline-block; margin-left: 8px; padding: 0 6px; border-radius: 4px; font-size: 13px; font-weight: 400;
+  background: var(--side-line); }
+#s-note .nag.bad { background: var(--tag-bg); color: #fff; } #s-note .nag.good { background: var(--win-bg); color: #fff; }
+#s-note dl { display: grid; grid-template-columns: max-content 1fr max-content 1fr; gap: 2px 12px; margin: 0 0 6px;
+  font-size: 14px; font-variant-numeric: tabular-nums; }
+#s-note dt { color: var(--text-weak); } #s-note dd { margin: 0; }
+#s-note dd.warn { color: var(--accent); }
+#s-note .lbl { color: var(--text-weak); font-size: 13px; margin-top: 6px; }
+#s-note .why { white-space: pre-wrap; }
+#s-note .raw { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--text-weak); word-break: break-all; }
+#s-note .none { color: var(--text-weak); }
+#s-keys { flex: none; display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 12px; color: var(--text-weak); line-height: 1.7; }
+#s-keys b { display: inline-block; font-weight: 400; padding: 0 5px; border: 1px solid var(--side-line); border-radius: 3px;
+  line-height: 1.4; color: var(--text); }
+#stage.wide.empty > #side { display: none; }
+#s-keys > span { white-space: nowrap; }

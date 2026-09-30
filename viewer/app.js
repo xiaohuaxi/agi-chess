@@ -1,5 +1,8 @@
-// 棋谱阅读器页面外壳（docs/viewer.md）。现在只有窄版（录屏画面）：顶部细条、两条棋手条、棋盘、终局横幅、标题画面、
-// 总比分，加上自动播放、连播和录制接口。宽版另做。
+// 棋谱阅读器页面外壳（docs/viewer.md）。两种版式共用：顶部细条、两条棋手条、棋盘、终局横幅、标题画面、总比分，
+// 加上自动播放、连播和录制接口。宽版（给人读棋谱）右边多一栏：对局信息、播放按钮、着法列表、这步的评注和数字。
+// 版式：layout=compact / wide 强制，不给按窗口宽度自动选（宽 ≥ WIDE_MIN 用宽版，窗口改大小时跟着切）；rec=1 恒为窄版。
+// 键盘（rec=1 时都不理）：← → 单步，空格 播放 / 暂停，Home / End 本盘首尾，PgUp / PgDn 上一盘 / 下一盘；
+// 手动跳步会先停下自动播放，再播从跳到的那一格接着往下。
 //
 // 网址参数（docs/viewer.md「播放」有完整清单）：
 //   files=逗号分隔的棋谱路径（按站点根解析，一个文件可以有多盘）；也可以把文件拖进页面。
@@ -13,15 +16,19 @@
 // window.viewer.show(game, ply) / summary()：直接画某一格（截图、调试用）。
 import { decodeText, parsePgn, moveNote } from './lib/pgn.js';
 import { replay } from './lib/replay.js';
-import { playerOf, fullName, startMoveNumber, fmtTokens, thinkTotals, points, scoresBefore, fmtScore, resultParts, totals } from './lib/match.js';
+import { playerOf, fullName, startMoveNumber, fmtTokens, thinkTotals, points, scoresBefore, fmtScore, resultParts, resultText, totals } from './lib/match.js';
+import { moveRows, nagLabel, noteItems } from './lib/panel.js';
 import { playOptions, sequence } from './lib/play.js';
 import { ChessBoard, kingSquare } from './lib/chessboard.js';
 import { XiangqiBoard, xqKingSquare } from './lib/xqboard.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
-const REC = params.get('rec') === '1';   // 录制模式；现在只有窄版，所以「隐含 layout=compact」不用另做
+const REC = params.get('rec') === '1';   // 录制模式，隐含 layout=compact
 const OPT = playOptions(params);
+const FORCED = REC ? 'compact' : ['compact', 'wide'].includes(params.get('layout')) ? params.get('layout') : null;
+// 自动选版式的分界。录 16:9 时页面宽 960 会判成宽版，所以录制靠 rec=1（恒为窄版），不靠自动判断
+const WIDE_MIN = 900;
 const frames = (n = 2) => new Promise((ok) => {
   const step = () => (n-- <= 0 ? ok() : requestAnimationFrame(step));
   step();
@@ -211,14 +218,127 @@ function showTitle(gi) {
   for (const [el, full] of names) fitMiddle(el, full);
 }
 
+// ---------------------------------------------------------------- 宽版右栏
+// 换了一盘（或换了棋谱）才重建对局信息和着法列表；同一盘里走动只改高亮和下面的评注。
+let side = { games: null, gi: -1, cells: new Map() };
+
+function renderSide(gi, ply, final) {
+  const g = games[gi], { game, rep, notes, startTurn, xiangqi } = g;
+  const steps = rep.steps;
+  if (side.games !== games || side.gi !== gi) {
+    side = { games, gi, cells: new Map() };
+    // 对局信息：棋种、第几局（多盘时是下拉框，可以换盘）
+    const head = [h('span', null, xiangqi ? '中国象棋' : '国际象棋')];
+    if (games.length > 1) {
+      const sel = h('select');
+      sel.id = 's-game';
+      sel.title = '换盘（PgUp / PgDn）';
+      games.forEach((x, i) => {
+        const o = h('option', null, `第 ${i + 1} 局 · ${playerOf(x.game, 'w').name} 对 ${playerOf(x.game, 'b').name}`
+          + ` · ${x.game.result ?? x.game.tags.Result ?? '*'}`);
+        o.value = i;
+        sel.append(o);
+      });
+      sel.value = gi;
+      head.push(sel);
+    }
+    $('s-head').replaceChildren(...head);
+    // 双方：圆片、全称、思考深度；最后一行结果
+    const ps = ['w', 'b'].map((s) => {
+      const p = fullName(game, s), row = h('div', 'p');
+      row.append(h('span', 'disc ' + (s === 'w' ? (xiangqi ? 'red' : 'white') : 'black')), h('span', 'pname', p.name));
+      if (p.effort) { const e = h('span', 'eff', '思考深度 '); e.append(h('b', null, p.effort)); row.append(e); }
+      return row;
+    });
+    const res = rep.error ? `第 ${rep.error.ply} 步读不懂：${rep.error.text}` : resultText(game, xiangqi) || '未完';
+    $('s-players').replaceChildren(...ps, h('div', 'res', '结果：' + res));
+    // 着法列表：开局一格，之后每回合一行（回合号、红 / 白、黑），末尾写结果
+    const list = [];
+    const start = h('div', 'r');
+    const s0 = h('div', 'm start', '开局');
+    s0.dataset.ply = 0;
+    side.cells.set(0, s0);
+    start.append(h('div', 'no'), s0);
+    list.push(start);
+    for (const r of moveRows(steps, game.moves, startTurn, startMoveNumber(game), xiangqi)) {
+      const row = h('div', 'r');
+      row.append(h('div', 'no', r.no + '.'));
+      for (const s of ['w', 'b']) {
+        const c = h('div', 'm', r[s] ? r[s].text : '');
+        if (r[s]) {
+          c.dataset.ply = r[s].ply;
+          const nag = game.moves[r[s].ply - 1].nags[0];
+          if ([2, 4, 6].includes(nag)) c.classList.add('bad');
+          if ([1, 3, 5].includes(nag)) c.classList.add('good');
+          side.cells.set(r[s].ply, c);
+        } else c.style.visibility = 'hidden';
+        row.append(c);
+      }
+      list.push(row);
+    }
+    list.push(h('div', 'end', res));
+    $('s-moves').replaceChildren(...list);
+  }
+  const sel = $('s-game');
+  if (sel) sel.value = gi;
+  for (const c of $('s-moves').querySelectorAll('.cur')) c.classList.remove('cur');
+  const cell = side.cells.get(ply);
+  if (cell) {
+    cell.classList.add('cur');
+    const box = $('s-moves'), top = cell.offsetTop, bottom = top + cell.offsetHeight;
+    if (top < box.scrollTop + 8) box.scrollTop = Math.max(0, top - 8);            // 只滚列表本身，不动页面
+    else if (bottom > box.scrollTop + box.clientHeight - 8) box.scrollTop = bottom - box.clientHeight + 8;
+  }
+  $('s-note').replaceChildren(...noteView(g, ply, final));
+}
+
+// 当前这步的评注：记谱、标注、谁走的；各项数字（带中文标签）；理由文字；不认识的命令原样列出。
+function noteView(g, ply, final) {
+  const { game, rep, notes, startTurn, xiangqi } = g;
+  if (ply === 0) {
+    const kids = [h('div', 'n-head', '开局局面')];
+    if (game.pre.length) kids.push(h('div', 'lbl', '评注'), h('div', 'why', game.pre.join('\n')));
+    return kids;
+  }
+  const st = rep.steps[ply - 1], note = notes[ply - 1], move = game.moves[ply - 1];
+  const no = startMoveNumber(game) + Math.floor((ply - 1 + (startTurn === 'b' ? 1 : 0)) / 2);
+  const head = h('div', 'n-head', `${no}${st.side === 'w' ? '.' : '...'} ${xiangqi ? st.text : st.san}`);
+  for (const n of move.nags) head.append(h('span', 'nag' + ([2, 4, 6].includes(n) ? ' bad' : [1, 3, 5].includes(n) ? ' good' : ''), nagLabel(n)));
+  if (st.check) head.append(h('span', 'nag bad', '将军'));
+  const p = playerOf(game, st.side);
+  head.append(h('span', 'who', p.name + (p.effort ? '+' + p.effort : '')));
+  const kids = [head];
+  const items = noteItems(note);
+  if (items.length) {
+    const dl = h('dl');
+    for (const it of items) {
+      dl.append(h('dt', null, it.label));
+      dl.append(h('dd', ['illegal', 'flagged', 'empty'].includes(it.key) && it.value !== '0' ? 'warn' : null, it.value));
+    }
+    kids.push(dl);
+  }
+  if (note.text) kids.push(h('div', 'lbl', '理由 / 评注'), h('div', 'why', note.text));
+  if (note.unknown.length) kids.push(h('div', 'lbl', '其他命令'), h('div', 'raw', note.unknown.join(' ')));
+  if (!items.length && !note.text && !note.unknown.length) kids.push(h('div', 'none', '这步没有评注'));
+  if (final && ply === rep.steps.length) {
+    const r = rep.error ? `第 ${rep.error.ply} 步读不懂：${rep.error.text}` : resultText(game, xiangqi);
+    if (r) kids.push(h('div', 'lbl', '终局'), h('div', null, r));
+  }
+  return kids;
+}
+
 let games = [];
 const boards = {};
+let pos = { gi: 0, ply: 0, opts: {} };   // 现在画着哪一格（总比分那格不改它）
+let wide = false;
 
 // opts.final：见 frameData（默认 true，静态看 ply=end 时带横幅）；opts.title：盖上标题画面。
 async function show(gi, ply, opts = {}) {
   $('stage').classList.remove('summary', 'empty');
   $('summary').hidden = true;
   $('title').hidden = true;
+  ply = Math.max(0, Math.min(ply, games[gi].rep.steps.length));
+  pos = { gi, ply, opts };
   const d = frameData(games, gi, ply, opts.final ?? true);
   $('strip').hidden = !d.strip;
   $('strip').textContent = d.strip || '';
@@ -229,6 +349,7 @@ async function show(gi, ply, opts = {}) {
   await (d.xiangqi ? boards.xq : boards.chess).render(d);
   showBanner(d.banner);
   if (opts.title) showTitle(gi);
+  if (wide) renderSide(gi, ply, opts.final ?? true);
   await document.fonts.ready;
   await frames(2);
 }
@@ -295,6 +416,7 @@ async function play() {
   if (REC || playing || !seq.length) return;
   if (done) resetSequence();
   playing = true;
+  syncPlay();
   const me = ++run;
   try {
     while (me === run) {
@@ -305,14 +427,85 @@ async function play() {
   } catch (e) {
     fail(e);
   } finally {
-    if (me === run) playing = false;
+    if (me === run) { playing = false; syncPlay(); }
   }
 }
 
 function pause() {
   run++;
   playing = false;
+  syncPlay();
   if (wake) wake();
+}
+
+function syncPlay() {
+  const b = $('s-play');
+  b.textContent = playing ? '暂停' : '播放';
+  b.classList.toggle('on', playing);
+}
+
+// ---------------------------------------------------------------- 手动跳步（宽版按钮、点着法、键盘）
+// 先停下自动播放，画「第 gi 盘走完 ply 个半回合」（走完最后一步时带终局横幅），再把播放位置对到这一格，
+// 之后按播放就从这里往下。want 是最近一次要去的位置：连按方向键时按它累加，不等上一格画完。
+let want = null;
+
+function seqIndex(gi, ply) {
+  let at = -1;                     // 同一位置有几格时取最后一格：开局有标题格和（title=0 时）开局格，最后一步有走子格和结果格
+  seq.forEach((f, i) => { if (f.game === gi && f.ply === ply) at = i; });
+  return at;
+}
+
+function goto(gi, ply) {
+  if (!games.length) return Promise.resolve();
+  pause();
+  gi = Math.max(0, Math.min(games.length - 1, gi));
+  ply = Math.max(0, Math.min(games[gi].rep.steps.length, ply));
+  const me = want = { gi, ply, final: true };
+  const p = chain.then(async () => {
+    await show(gi, ply);
+    cur = seqIndex(gi, ply);
+    setDone(false);
+  }).finally(() => { if (want === me) want = null; });
+  chain = p.catch(() => {});
+  return p;
+}
+
+const here = () => want || { ...pos, final: pos.opts.final ?? true };
+
+function step(d) {
+  const { gi, ply, final } = here(), n = games[gi]?.rep.steps.length ?? 0;
+  if (d > 0) {
+    if (ply < n || !final) return goto(gi, ply + (ply < n ? 1 : 0));   // 播到最后一步还没出横幅时，先补上终局那格
+    if (gi < games.length - 1) return goto(gi + 1, 0);
+    return Promise.resolve();
+  }
+  if (ply > 0) return goto(gi, ply - 1);
+  if (gi > 0) return goto(gi - 1, Infinity);
+  return Promise.resolve();
+}
+
+const toStart = () => goto(here().gi, 0);
+const toEnd = () => goto(here().gi, Infinity);
+const toGame = (d) => goto(here().gi + d, 0);
+
+function toggle() {
+  if (playing) pause(); else play();
+}
+
+// ---------------------------------------------------------------- 版式
+function applyLayout() {
+  const w = FORCED ? FORCED === 'wide' : innerWidth >= WIDE_MIN;
+  const st = $('stage');
+  st.classList.toggle('wide', w);
+  st.classList.toggle('compact', !w);
+  const changed = w !== wide;
+  wide = w;
+  boards.chess?.resize();
+  // 换了版式：棋手条宽度变了（名字从中间省略要重算），宽版右栏要补画，所以把当前这格重画一遍
+  if (changed && games.length && !st.classList.contains('summary') && !st.classList.contains('empty')) {
+    const { gi, ply, opts } = pos;
+    chain = chain.then(() => show(gi, ply, opts)).catch(() => {});
+  }
 }
 
 // ---------------------------------------------------------------- 载入
@@ -357,7 +550,10 @@ async function init() {
     const gi = Math.max(0, Math.min(games.length - 1, (Number(params.get('game')) || 1) - 1));
     const p = params.get('ply');
     if (params.get('summary') === '1' && games.length > 1) await summary();
-    else await show(gi, p === 'end' ? Infinity : Number(p) || 0);
+    else {
+      await show(gi, p === 'end' ? Infinity : Number(p) || 0);
+      cur = seqIndex(pos.gi, pos.ply);                     // 之后按播放从这一格接着往下
+    }
   } else {
     await draw(seq[0]);                                   // 先画出第一格；next() 第一次调用仍从这一格算起
   }
@@ -381,11 +577,35 @@ async function onDrop(e) {
 }
 document.addEventListener('dragover', (e) => e.preventDefault());
 document.addEventListener('drop', onDrop);
+const KEYS = {
+  Space: toggle, ArrowRight: () => step(1), ArrowLeft: () => step(-1), Home: toStart, End: toEnd,
+  PageDown: () => toGame(1), PageUp: () => toGame(-1),
+};
 document.addEventListener('keydown', (e) => {
-  if (REC || e.code !== 'Space') return;
+  const act = KEYS[e.code];
+  if (REC || !act || e.altKey || e.ctrlKey || e.metaKey || e.target.closest?.('select, input, textarea')) return;
   e.preventDefault();
-  if (playing) pause(); else play();
+  if (!games.length) return;
+  Promise.resolve(act()).catch(fail);
 });
+// 宽版右栏：按钮、点着法、下拉换盘。按钮不拿焦点，免得空格键既触发按钮又切换播放。
+$('s-ctrl').addEventListener('mousedown', (e) => e.preventDefault());
+$('s-ctrl').addEventListener('click', (e) => {
+  const act = e.target.closest('button')?.dataset.act;
+  const fn = { first: toStart, prev: () => step(-1), play: toggle, next: () => step(1), last: toEnd }[act];
+  if (fn && games.length) Promise.resolve(fn()).catch(fail);
+});
+$('s-moves').addEventListener('click', (e) => {
+  const c = e.target.closest('[data-ply]');
+  if (c) goto(side.gi, Number(c.dataset.ply)).catch(fail);
+});
+$('s-head').addEventListener('change', (e) => {
+  if (e.target.id !== 's-game') return;
+  e.target.blur();
+  goto(Number(e.target.value), 0).catch(fail);
+});
+applyLayout();
+addEventListener('resize', applyLayout);
 
 window.viewer = {
   show, summary, next, play, pause,

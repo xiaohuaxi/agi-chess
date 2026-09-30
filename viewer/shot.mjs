@@ -1,7 +1,8 @@
 // 静态截图：起本机服务，无头打开 index.html 的若干格画面，各截一张 2 倍图（540×720 → 1080×1440）。
-// 用法：node viewer/shot.mjs <输出目录> [--runs <目录>] [--measure] <名字>=<网址参数> ...
+// 用法：node viewer/shot.mjs <输出目录> [--runs <目录>] [--measure] [--size 宽x高] <名字>=<网址参数> ...
 //   例：node viewer/shot.mjs /tmp/shots --runs ~/repos/llm-chess/runs chess-open='files=/runs/g1-c-opus-sol/game.pgn&ply=0'
 //   --runs 把网址 /runs/ 映射到给定目录（worktree 里没有 runs/）；--measure 另存 <名字>.json：页面里实测的各块尺寸。
+//   --size 换视口（默认 540x720，宽版截图用如 1440x900）；网址参数里没写 layout= 时补 layout=compact。
 // 浏览器：playwright-core 锁在 1.58.2，默认用它配套的缓存 chromium-1208；缓存里没有时用 VIEWER_CHROMIUM 指到可执行文件。
 import { chromium } from 'playwright-core';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -11,13 +12,14 @@ import { serve } from './serve.mjs';
 
 const args = process.argv.slice(2);
 const out = args.shift();
-if (!out) { console.error('usage: node viewer/shot.mjs <out-dir> [--runs DIR] [--measure] name=query ...'); process.exit(2); }
-let runs = null, measure = false;
+if (!out) { console.error('usage: node viewer/shot.mjs <out-dir> [--runs DIR] [--measure] [--size WxH] name=query ...'); process.exit(2); }
+let runs = null, measure = false, size = [540, 720];
 const shots = [];
 while (args.length) {
   const a = args.shift();
   if (a === '--runs') runs = path.resolve(args.shift());
   else if (a === '--measure') measure = true;
+  else if (a === '--size') size = args.shift().split('x').map(Number);
   else { const i = a.indexOf('='); shots.push([a.slice(0, i), a.slice(i + 1)]); }
 }
 mkdirSync(out, { recursive: true });
@@ -69,11 +71,11 @@ const server = await serve(root, runs ? { '/runs/': runs } : {});
 const browser = await chromium.launch({ executablePath: process.env.VIEWER_CHROMIUM || undefined });
 let failed = 0;
 try {
-  const ctx = await browser.newContext({ viewport: { width: 540, height: 720 }, deviceScaleFactor: 2 });
+  const ctx = await browser.newContext({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 2 });
   for (const [name, query] of shots) {
     const page = await ctx.newPage();
     page.on('pageerror', (e) => console.error(name, 'pageerror', e.message));
-    await page.goto(`http://127.0.0.1:${server.port}/viewer/?layout=compact&${query}`);
+    await page.goto(`http://127.0.0.1:${server.port}/viewer/?${/(^|&)layout=/.test(query) ? '' : 'layout=compact&'}${query}`);
     try {
       await page.evaluate(() => window.viewer.ready);
     } catch (e) {

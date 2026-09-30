@@ -42,6 +42,11 @@ export class ChessBoard {
     });
   }
 
+  // 容器尺寸变了（宽版随窗口高度定棋盘边长、切换版式）时按新尺寸重画；构造时 responsive 关着，所以要手动调。
+  resize() {
+    this.board?.view.handleResize();
+  }
+
   // fen：局面；last：{from, to} 或 null；check：走完后被将军一方的王所在格，或 null。
   async render({ fen, last, check }) {
     const b = this.board;
