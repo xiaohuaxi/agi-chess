@@ -65,9 +65,9 @@ test('评注断行：两边都是全角字符不补空格，否则补一个', ()
 
 test('评注命令：已知的取数，未知的原样保留，剩下是理由', () => {
   const c = parseComment('[%emt 0:01:05] [%think 1631] [%out 1865] [%in 2] [%cacheread 0] [%cachewrite 1810] ' +
-    '[%illegal 1] [%flagged 2] [%empty 1] [%clk 0:10:00] 红方炮二进四，[%think abc] 有两个威胁');
+    '[%illegal 1] [%flagged 2] [%empty 1] [%dropped 0] [%clk 0:10:00] 红方炮二进四，[%think abc] 有两个威胁');
   assert.deepEqual(c.cmds, { emt: 65, think: 1631, out: 1865, in: 2, cacheread: 0, cachewrite: 1810,
-                             illegal: 1, flagged: 2, empty: 1 });
+                             illegal: 1, flagged: 2, empty: 1, dropped: 0 });
   assert.deepEqual(c.unknown, ['[%clk 0:10:00]', '[%think abc]']);
   assert.equal(c.text, '红方炮二进四， 有两个威胁');
   assert.deepEqual(parseComment('只有文字'), { cmds: {}, unknown: [], text: '只有文字' });

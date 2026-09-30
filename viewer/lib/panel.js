@@ -29,6 +29,7 @@ export function fmtSeconds(s) {
 export const CMD_LABELS = [
   ['emt', '用时'], ['think', '思考 token'], ['out', '输出 token'], ['in', '输入 token'],
   ['cacheread', '缓存读'], ['cachewrite', '缓存写'], ['illegal', '非法重选'], ['flagged', '被拦截'], ['empty', '空回复'],
+  ['dropped', '去掉的思考段'],   // 只有开了 drop_thinking 的一方有，0 也写（design.md 第四节）
 ];
 
 // 一步的评注（moveNote 的结果）→ [{ key, label, value }]，只列这步写了的命令。

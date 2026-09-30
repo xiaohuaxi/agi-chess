@@ -53,7 +53,7 @@ export function unwrap(text) {
 
 // ---------------------------------------------------------------- 评注命令
 // 本项目的命令（真身 docs/design.md 第四节）：数字值。%emt 是 PGN 规范补充的标准命令，写成 h:mm:ss。
-export const NUMERIC_CMDS = ['think', 'out', 'in', 'cacheread', 'cachewrite', 'illegal', 'flagged', 'empty'];
+export const NUMERIC_CMDS = ['think', 'out', 'in', 'cacheread', 'cachewrite', 'illegal', 'flagged', 'empty', 'dropped'];
 
 // 解析 h:mm:ss / m:ss / 秒数（可带小数）；认不出返回 null。
 export function parseClock(v) {
