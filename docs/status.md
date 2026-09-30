@@ -54,7 +54,7 @@
 - 第一至四批全部实验和结论文档，第一轮总结论 `results/summary-round1.md`，棋力人群对照 `results/rating-reference.md`。原始数据都在被忽略的 `runs/`。
 - 棋谱每步带元信息（2026-09-28）：`game.pgn` / `record.txt` 每步评注里写 `[%emt 用时]`（PGN 标准命令）和自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite]`、非法 / 被拦 / 空回复次数，后端没给的项省掉不补 0（`design.md` 第四节）。已结束的盘不用重下：`python3 -m llmchess export runs/<tag>`。
 - 局面给法开关 `show`（all / board / pieces / fen / boardpieces），整盘和局面题共用，默认按第四批结论。
-- 棋谱阅读器（`docs/viewer.md`，2026-09-30）：方案第 1–5 步（导出、解析、打样、页面含窄版 / 宽版 / 播放 / 录制接口、录制脚本 `viewer/record.mjs`）已实施完，版式用户已定稿，2026-09-30 合回 main（阅读器认得 `drop_thinking` 对局的 `[%dropped]` 评注）。一条命令出 3:4 mp4，用法见项目 skill `.agents/skills/replay-video/`。第 6 步走子滑动动画（两种棋，默认 0.3 秒、算在每步间隔内）2026-09-30 在 `anim` 分支做完，未合回 main。合回时已用新代码把当时已结束的对局重导（`python3 -m llmchess export runs/<tag>`）；合回时还在下的对局（进程里跑的仍是旧代码，如 g6-x-opusdrop-astra-2）结束后要再重导一次。
+- 棋谱阅读器（`docs/viewer.md`，2026-09-30）：方案第 1–5 步（导出、解析、打样、页面含窄版 / 宽版 / 播放 / 录制接口、录制脚本 `viewer/record.mjs`）已实施完，版式用户已定稿，2026-09-30 合回 main（阅读器认得 `drop_thinking` 对局的 `[%dropped]` 评注）。一条命令出 3:4 mp4，用法见项目 skill `.agents/skills/replay-video/`。第 6 步走子滑动动画（两种棋，默认 0.3 秒、算在每步间隔内）2026-09-30 做完并合回 main。合回时已用新代码把当时已结束的对局重导（`python3 -m llmchess export runs/<tag>`）；合回时还在下的对局（进程里跑的仍是旧代码，如 g6-x-opusdrop-astra-2）结束后要再重导一次。
 
 ## 已拍板
 
