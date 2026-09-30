@@ -17,7 +17,9 @@ const FIX = '/viewer/test/fixtures/';
 
 test('播放设置：默认值、自定、不合法回默认', () => {
   const o = playOptions(new URLSearchParams(''));
-  assert.deepEqual(o, { ...DEFAULTS, title: true });
+  assert.deepEqual(o, { ...DEFAULTS, title: false });                 // 标题画面默认不加
+  assert.equal(playOptions(new URLSearchParams('title=1')).title, true);
+  assert.equal(playOptions(new URLSearchParams('title=0')).title, false);   // 旧写法仍表示关
   assert.equal(o.gap, 2.5);
   assert.equal(o.anim, 0.3);
   const p = playOptions(new URLSearchParams('gap=1.5&titlehold=0&resulthold=x&summaryhold=-1&title=0&anim=0'));
@@ -48,7 +50,7 @@ test('播放顺序：走子动画算在 gap 之内——只有走子那几格有
 const plies = (file) => parsePgn(decodeText(readFileSync(join(ROOT, FIX, file)))).map((g) => replay(g).steps.length);
 
 // 不看实现，照方案手写的期望：[kind, hold, anim]。走子那几格先滑 anim 秒、再停 gap − anim，一格总长仍是 gap。
-function expected(counts, { gap = 2.5, titlehold = 3, resulthold = 4, summaryhold = 5, title = true, anim = 0.3 } = {}) {
+function expected(counts, { gap = 2.5, titlehold = 3, resulthold = 4, summaryhold = 5, title = false, anim = 0.3 } = {}) {
   const out = [];
   for (const n of counts) {
     out.push(title ? ['title', titlehold, 0] : ['move', gap, 0]);
@@ -97,21 +99,22 @@ async function walk(page) {
   });
 }
 
-test('录制接口：单盘默认参数', { skip }, async () => {
+test('录制接口：单盘默认参数（默认没有标题画面）', { skip }, async () => {
   await withPage(`rec=1&files=${FIX}chess-sample.pgn`, async (page) => {
     const res = await page.evaluate(() => ({
       sprite: !!document.getElementById('cm-chessboard-sprite'), fonts: document.fonts.status,
       done: window.viewer.done, title: !document.getElementById('title').hidden,
     }));
-    assert.deepEqual(res, { sprite: true, fonts: 'loaded', done: false, title: true });   // ready 时第一格（标题）已画好
+    assert.deepEqual(res, { sprite: true, fonts: 'loaded', done: false, title: false });   // ready 时第一格（开局局面）已画好
     assert.deepEqual(await walk(page), expected(plies('chess-sample.pgn')));
     assert.equal(await page.evaluate(() => document.body.dataset.done), '1');
     assert.deepEqual(await page.evaluate(() => window.viewer.next()), { kind: 'end', hold: 0, anim: 0 });
   });
 });
 
-test('录制接口：单盘自定时长，result 那格才出横幅', { skip }, async () => {
-  await withPage(`rec=1&gap=1.5&titlehold=2&resulthold=6&files=${FIX}xq-sample.pgn`, async (page) => {
+test('录制接口：单盘自定时长、title=1 有标题画面，result 那格才出横幅', { skip }, async () => {
+  await withPage(`rec=1&title=1&gap=1.5&titlehold=2&resulthold=6&files=${FIX}xq-sample.pgn`, async (page) => {
+    assert.equal(await page.evaluate(() => !document.getElementById('title').hidden), true);   // ready 时第一格（标题）已画好
     const n = plies('xq-sample.pgn')[0];
     const seen = await page.evaluate(async (n) => {
       const banner = () => !document.getElementById('banner').hidden;
@@ -119,7 +122,7 @@ test('录制接口：单盘自定时长，result 那格才出横幅', { skip }, 
       for (let i = 0; i < n + 3; i++) { const r = await window.viewer.next(); out.push([r.kind, r.hold, r.anim, banner()]); }
       return out;
     }, n);
-    const want = expected([n], { gap: 1.5, titlehold: 2, resulthold: 6 }).map(([k, h, a]) => [k, h, a, k === 'result' || k === 'end']);
+    const want = expected([n], { title: true, gap: 1.5, titlehold: 2, resulthold: 6 }).map(([k, h, a]) => [k, h, a, k === 'result' || k === 'end']);
     assert.deepEqual(seen, want);
   });
 });
@@ -138,8 +141,8 @@ test('录制接口：连播（一个文件多盘 + 多个文件、两种棋）�
   });
 });
 
-test('拖文件进页面：换成拖进来的棋谱、从头播', { skip }, async () => {
-  await withPage(`rec=1&files=${FIX}chess-sample.pgn`, async (page) => {
+test('拖文件进页面：换成拖进来的棋谱、从头播（title=1 时照样有标题）', { skip }, async () => {
+  await withPage(`rec=1&title=1&files=${FIX}chess-sample.pgn`, async (page) => {
     await page.evaluate(() => window.viewer.next());
     const texts = ['xq-sample.pgn', 'chess-sample.pgn'].map((f) => readFileSync(join(ROOT, FIX, f), 'utf8'));
     const dt = await page.evaluateHandle(([a, b]) => {
@@ -150,7 +153,23 @@ test('拖文件进页面：换成拖进来的棋谱、从头播', { skip }, asyn
     }, texts);
     await page.dispatchEvent('body', 'drop', { dataTransfer: dt });
     await page.waitForFunction(() => document.querySelector('#title .t-head')?.textContent === '第 1 局 · 共 2 局');
-    assert.deepEqual(await walk(page), expected([...plies('chess-sample.pgn'), ...plies('xq-sample.pgn')]));
+    assert.deepEqual(await walk(page), expected([...plies('chess-sample.pgn'), ...plies('xq-sample.pgn')], { title: true }));
+  });
+});
+
+test('拖文件进页面：默认没有标题画面', { skip }, async () => {
+  await withPage(`rec=1&files=${FIX}chess-sample.pgn`, async (page) => {
+    await page.evaluate(() => window.viewer.next());
+    const text = readFileSync(join(ROOT, FIX, 'xq-sample.pgn'), 'utf8');
+    const dt = await page.evaluateHandle((a) => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([a], 'a.pgn'));
+      return dt;
+    }, text);
+    await page.dispatchEvent('body', 'drop', { dataTransfer: dt });
+    await page.waitForFunction(() => document.getElementById('stage').classList.contains('xq'));   // 换成象棋、第一格已画
+    assert.deepEqual(await walk(page), expected(plies('xq-sample.pgn')));
+    assert.equal(await page.evaluate(() => document.getElementById('title').hidden), true);
   });
 });
 

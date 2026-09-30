@@ -28,10 +28,12 @@ test('秒数换帧数：按累计时刻取整，总数 = round(总秒数 × 30)'
   assert.deepEqual(rec.toFrames([0.01, 0.01, 1]), [0, 1, 30]);   // 太短的格可能分到 0 帧，但总数不丢
 });
 
-test('命令行：停留时长透传、--no-title、--set、不合法的报中文错', { skip: recSkip }, () => {
-  const o = rec.parseCli(['a.pgn', 'b.pgn', '-o', 'x.mp4', '--gap', '1.5', '--resulthold', '0', '--no-title', '--set', 'layout=compact']);
+test('命令行：停留时长透传、默认无标题 / --title 加 / --no-title 兼容、--set、不合法的报中文错', { skip: recSkip }, () => {
+  const o = rec.parseCli(['a.pgn', 'b.pgn', '-o', 'x.mp4', '--gap', '1.5', '--resulthold', '0', '--set', 'layout=compact']);
   assert.deepEqual(o.inputs, ['a.pgn', 'b.pgn']);
-  assert.deepEqual(o.params, { gap: '1.5', resulthold: '0', title: '0', layout: 'compact' });
+  assert.deepEqual(o.params, { gap: '1.5', resulthold: '0', layout: 'compact' });   // 默认不带 title，页面默认无标题
+  assert.deepEqual(rec.parseCli(['a', '-o', 'x.mp4', '--title']).params, { title: '1' });
+  assert.deepEqual(rec.parseCli(['a', '-o', 'x.mp4', '--no-title']).params, {});
   assert.equal(o.aspect, '3:4');
   assert.equal(o.scale, 2);
   assert.deepEqual(rec.parseCli(['-h']), { help: true });
@@ -134,7 +136,7 @@ function checkSpec(p, out, seconds) {
   assert.ok(moovFirst(out), '没有 +faststart');
 }
 
-const H = { titlehold: '0.2', resulthold: '0.3' };
+const H = { title: '1', titlehold: '0.2', resulthold: '0.3' };   // 这几条带标题画面出片
 
 test('出片：两种棋 3:4、编码与时长对，换 gap 时长跟着变', { skip }, async () => {
   const [nx] = plies('xq-sample.pgn');
@@ -151,8 +153,8 @@ test('出片：两种棋 3:4、编码与时长对，换 gap 时长跟着变', { 
 
 test('出片：两个文件连播、不要标题，末尾总比分停 summaryhold', { skip }, async () => {
   const counts = ['chess-sample.pgn', 'xq-sample.pgn'].flatMap(plies);
-  const m = await make('match', ['chess-sample.pgn', 'xq-sample.pgn'], { gap: '0.05', resulthold: '0.2', summaryhold: '0.5', title: '0' });
-  // title=0：每盘开局一格 move（停 gap）+ N 步 + result；最后一格总比分。
+  const m = await make('match', ['chess-sample.pgn', 'xq-sample.pgn'], { gap: '0.05', resulthold: '0.2', summaryhold: '0.5' });
+  // 默认无标题：每盘开局一格 move（停 gap）+ N 步 + result；最后一格总比分。
   const want = counts.reduce((s, n) => s + (n + 1) * 0.05 + 0.2, 0) + 0.5;
   checkSpec(m.p, m.out, want);
   assert.equal(m.r.cells.at(-1).kind, 'end');

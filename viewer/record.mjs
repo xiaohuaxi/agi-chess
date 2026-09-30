@@ -27,12 +27,13 @@ const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -
 选项：
   -o, --out <文件>         输出 mp4 路径（必填；目录须已存在，先写临时文件再改名）
   --gap <秒>               每步停多久（页面默认 2.5）
-  --titlehold <秒>         标题画面停多久（页面默认 3）
+  --titlehold <秒>         标题画面停多久（页面默认 3；配 --title 才有用）
   --resulthold <秒>        终局横幅停多久（页面默认 4）
   --summaryhold <秒>       多盘时总比分停多久（页面默认 5）
   --anim <秒>              走子滑动多久（页面默认 0.3，0 关掉）；算在 gap 之内，不拉长视频：
                            每步一格总长仍是 gap（先滑 anim 秒，再停 gap − anim 秒）
-  --no-title               不要标题画面（网址参数 title=0）
+  --title                  加标题画面（网址参数 title=1）；默认不加
+  --no-title               不加标题画面（默认就是这样，留着兼容旧命令）
   --aspect <比例>          3:4（默认，1080×1440）、9:16（1080×1920）、16:9（1920×1080）
   --scale <倍数>           像素倍数，默认 2（视口 540×720 出 1080×1440）
   --set <名=值>            再透传一个网址参数给页面（可多次），如 --set layout=compact；
@@ -53,7 +54,7 @@ export function parseCli(argv) {
   const { values, positionals } = parseArgs({
     args: argv, allowPositionals: true, strict: true,
     options: {
-      out: { type: 'string', short: 'o' }, help: { type: 'boolean', short: 'h' }, 'no-title': { type: 'boolean' },
+      out: { type: 'string', short: 'o' }, help: { type: 'boolean', short: 'h' }, title: { type: 'boolean' }, 'no-title': { type: 'boolean' },
       aspect: { type: 'string' }, scale: { type: 'string' }, set: { type: 'string', multiple: true },
       chromium: { type: 'string' }, ffmpeg: { type: 'string' },
       ...Object.fromEntries(HOLDS.map((k) => [k, { type: 'string' }])),
@@ -67,7 +68,7 @@ export function parseCli(argv) {
     if (values[k].trim() === '' || !Number.isFinite(v) || v < 0) throw new RecordError(`--${k} 要给不小于 0 的秒数，收到「${values[k]}」`);
     params[k] = values[k];
   }
-  if (values['no-title']) params.title = '0';
+  if (values.title) params.title = '1';   // 默认不加标题；--no-title 等同默认，不传参数
   for (const kv of values.set || []) {
     const i = kv.indexOf('=');
     if (i <= 0) throw new RecordError(`--set 要写成 名=值，收到「${kv}」`);

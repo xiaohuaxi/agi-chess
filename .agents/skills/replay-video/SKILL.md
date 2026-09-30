@@ -19,15 +19,15 @@ description: 用本仓库的棋谱阅读器（viewer/）把对局录成 mp4，�
 ```
 node viewer/record.mjs <棋谱或 runs 目录> [更多…] -o <输出.mp4> [选项]
 node viewer/record.mjs ~/repos/llm-chess/runs/g1-c-opus-sol -o /tmp/g1.mp4
-node viewer/record.mjs runs/a runs/b -o /tmp/ab.mp4 --gap 1.5 --no-title   # 连播，最后一格是总比分
+node viewer/record.mjs runs/a runs/b -o /tmp/ab.mp4 --gap 1.5 --title   # 连播，每盘前加标题画面，最后一格是总比分
 ```
 
 - 给目录时读里面的 `game.pgn`。给了多个就按顺序连播，当成一场比赛算比分。
 - 常用选项（单位是秒；没给的用页面默认值）：
   - `--gap` 每步停多久（2.5），含走子滑动
   - `--anim` 走子滑动多久（0.3），算在 gap 之内、不拉长视频；`--anim 0` 不要动画
-  - `--titlehold` 标题画面（3）、`--resulthold` 终局横幅（4）、`--summaryhold` 多盘总比分（5）
-  - `--no-title` 不要标题画面，开头直接是开局局面
+  - `--titlehold` 标题画面（3，配 `--title` 才有）、`--resulthold` 终局横幅（4）、`--summaryhold` 多盘总比分（5）
+  - `--title` 每盘开局前加标题画面（写双方名字）；默认不加，开头直接是开局局面（`--no-title` 等同默认，留作兼容）
   - `--aspect 3:4|9:16|16:9`：默认 3:4 出 1080×1440，这是发布用的比例
   - `--scale` 像素倍数（默认 2）
   - `--set 名=值` 再透传一个网址参数；`--set vendor=0` 标题画面名字前不补厂商（「GPT astra」→「astra」）
@@ -70,4 +70,4 @@ cd ~/repos/llm-chess && python3 -m http.server --bind 127.0.0.1 8000
 - **9:16 / 16:9 没专门排版**：只是换了视口尺寸，画面照 3:4 的窄版摆，可能多出空白或显得挤。要发布就用 3:4，另外两种先出一段看看再说。
 - **`--set` 传错不报错**：页面不认识的参数名直接忽略，值不合法就退回默认值，所以写错了也照样出片。`rec`、`files` 由脚本自己给，传了会被拒。录制时版式恒为窄版，`--set layout=wide` 不起作用。改时长请用专门的 `--gap` 这类选项，它们会先检查数值。
 - **Ctrl-C 中途停**：会杀掉 ffmpeg、关掉浏览器和服务、删掉中间帧和半截输出再退出（退出码 130），不用手工清理。输出先写成同目录的临时文件，成功后才改名，所以不会留下半截 mp4。
-- **标题画面上的棋手名**：默认前面补上厂商名（「Claude opus」「GPT astra」），`--set vendor=0` 去掉。标题画面最终要不要留还没定（见 `docs/status.md`），拿不准就先用 `--no-title` 出一版。
+- **标题画面上的棋手名**（加了 `--title` 时）：默认前面补上厂商名（「Claude opus」「GPT astra」），`--set vendor=0` 去掉。用户 2026-09-30 定标题画面默认不加，要才用 `--title`。

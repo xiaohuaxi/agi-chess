@@ -6,7 +6,7 @@
 //
 // 网址参数（docs/viewer.md「播放」有完整清单）：
 //   files=逗号分隔的棋谱路径（按站点根解析，一个文件可以有多盘）；也可以把文件拖进页面。
-//   autoplay=1 打开就自动播放；gap / titlehold / resulthold / summaryhold 各格停几秒；title=0 不要标题画面；
+//   autoplay=1 打开就自动播放；gap / titlehold / resulthold / summaryhold 各格停几秒；title=1 加标题画面（默认不加）；
 //   anim=走子滑动的秒数（默认 0.3，算在 gap 之内，0 关掉）。静态看某一格不带动画。
 //   rec=1 录制模式：隐含 layout=compact，不起任何计时器，由脚本调 viewer.next() 一格一格走。
 //   静态看某一格（截图用）：game=第几盘（从 1 起）&ply=半回合数或 end；多盘时 summary=1 看总比分。
@@ -463,7 +463,7 @@ function syncPlay() {
 let want = null;
 
 function seqIndex(gi, ply) {
-  let at = -1;                     // 同一位置有几格时取最后一格：开局有标题格和（title=0 时）开局格，最后一步有走子格和结果格
+  let at = -1;                     // 同一位置有几格时取最后一格：开局有标题格（title=1 时）和开局格，最后一步有走子格和结果格
   seq.forEach((f, i) => { if (f.game === gi && f.ply === ply) at = i; });
   return at;
 }

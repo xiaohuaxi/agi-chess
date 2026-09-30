@@ -13,13 +13,13 @@ export function playOptions(params) {
   };
   return {
     gap: sec('gap'), titlehold: sec('titlehold'), resulthold: sec('resulthold'), summaryhold: sec('summaryhold'),
-    anim: sec('anim'), title: params.get('title') !== '0',
+    anim: sec('anim'), title: params.get('title') === '1',   // 标题画面默认不加，title=1 才加
   };
 }
 
 // games[i] = { plies: 走得通的半回合数, over: 这盘有结果（或读到一半读不懂、要在结果格报错） }。
 // → [{ kind, game, ply, hold, anim }]，kind 依次是：
-//   每盘：title（标题画面，盖在开局局面上；title=0 时换成停 gap 的开局局面，kind 记 move、ply 0）
+//   每盘：title（标题画面，盖在开局局面上，只在 title=1 时有；默认换成停 gap 的开局局面，kind 记 move、ply 0）
 //        → move（第 1 … N 个半回合，各停 gap）→ result（终局横幅，这盘有结果才有）；
 //   最后：end——多盘时画总比分、停 summaryhold；单盘不改画面、hold 0。
 // anim 是这格开头走子滑动的秒数，只有第 1 … N 个半回合那几格有（其余为 0）；它算在 gap 之内：
