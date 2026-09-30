@@ -39,6 +39,8 @@ test('命令行：停留时长透传、--no-title、--set、不合法的报中�
   assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--gap', '']), /--gap/);
   assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--set', 'files=/etc/passwd']), /files/);
   assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--bogus']));
+  assert.deepEqual(rec.parseCli(['a', '-o', 'x.mp4', '--anim', '0']).params, { anim: '0' });
+  assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--anim', 'x']), /--anim/);
 });
 
 test('开工前检查：缺棋谱、输出不是 mp4、画幅不认识、ffmpeg 不在都直接报错', { skip: recSkip }, async () => {
@@ -155,6 +157,17 @@ test('出片：两个文件连播、不要标题，末尾总比分停 summaryhol
   checkSpec(m.p, m.out, want);
   assert.equal(m.r.cells.at(-1).kind, 'end');
   assert.equal(m.r.cells.at(-1).hold, 0.5);
+});
+
+test('出片：走子动画算在 gap 之内——时长不变，每步多出 round(anim×30) 张动画帧', { skip }, async () => {
+  const [n] = plies('anim-special.pgn');
+  const a = await make('anim', ['anim-special.pgn'], { ...H, gap: '0.5', anim: '0.3' });
+  checkSpec(a.p, a.out, 0.2 + n * 0.5);                      // 这盘没结果：title + n 步，没有 result 格
+  assert.ok(a.r.cells.filter((c) => c.kind === 'move').every((c) => c.anim === 0.3 && Math.abs(c.hold - 0.2) < 1e-9));
+  assert.equal(a.r.shots, 1 + n * (9 + 1));                  // 标题 1 张；每步 9 张动画帧 + 1 张静止
+  const b = await make('anim0', ['anim-special.pgn'], { ...H, gap: '0.5', anim: '0' });
+  checkSpec(b.p, b.out, 0.2 + n * 0.5);
+  assert.equal(b.r.shots, 1 + n);
 });
 
 // 放在文件末尾：顶层 await 之后才登记的测试，要在它们之后收临时目录。

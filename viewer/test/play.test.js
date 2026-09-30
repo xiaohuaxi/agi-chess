@@ -19,8 +19,10 @@ test('播放设置：默认值、自定、不合法回默认', () => {
   const o = playOptions(new URLSearchParams(''));
   assert.deepEqual(o, { ...DEFAULTS, title: true });
   assert.equal(o.gap, 2.5);
-  const p = playOptions(new URLSearchParams('gap=1.5&titlehold=0&resulthold=x&summaryhold=-1&title=0'));
-  assert.deepEqual(p, { gap: 1.5, titlehold: 0, resulthold: DEFAULTS.resulthold, summaryhold: DEFAULTS.summaryhold, title: false });
+  assert.equal(o.anim, 0.3);
+  const p = playOptions(new URLSearchParams('gap=1.5&titlehold=0&resulthold=x&summaryhold=-1&title=0&anim=0'));
+  assert.deepEqual(p, { gap: 1.5, titlehold: 0, resulthold: DEFAULTS.resulthold, summaryhold: DEFAULTS.summaryhold, anim: 0, title: false });
+  assert.equal(playOptions(new URLSearchParams('anim=-1')).anim, DEFAULTS.anim);
 });
 
 test('播放顺序：单盘 title → move… → result → end(0)；多盘 end 停 summaryhold；没结果的盘没有 result', () => {
@@ -33,18 +35,27 @@ test('播放顺序：单盘 title → move… → result → end(0)；多盘 end
     [['move', 0, 0, 2], ['move', 0, 1, 2], ['move', 1, 0, 2], ['result', 1, 0, 4], ['end', null, null, 5]]);
 });
 
+test('播放顺序：走子动画算在 gap 之内——只有走子那几格有 anim，hold = gap − anim，anim 超过 gap 时截到 gap', () => {
+  const opt = { gap: 2, titlehold: 3, resulthold: 4, summaryhold: 5, title: false, anim: 0.5 };
+  const one = sequence([{ plies: 2, over: true }], opt);
+  assert.deepEqual(one.map((f) => [f.kind, f.ply, f.hold, f.anim]),
+    [['move', 0, 2, 0], ['move', 1, 1.5, 0.5], ['move', 2, 1.5, 0.5], ['result', 2, 4, 0], ['end', null, 0, 0]]);
+  const short = sequence([{ plies: 1, over: false }], { ...opt, gap: 0.2 });
+  assert.deepEqual(short.map((f) => [f.hold, f.anim]), [[0.2, 0], [0, 0.2], [0, 0]]);
+});
+
 // ---------------------------------------------------------------- 浏览器
 const plies = (file) => parsePgn(decodeText(readFileSync(join(ROOT, FIX, file)))).map((g) => replay(g).steps.length);
 
-// 不看实现，照方案手写的期望：[kind, hold]。
-function expected(counts, { gap = 2.5, titlehold = 3, resulthold = 4, summaryhold = 5, title = true } = {}) {
+// 不看实现，照方案手写的期望：[kind, hold, anim]。走子那几格先滑 anim 秒、再停 gap − anim，一格总长仍是 gap。
+function expected(counts, { gap = 2.5, titlehold = 3, resulthold = 4, summaryhold = 5, title = true, anim = 0.3 } = {}) {
   const out = [];
   for (const n of counts) {
-    out.push(title ? ['title', titlehold] : ['move', gap]);
-    for (let i = 0; i < n; i++) out.push(['move', gap]);
-    out.push(['result', resulthold]);                    // 样例每盘都有结果
+    out.push(title ? ['title', titlehold, 0] : ['move', gap, 0]);
+    for (let i = 0; i < n; i++) out.push(['move', gap - anim, anim]);
+    out.push(['result', resulthold, 0]);                 // 样例每盘都有结果
   }
-  out.push(['end', counts.length > 1 ? summaryhold : 0]);
+  out.push(['end', counts.length > 1 ? summaryhold : 0, 0]);
   return out;
 }
 
@@ -72,14 +83,14 @@ async function withPage(query, fn) {
   }
 }
 
-// 调 next() 走到 end 为止（多给几格余量防死循环），返回 [kind, hold] 列表；anim 现在恒为 0。
+// 调 next() 走到 end 为止（多给几格余量防死循环），返回 [kind, hold, anim] 列表。
+// 不去拨动画进度：下一格开始时页面自己把上一段直接结束。
 async function walk(page) {
   return page.evaluate(async () => {
     const out = [];
     for (let i = 0; i < 2000; i++) {
       const r = await window.viewer.next();
-      if (r.anim !== 0) throw new Error('anim ' + r.anim);
-      out.push([r.kind, r.hold]);
+      out.push([r.kind, r.hold, r.anim]);
       if (r.kind === 'end') break;
     }
     return out;
@@ -105,10 +116,10 @@ test('录制接口：单盘自定时长，result 那格才出横幅', { skip }, 
     const seen = await page.evaluate(async (n) => {
       const banner = () => !document.getElementById('banner').hidden;
       const out = [];
-      for (let i = 0; i < n + 3; i++) { const r = await window.viewer.next(); out.push([r.kind, r.hold, banner()]); }
+      for (let i = 0; i < n + 3; i++) { const r = await window.viewer.next(); out.push([r.kind, r.hold, r.anim, banner()]); }
       return out;
     }, n);
-    const want = expected([n], { gap: 1.5, titlehold: 2, resulthold: 6 }).map(([k, h]) => [k, h, k === 'result' || k === 'end']);
+    const want = expected([n], { gap: 1.5, titlehold: 2, resulthold: 6 }).map(([k, h, a]) => [k, h, a, k === 'result' || k === 'end']);
     assert.deepEqual(seen, want);
   });
 });

@@ -6,11 +6,13 @@
 //
 // 网址参数（docs/viewer.md「播放」有完整清单）：
 //   files=逗号分隔的棋谱路径（按站点根解析，一个文件可以有多盘）；也可以把文件拖进页面。
-//   autoplay=1 打开就自动播放；gap / titlehold / resulthold / summaryhold 各格停几秒；title=0 不要标题画面。
+//   autoplay=1 打开就自动播放；gap / titlehold / resulthold / summaryhold 各格停几秒；title=0 不要标题画面；
+//   anim=走子滑动的秒数（默认 0.3，算在 gap 之内，0 关掉）。静态看某一格不带动画。
 //   rec=1 录制模式：隐含 layout=compact，不起任何计时器，由脚本调 viewer.next() 一格一格走。
 //   静态看某一格（截图用）：game=第几盘（从 1 起）&ply=半回合数或 end；多盘时 summary=1 看总比分。
 // window.viewer.ready：棋谱、棋子图、字体都加载好并画完第一格才兑现；失败时 reject，并在 body 上写 data-error。
 // window.viewer.next()：前进一格，画完（再等两帧）才兑现 {kind, hold, anim}；播完后再调返回 {kind: 'end', hold: 0, anim: 0}。
+//   anim > 0 时这格开头有走子滑动：rec=1 下兑现时动画已开始、停在起点，由录制脚本拨进度；这格总长 anim + hold = gap。
 // 播完（到了 end 那格）在 body 上置 data-done="1"，window.viewer.done 为 true。
 // window.viewer.play() / pause()：自动播放的开关（rec=1 时不起作用）；空格键同样切换。
 // window.viewer.show(game, ply) / summary()：直接画某一格（截图、调试用）。
@@ -103,6 +105,7 @@ function frameData(games, gi, ply, final = true) {
   const mated = !!(over && inCheck && pts && pts.w !== pts.b);
   return {
     xiangqi, fen, last: last ? { from: last.from, to: last.to } : null, check: kingSq, mated, banner,
+    prev: ply > 1 ? steps[ply - 2].fen : ply === 1 ? rep.start : null,   // 走这步之前的局面（画走子滑动用）
     strip: match ? `第 ${gi + 1} 局 · 共 ${games.length} 局` : null,
     top: side('b'), bottom: side('w'),
   };
@@ -337,7 +340,8 @@ const boards = {};
 let pos = { gi: 0, ply: 0, opts: {} };   // 现在画着哪一格（总比分那格不改它）
 let wide = false;
 
-// opts.final：见 frameData（默认 true，静态看 ply=end 时带横幅）；opts.title：盖上标题画面。
+// opts.final：见 frameData（默认 true，静态看 ply=end 时带横幅）；opts.title：盖上标题画面；
+// opts.anim：走子滑动的秒数（0 或不给就不动），rec=1 时动画停在起点等录制脚本拨进度。
 async function show(gi, ply, opts = {}) {
   $('stage').classList.remove('summary', 'empty');
   $('summary').hidden = true;
@@ -352,7 +356,9 @@ async function show(gi, ply, opts = {}) {
   $('board-chess').hidden = d.xiangqi;
   $('board-xq').hidden = !d.xiangqi;
   $('stage').classList.toggle('xq', d.xiangqi);
-  await (d.xiangqi ? boards.xq : boards.chess).render(d);
+  const other = d.xiangqi ? boards.chess : boards.xq;
+  other?.moves.stop();                   // 换了棋种：另一块棋盘上没走完的那段直接结束
+  await (d.xiangqi ? boards.xq : boards.chess).render(d, { anim: opts.anim || 0, paused: REC });
   showBanner(d.banner);
   if (opts.title) showTitle(gi);
   if (wide) renderSide(gi, ply, opts.final ?? true);
@@ -396,7 +402,7 @@ async function draw(f) {
     else await frames(2);                // 单盘：不改画面
     return;
   }
-  await show(f.game, f.ply, { final: f.kind === 'result', title: f.kind === 'title' });
+  await show(f.game, f.ply, { final: f.kind === 'result', title: f.kind === 'title', anim: f.anim });
 }
 
 function next() {
@@ -405,7 +411,7 @@ function next() {
     const f = seq[++cur];
     await draw(f);
     if (f.kind === 'end') setDone(true);
-    return { kind: f.kind, hold: f.hold, anim: 0 };   // 走子动画还没做，anim 恒为 0
+    return { kind: f.kind, hold: f.hold, anim: f.anim };
   };
   const p = chain.then(step);
   chain = p.catch(() => {});
@@ -417,7 +423,7 @@ function fail(e) {
   console.error(e);
 }
 
-// 自动播放：画一格、停 hold 秒、再下一格，到 end 那格为止。播完再调从头来。
+// 自动播放：画一格、停 anim + hold 秒（走子滑动算在这格之内）、再下一格，到 end 那格为止。播完再调从头来。
 async function play() {
   if (REC || playing || !seq.length) return;
   if (done) resetSequence();
@@ -428,7 +434,7 @@ async function play() {
     while (me === run) {
       const r = await next();
       if (me !== run || cur >= seq.length - 1) break;
-      await new Promise((ok) => { wake = ok; setTimeout(ok, r.hold * 1000); });
+      await new Promise((ok) => { wake = ok; setTimeout(ok, (r.anim + r.hold) * 1000); });
     }
   } catch (e) {
     fail(e);
@@ -468,7 +474,8 @@ function goto(gi, ply) {
   ply = Math.max(0, Math.min(games[gi].rep.steps.length, ply));
   const me = want = { gi, ply, final: true };
   const p = chain.then(async () => {
-    await show(gi, ply);
+    // 同一盘往前走一步才滑（上一段没走完的由棋盘直接结束）；往回、跳步、换盘直接画
+    await show(gi, ply, { anim: pos.gi === gi && pos.ply === ply - 1 && !summaryShown() ? OPT.anim : 0 });
     cur = seqIndex(gi, ply);
     setDone(false);
   }).finally(() => { if (want === me) want = null; });
@@ -476,6 +483,7 @@ function goto(gi, ply) {
   return p;
 }
 
+const summaryShown = () => $('stage').classList.contains('summary');
 const here = () => want || { ...pos, final: pos.opts.final ?? true };
 
 function step(d) {

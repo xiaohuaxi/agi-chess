@@ -3,6 +3,7 @@
 // 棋子是木色圆子，红方红字红圈、黑方黑字黑圈；上一步在起点和落点各画四个蓝色角框。
 // 棋子上的字用页面字体现画（楷体，见 app.css 的 --xq-font），不拷任何字体或字形轮廓：本机没有楷体时会退回别的中文字体。
 import { parseFen } from './xiangqi.js';
+import { Moves } from './anim.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 // 棋子字：红方俥傌相仕帥炮兵，黑方車馬象士將砲卒（象棋软件的常见写法，与此前素材一致）。
@@ -34,6 +35,7 @@ export class XiangqiBoard {
   constructor(el) {
     this.el = el;
     el.style.aspectRatio = `${W} / ${H}`;   // 容器宽高比跟着几何走（高度由 app.css 定）
+    this.moves = new Moves();
   }
 
   async load() {
@@ -90,8 +92,11 @@ export class XiangqiBoard {
     }
   }
 
-  // fen：局面；last：{from, to}（ICCS 格名，如 'h2'）或 null；check：被将军一方的将 / 帅所在格名或 null；mated：被将死。
-  async render({ fen, last, check, mated }) {
+  // fen：局面；last：{from, to}（ICCS 格名，如 'h2'）或 null；check：被将军一方的将 / 帅所在格名或 null；mated：被将死；
+  // prev：走这步之前的局面。anim > 0（秒）且有 last、prev 时画走子滑动（走的子从起点滑到落点，被吃的子待到结束才消失）；
+  // paused：录制模式，动画停在起点等脚本拨进度。
+  async render({ fen, last, check, mated, prev }, { anim = 0, paused = false } = {}) {
+    this.moves.stop();
     const { board } = parseFen(fen);
     this.under.replaceChildren();
     this.pieces.replaceChildren();
@@ -101,18 +106,34 @@ export class XiangqiBoard {
       const [cx, cy] = at(check);
       el('circle', { class: 'xq-check', cx, cy, r: R + 0.07 }, this.under);
     }
-    board.forEach((p, i) => {
-      if (!p) return;
-      const x = i % 9, y = (i - x) / 9;
+    const piece = (p, x, y, dead = false) => {
       const red = p === p.toUpperCase();
-      const dead = mated && check && 'abcdefghi'[x] + y === check;
       const side = dead ? 'mated' : red ? 'red' : 'black';
       const g = el('g', { class: `xq-piece ${red ? 'red' : 'black'}${dead ? ' mated' : ''}`, transform: `translate(${X(x)} ${Y(y)})` }, this.pieces);
       el('circle', { class: 'xq-shadow', cx: 0.03, cy: 0.05, r: R }, g);
       el('circle', { class: 'xq-face', r: R, fill: `url(#xq-face-${side})` }, g);
       el('circle', { class: 'xq-ring', r: R * 0.8 }, g);
       el('text', { class: 'xq-glyph', x: 0, y: 0.02 }, g, GLYPH[p]);
+      return g;
+    };
+    let moving = null;
+    board.forEach((p, i) => {
+      if (!p) return;
+      const x = i % 9, y = (i - x) / 9;
+      const g = piece(p, x, y, !!(mated && check && 'abcdefghi'[x] + y === check));
+      if (last && 'abcdefghi'[x] + y === last.to) moving = g;
     });
+    if (anim > 0 && last && prev && moving) {
+      const ms = anim * 1000, xy = (sq) => ({ x: X('abcdefghi'.indexOf(sq[0])), y: Y(Number(sq.slice(1))) });
+      const taken = parseFen(prev).board[Number(last.to.slice(1)) * 9 + 'abcdefghi'.indexOf(last.to[0])];
+      if (taken) {                                    // 被吃的子垫在最底下，待到动画结束
+        const x = 'abcdefghi'.indexOf(last.to[0]), g = piece(taken, x, Number(last.to.slice(1)));
+        this.pieces.insertBefore(g, this.pieces.firstChild);
+        this.moves.during(g, ms, paused);
+      }
+      this.pieces.appendChild(moving);                // 走的子压在所有棋子上面
+      this.moves.slide(moving, xy(last.from), xy(last.to), ms, paused);
+    }
     if (last) {                                       // 上一步：起点、落点各画四个角框
       const s = 0.47, k = 0.15;
       for (const sq of [last.from, last.to]) {

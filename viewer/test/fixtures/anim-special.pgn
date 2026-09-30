@@ -1,0 +1,6 @@
+[Event "走子动画样例：吃过路兵、升变、长易位"]
+[White "white"]
+[Black "black"]
+[Result "*"]
+
+1. e4 d5 2. e5 f5 3. exf6 Nc6 4. fxg7 Bf5 5. gxh8=Q Qd6 6. Qe2 O-O-O 7. Nf3 *

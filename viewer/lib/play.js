@@ -2,7 +2,8 @@
 // 纯函数，不碰 DOM；页面的自动播放和录制接口 viewer.next() 都照这张单子走。
 
 // 网址参数 → 播放设置。时长单位是秒，不合法（非数字、负数）时用默认值。
-export const DEFAULTS = { gap: 2.5, titlehold: 3, resulthold: 4, summaryhold: 5 };
+// anim：走子滑动动画的时长，算在这步的 gap 之内（这格停 gap − anim），0 关掉动画。
+export const DEFAULTS = { gap: 2.5, titlehold: 3, resulthold: 4, summaryhold: 5, anim: 0.3 };
 
 export function playOptions(params) {
   const sec = (k) => {
@@ -12,23 +13,26 @@ export function playOptions(params) {
   };
   return {
     gap: sec('gap'), titlehold: sec('titlehold'), resulthold: sec('resulthold'), summaryhold: sec('summaryhold'),
-    title: params.get('title') !== '0',
+    anim: sec('anim'), title: params.get('title') !== '0',
   };
 }
 
 // games[i] = { plies: 走得通的半回合数, over: 这盘有结果（或读到一半读不懂、要在结果格报错） }。
-// → [{ kind, game, ply, hold }]，kind 依次是：
+// → [{ kind, game, ply, hold, anim }]，kind 依次是：
 //   每盘：title（标题画面，盖在开局局面上；title=0 时换成停 gap 的开局局面，kind 记 move、ply 0）
 //        → move（第 1 … N 个半回合，各停 gap）→ result（终局横幅，这盘有结果才有）；
 //   最后：end——多盘时画总比分、停 summaryhold；单盘不改画面、hold 0。
+// anim 是这格开头走子滑动的秒数，只有第 1 … N 个半回合那几格有（其余为 0）；它算在 gap 之内：
+// anim = min(opt.anim, gap)，hold = gap − anim，一格总长仍是 gap（docs/viewer.md「录屏：脚本出片」）。
 export function sequence(games, opt) {
   const out = [];
+  const a = Math.min(opt.anim ?? 0, opt.gap);
+  const cell = (kind, game, ply, hold, anim = 0) => ({ kind, game, ply, hold, anim });
   games.forEach((g, gi) => {
-    out.push(opt.title ? { kind: 'title', game: gi, ply: 0, hold: opt.titlehold } : { kind: 'move', game: gi, ply: 0, hold: opt.gap });
-    for (let p = 1; p <= g.plies; p++) out.push({ kind: 'move', game: gi, ply: p, hold: opt.gap });
-    if (g.over) out.push({ kind: 'result', game: gi, ply: g.plies, hold: opt.resulthold });
+    out.push(opt.title ? cell('title', gi, 0, opt.titlehold) : cell('move', gi, 0, opt.gap));
+    for (let p = 1; p <= g.plies; p++) out.push(cell('move', gi, p, opt.gap - a, a));
+    if (g.over) out.push(cell('result', gi, g.plies, opt.resulthold));
   });
-  out.push(games.length > 1 ? { kind: 'end', game: null, ply: null, hold: opt.summaryhold }
-                            : { kind: 'end', game: null, ply: null, hold: 0 });
+  out.push(cell('end', null, null, games.length > 1 ? opt.summaryhold : 0));
   return out;
 }

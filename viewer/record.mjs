@@ -15,7 +15,7 @@ export const FPS = 30;
 // 画幅 → 页面视口（CSS 像素）；实际像素再乘 scale（默认 2）。
 export const ASPECTS = { '3:4': [540, 720], '9:16': [540, 960], '16:9': [960, 540] };
 const VIEWER = path.dirname(fileURLToPath(import.meta.url));
-const HOLDS = ['gap', 'titlehold', 'resulthold', 'summaryhold'];
+const HOLDS = ['gap', 'titlehold', 'resulthold', 'summaryhold', 'anim'];   // 秒数选项，原样透传成同名网址参数
 const STEP_TIMEOUT = 30_000;   // 页面画一格的上限；超了多半是页面卡住
 
 const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -o <输出.mp4>
@@ -30,6 +30,8 @@ const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -
   --titlehold <秒>         标题画面停多久（页面默认 3）
   --resulthold <秒>        终局横幅停多久（页面默认 4）
   --summaryhold <秒>       多盘时总比分停多久（页面默认 5）
+  --anim <秒>              走子滑动多久（页面默认 0.3，0 关掉）；算在 gap 之内，不拉长视频：
+                           每步一格总长仍是 gap（先滑 anim 秒，再停 gap − anim 秒）
   --no-title               不要标题画面（网址参数 title=0）
   --aspect <比例>          3:4（默认，1080×1440）、9:16（1080×1920）、16:9（1920×1080）
   --scale <倍数>           像素倍数，默认 2（视口 540×720 出 1080×1440）
@@ -39,7 +41,7 @@ const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -
   --ffmpeg <路径>          ffmpeg；默认环境变量 VIEWER_FFMPEG，再默认 /opt/homebrew/bin/ffmpeg
   -h, --help               显示本说明
 
-没给的停留时长用页面的默认值；各格停多久由页面决定，脚本只照 next() 返回的 hold 办。
+没给的停留时长用页面的默认值；各格停多久由页面决定，脚本只照 next() 返回的 anim 与 hold 办。
 例：node viewer/record.mjs ~/repos/llm-chess/runs/g1-c-opus-sol -o /tmp/g1.mp4 --gap 1.5
 `;
 
@@ -209,12 +211,13 @@ export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
       }
       cells.push(r);
       // 走子动画（anim 秒）：约定 next() 兑现时动画已开始并暂停在起点；这里按 1/30 秒逐格拨进度截图，
-      // 然后把动画走完，再截静止画面停 hold。现在页面的 anim 恒为 0，这段走不到，为以后留着。
+      // 然后把动画走完，再截静止画面停 hold。这一格总长 = anim + hold（页面给的 hold 已是 gap − anim）。
+      // 各张的秒数加起来恰为 anim（末张补齐零头），帧数由 toFrames 按累计时刻取整。
       if (r.anim > 0) {
         const k = Math.max(1, Math.round(r.anim * FPS));
         for (let j = 0; j < k; j++) {
           await page.evaluate((ms) => { for (const a of document.getAnimations()) { a.pause(); a.currentTime = ms; } }, (j * 1000) / FPS);
-          list.push([await shot(), 1 / FPS]);
+          list.push([await shot(), j < k - 1 ? 1 / FPS : r.anim - (k - 1) / FPS]);
         }
         await page.evaluate(async () => {
           for (const a of document.getAnimations()) {
