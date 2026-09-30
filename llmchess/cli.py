@@ -21,8 +21,8 @@
   legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、notes_keep N、session_view full|move、
   reason brief|detailed|off（只在 real 下：着法之前用自己的话简短 / 详细写出这步的理由，导出棋谱时进该步评注；off 只需给出着法）、
   drop_thinking on|off（只在 real、memory=session 下，只有 Claude 棋手能开，默认 off：续接时不带此前几轮的思考，
-  llm-chat --drop-thinking）。reason 不给时跟着 drop_thinking 走：关 brief、开 detailed（去掉思考后，前几步写下的理由
-  是它唯一的记忆）。例：--w drop_thinking=on 让白方去掉思考、写详细理由，黑方照旧带思考、写简短理由。
+  llm-chat --drop-thinking）。reason 不给时一律 brief；detailed 已弃用（2026-09-30：opus 去掉思考 + 详细理由频繁被
+  安全防护拦下），只为复现保留。例：--w drop_thinking=on 让白方去掉思考，双方都写简短理由。
 局面怎么呈现：show all|board|pieces|fen|boardpieces（boardpieces 只有中国象棋），和局面题的 --set show 同一套（棋种模块的
   SHOWS）。不给时用棋种默认给法：中国象棋 pieces（只给子力清单）、国际象棋 all（FEN + 字母棋盘），第 4P2 批定的；
   --show all 回到改默认之前的提示（中国象棋棋盘 + 清单 + FEN）。view 是自定义组合，和 show 二选一：同一层（公共 / 一方单设）
@@ -99,13 +99,12 @@ def side_cfg(a, G, overrides, max_plies):
             raise SystemExit('drop_thinking 只能是 on/off，收到 %r' % sc['drop_thinking'])
         if sc['drop_thinking'] == 'on' and sc['memory'] != 'session':
             raise SystemExit('drop_thinking=on 只对连续会话（memory=session）有意义，收到 memory=%s' % sc['memory'])
-        # 着法之前写理由（用户 2026-09-29 定要写）；措辞默认跟着 drop_thinking 走（用户 2026-09-30 定）：带着前几步思考的
-        # 用「简短」，去掉思考的用「详细」（前几步写下的理由是它唯一的记忆）；显式给了就照给的
+        # 着法之前写理由（用户 2026-09-29 定要写）；不给时一律「简短」（用户 2026-09-30 定）。detailed「详细」已弃用：
+        # opus 去掉此前思考 + 详细时频繁被安全防护拦下，用户定不改措辞绕，只为复现保留，显式给了照给的
         if sc['reason'] is None:
-            sc['reason'] = 'detailed' if sc['drop_thinking'] == 'on' else 'brief'
+            sc['reason'] = 'brief'
         if sc['reason'] == 'on':
-            raise SystemExit('reason 现在分 brief（简短）/ detailed（详细）/ off，不再收 on；'
-                             '不给时按 drop_thinking 定：关 brief、开 detailed')
+            raise SystemExit('reason 现在分 brief（简短）/ detailed（详细，已弃用）/ off，不再收 on；不给时 brief')
         if sc['reason'] not in memory.REASONS:
             raise SystemExit('reason 只能是 %s，收到 %r' % ('/'.join(memory.REASONS), sc['reason']))
     else:
@@ -321,8 +320,8 @@ def main(argv=None):
     p.add_argument('--recite', default='off')
     p.add_argument('--notes-keep', dest='notes_keep', type=int, default=1)
     p.add_argument('--session-view', dest='session_view', default='full')
-    p.add_argument('--reason', default=None, help='brief / detailed：着法之前用自己的话简短 / 详细写出这步的理由；off：只需给出着法。'
-                   '不给时 drop_thinking 关的一方 brief、开的一方 detailed')
+    p.add_argument('--reason', default=None, help='brief（默认）：着法之前用自己的话简短写出这步的理由；off：只需给出着法；'
+                   'detailed：写详细理由，已弃用（易被安全防护拦下），只为复现保留')
     p.add_argument('--drop-thinking', dest='drop_thinking', default=None,
                    help='on：续接时不带此前几轮的思考（llm-chat --drop-thinking，只有 Claude 棋手）；默认 off')
     p.add_argument('--w', action='append', metavar='变量=值', help='只改先走一方（红 / 白），可重复')

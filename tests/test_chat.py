@@ -262,7 +262,7 @@ class FakeChat(unittest.TestCase):
 
     # ------------------------------------------------------------------ 去掉此前思考（drop_thinking）
     def test_drop_thinking_per_side_flag_first_turn_and_warn(self):
-        # 白方开：只在会话首轮传 --drop-thinking，理由默认跟着变详细；每次调用记 thinking_dropped，续接轮为 0 告警不中断
+        # 白方开：只在会话首轮传 --drop-thinking，理由默认仍是简短（详细已弃用）；每次调用记 thinking_dropped，续接轮为 0 告警不中断
         self.plan([{'text': '着法: e2e4', 'dropped': 0}, {'text': '着法: g1f3', 'dropped': 1},
                    {'text': '着法: f1c4', 'dropped': 0}])
         with contextlib.redirect_stdout(io.StringIO()) as out:
@@ -271,9 +271,9 @@ class FakeChat(unittest.TestCase):
         self.assertEqual(rc, 0)
         recs = self.recs('dt')
         cfg = recs[0]['cfg']
-        self.assertEqual((cfg['sides']['w']['drop_thinking'], cfg['sides']['w']['reason']), ('on', 'detailed'))
+        self.assertEqual((cfg['sides']['w']['drop_thinking'], cfg['sides']['w']['reason']), ('on', 'brief'))
         self.assertEqual((cfg['sides']['b']['drop_thinking'], cfg['sides']['b']['reason']), ('off', 'brief'))
-        self.assertIn(memory.ANSWER_LEAD['detailed'], cfg['system']['w'])
+        self.assertIn(memory.ANSWER_LEAD['brief'], cfg['system']['w'])
         self.assertIn('--drop-thinking', cfg['commands']['w'])
         c = self.calls()
         self.assertEqual(len(c), 3)
@@ -296,13 +296,14 @@ class FakeChat(unittest.TestCase):
         self.assertIn('[%dropped 1]', pgn)
 
     def test_drop_thinking_reason_override_and_resume(self):
-        # 显式给 reason 就照给的；暂停后续跑接同一会话，不再传 --drop-thinking，续接轮照样查 thinking_dropped
+        # 显式给 reason 就照给的（弃用的 detailed 也照给）；暂停后续跑接同一会话，不再传 --drop-thinking，续接轮照样查 thinking_dropped
         self.plan([{'text': '着法: e2e4', 'dropped': 0}, {'text': '着法: g1f3', 'dropped': 0}])
         rc = self.play(['--game', 'chess', '--tag', 'dr', '--black', 'random', '--max-plies', '3', '--seed', '3',
-                        '--drop-thinking', 'on', '--black', 'random', '--w', 'reason=brief', '--stop-after', '2'])
+                        '--drop-thinking', 'on', '--black', 'random', '--w', 'reason=detailed', '--stop-after', '2'])
         self.assertEqual(rc, 3)
         cfg = self.recs('dr')[0]['cfg']
-        self.assertEqual((cfg['sides']['w']['drop_thinking'], cfg['sides']['w']['reason']), ('on', 'brief'))
+        self.assertEqual((cfg['sides']['w']['drop_thinking'], cfg['sides']['w']['reason']), ('on', 'detailed'))
+        self.assertIn(memory.ANSWER_LEAD['detailed'], cfg['system']['w'])
         with contextlib.redirect_stdout(io.StringIO()):
             rc = cli.main(['resume', os.path.join(self.tmp, 'dr')])
         self.assertEqual(rc, 0)
@@ -326,10 +327,11 @@ class FakeChat(unittest.TestCase):
             with self.subTest(extra=extra), self.assertRaises(SystemExit):
                 self.play(['--game', 'chess', '--tag', 'bad%d' % i, '--max-plies', '2'] + extra)
         self.assertFalse(os.path.exists(os.path.join(self.tmp, 'calls.jsonl')))
-        # 对手是引擎 / 随机时公共开关不碍事（它们不看这一项）；dry-run 能看到详细理由的提示
+        # 对手是引擎 / 随机时公共开关不碍事（它们不看这一项）；开了去掉思考，dry-run 里理由仍是简短
         with contextlib.redirect_stdout(io.StringIO()) as out:
             cli.main(['play', '--game', 'chess', '--black', 'random', '--drop-thinking', 'on', '--dry-run'])
-        self.assertIn(memory.ANSWER_LEAD['detailed'], out.getvalue())
+        self.assertIn(memory.ANSWER_LEAD['brief'], out.getvalue())
+        self.assertNotIn(memory.ANSWER_LEAD['detailed'], out.getvalue())
 
 
 class RealProtocolPrompts(unittest.TestCase):
