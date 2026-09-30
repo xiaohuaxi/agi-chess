@@ -11,9 +11,12 @@ const RED_FILES = '九八七六五四三二一';
 const BLACK_FILES = '１２３４５６７８９';
 
 // 几何（SVG 用户单位，一格 = 1）：9 路 10 线外各留半格放棋子；上下各加一条标路数的带子。
-// 带子比路数字（0.3 格高）宽出一截，字略靠里，和棋盘外沿（贴着棋手条）之间留几像素空白、不贴死（用户 2026-09-30）。
-const BAND = 0.5;
-const FILE_Y = 0.3;          // 路数字中心离棋盘外沿（格）：比带子正中再往里一点
+// 带子只比路数字（0.3 格高）略宽：字靠外、离棋子近些，和棋盘外沿（贴着棋手条）之间仍留几像素空白、不贴死。
+// 第三轮定稿是 0.5 / 0.3（字靠里、离棋子远）；第四轮用户要棋盘更宽，收窄成下面的值，待用户看图定（2026-09-30）。
+const BAND = 0.34;
+// 路数字中心离棋盘外沿（格）。上下不对称是有意的：下方的汉字数字（一、二、三）墨迹偏低，
+// 同一个值会让下方的字比上方的阿拉伯数字更贴棋手条；各取一个值，让两边墨迹离外沿都约 5 像素（页面 540 宽时）。
+const FILE_TOP = 0.2, FILE_BOTTOM = 0.22;
 const W = 9, H = 10 + 2 * BAND;
 const R = 0.45;              // 棋子半径（格）
 const X = (x) => 0.5 + x;    // 纵线 x（0 = 红方左手 a 线）
@@ -82,8 +85,8 @@ export class XiangqiBoard {
     [['楚', 1.5], ['河', 2.5], ['漢', 5.5], ['界', 6.5]].forEach(([c, x]) => el('text', { class: 'xq-river', x: X(x), y: ry }, g, c));
     // 路数：黑方在上（从黑方右手数，即画面左起 1–9），红方在下（画面左起 九–一）
     for (let x = 0; x < 9; x++) {
-      el('text', { class: 'xq-file', x: X(x), y: FILE_Y + 0.02 }, g, BLACK_FILES[x]);
-      el('text', { class: 'xq-file', x: X(x), y: H - FILE_Y + 0.02 }, g, RED_FILES[x]);
+      el('text', { class: 'xq-file', x: X(x), y: FILE_TOP }, g, BLACK_FILES[x]);
+      el('text', { class: 'xq-file', x: X(x), y: H - FILE_BOTTOM }, g, RED_FILES[x]);
     }
   }
 

@@ -21,6 +21,7 @@
   --disc-red: #d23c32; --disc-black: #111; --disc-white: #f4f1ea; --disc-ring: #8a847b;
   --strip-h: 24px;  --strip-size: 13px;
   --board-h: 544px;
+  --xq-board-h: 564px;        /* 象棋画面的棋盘区高：有细条时棋手条各 66、单盘各 78（国际象棋 76 / 88） */
   --pad-x: 16px;              /* 棋手条左右内边距（左边另加竖条宽） */
   --row1-size: 24px; --row1-lh: 32px;  /* 名字 */
   --effort-size: 20px;                 /* +xhigh */
@@ -99,6 +100,9 @@ body { overflow: hidden; }
 .board[hidden] { display: none; }
 #board-chess { width: min(100vw, var(--board-h)); height: min(100vw, var(--board-h)); }
 #board-xq { height: var(--board-h); }   /* 宽高比由 lib/xqboard.js 按棋盘几何设 */
+/* 象棋画面（窄版）：棋盘区加高、两条棋手条跟着变矮（棋手条是 flex: 1，自动分剩下的），棋盘因此更宽。
+   国际象棋棋盘已占满宽度，不受影响。取值待用户看图定（2026-09-30 第四轮）。 */
+#stage.compact.xq { --board-h: var(--xq-board-h); }
 #board-xq svg { display: block; width: 100%; height: 100%; }
 
 .cm-chessboard.default .board .square.white { fill: var(--cb-light); }

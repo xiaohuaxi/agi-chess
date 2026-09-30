@@ -346,6 +346,7 @@ async function show(gi, ply, opts = {}) {
   renderBar($('bar-bottom'), d.bottom);
   $('board-chess').hidden = d.xiangqi;
   $('board-xq').hidden = !d.xiangqi;
+  $('stage').classList.toggle('xq', d.xiangqi);
   await (d.xiangqi ? boards.xq : boards.chess).render(d);
   showBanner(d.banner);
   if (opts.title) showTitle(gi);
