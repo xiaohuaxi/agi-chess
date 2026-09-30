@@ -81,7 +81,8 @@ function frameData(games, gi, ply, final = true) {
       const st = steps[j];
       const n = moveNo0 + Math.floor((j + (startTurn === 'b' ? 1 : 0)) / 2);
       const text = xiangqi ? st.text : st.san.replace(/[+#]$/, '');
-      move = { text: s === 'w' ? `${n}. ${text}` : `${n}... ${text}`, check: st.check && j === ply - 1 };
+      // 回合号：国际象棋黑方照标准写「11...」；中国象棋黑方不带省略号，写「11. 马３退２」（用户 2026-09-30 定，只改显示）
+      move = { text: s === 'w' || xiangqi ? `${n}. ${text}` : `${n}... ${text}`, check: st.check && j === ply - 1 };
     }
     const think = tokens.has[s] ? {
       total: fmtTokens(tokens.think[s][ply]),
@@ -310,7 +311,7 @@ function noteView(g, ply, final) {
   }
   const st = rep.steps[ply - 1], note = notes[ply - 1], move = game.moves[ply - 1];
   const no = startMoveNumber(game) + Math.floor((ply - 1 + (startTurn === 'b' ? 1 : 0)) / 2);
-  const head = h('div', 'n-head', `${no}${st.side === 'w' ? '.' : '...'} ${xiangqi ? st.text : st.san}`);
+  const head = h('div', 'n-head', `${no}${st.side === 'w' || xiangqi ? '.' : '...'} ${xiangqi ? st.text : st.san}`);   // 象棋黑方不带省略号
   for (const n of move.nags) head.append(h('span', 'nag' + ([2, 4, 6].includes(n) ? ' bad' : [1, 3, 5].includes(n) ? ' good' : ''), nagLabel(n)));
   if (st.check) head.append(h('span', 'nag bad', '将军'));
   const p = playerOf(game, st.side);

@@ -111,6 +111,21 @@ test('键盘：单步、连按、首尾、跨盘、换盘', { skip }, async () =
   });
 });
 
+test('黑方回合号：中国象棋不带省略号（「4. 卒３进１」），国际象棋照标准写「1...」', { skip }, async () => {
+  const look = (page) => page.evaluate(() => ({
+    head: document.querySelector('#s-note .n-head').firstChild.textContent,
+    bar: document.querySelector('#bar-top .mv').textContent,
+  }));
+  await withPage(`layout=wide&files=${FIX}xq-sample.pgn&ply=6`, WIDE, async (page) => {
+    const x = await look(page);
+    assert.match(x.head, /^3\. \S/);
+    assert.match(x.bar, /^3\. \S/);
+  });
+  await withPage(`layout=wide&files=${FIX}chess-sample.pgn&ply=2`, WIDE, async (page) => {
+    assert.deepEqual(await look(page), { head: '1... e5', bar: '1... e5' });
+  });
+});
+
 test('点着法跳步，按钮与空格播放 / 暂停，评注面板带中文标签', { skip }, async () => {
   await withPage(`layout=wide&gap=0.05&files=${FIX}xq-sample.pgn`, WIDE, async (page) => {
     await page.click('#s-moves [data-ply="7"]');
