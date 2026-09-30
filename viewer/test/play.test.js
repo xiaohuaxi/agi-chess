@@ -138,7 +138,7 @@ test('拖文件进页面：换成拖进来的棋谱、从头播', { skip }, asyn
       return dt;
     }, texts);
     await page.dispatchEvent('body', 'drop', { dataTransfer: dt });
-    await page.waitForFunction(() => document.querySelector('#title .t-head')?.textContent.startsWith('国际象棋 · 第 1 局 · 共 2 局'));
+    await page.waitForFunction(() => document.querySelector('#title .t-head')?.textContent === '第 1 局 · 共 2 局');
     assert.deepEqual(await walk(page), expected([...plies('chess-sample.pgn'), ...plies('xq-sample.pgn')]));
   });
 });

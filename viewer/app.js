@@ -26,6 +26,8 @@ const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const REC = params.get('rec') === '1';   // 录制模式，隐含 layout=compact
 const OPT = playOptions(params);
+const VENDOR = params.get('vendor') !== '0';   // 标题画面名字前补厂商（「GPT astra」），vendor=0 不补
+const TITLE_INSET = 24;                        // 标题卡片左右各离棋盘边多远
 const FORCED = REC ? 'compact' : ['compact', 'wide'].includes(params.get('layout')) ? params.get('layout') : null;
 // 自动选版式的分界。录 16:9 时页面宽 960 会判成宽版，所以录制靠 rec=1（恒为窄版），不靠自动判断
 const WIDE_MIN = 900;
@@ -195,16 +197,16 @@ function showSummary() {
   for (const [el, full] of names) fitMiddle(el, full);
 }
 
-// 标题画面（每盘开头一格，盖在开局局面上）：棋种与第几局，双方全称（带厂商）与思考深度，红 / 白方在前。
+// 标题画面（每盘开头一格，盖在开局局面上）：第几局（多盘时），双方全称与思考深度，红 / 白方在前。
+// 不写棋种（棋盘一看便知，用户 2026-09-30）；名字前补厂商，网址参数 vendor=0 不补。
+// 卡片左右各离棋盘边 24：象棋棋盘比页面窄，按棋盘实际位置算，两种棋看着一样。
 function showTitle(gi) {
   const g = games[gi], box = $('title');
-  const head = [g.xiangqi ? '中国象棋' : '国际象棋'];
-  if (games.length > 1) head.push(`第 ${gi + 1} 局 · 共 ${games.length} 局`);
-  const kids = [h('div', 't-head', head.join(' · '))];
+  const kids = games.length > 1 ? [h('div', 't-head', `第 ${gi + 1} 局 · 共 ${games.length} 局`)] : [];
   const names = [];
   for (const s of ['w', 'b']) {
     if (s === 'b') kids.push(h('div', 't-vs', '对'));
-    const p = fullName(g.game, s);
+    const p = fullName(g.game, s, VENDOR);
     const row = h('div', 't-row');
     row.append(h('span', 'disc ' + (s === 'w' ? (g.xiangqi ? 'red' : 'white') : 'black')));
     const name = h('span', 'name');
@@ -214,6 +216,9 @@ function showTitle(gi) {
     names.push([name, p.name]);
   }
   box.replaceChildren(...kids);
+  const area = $('board-area').getBoundingClientRect(), bd = $(g.xiangqi ? 'board-xq' : 'board-chess').getBoundingClientRect();
+  box.style.left = `${bd.left - area.left + TITLE_INSET}px`;
+  box.style.right = `${area.right - bd.right + TITLE_INSET}px`;
   box.hidden = false;
   for (const [el, full] of names) fitMiddle(el, full);
 }

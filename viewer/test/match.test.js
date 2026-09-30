@@ -16,6 +16,7 @@ test('标题画面全称：补厂商，认不出的照原名', () => {
   assert.deepEqual(fullName(g, 'w'), { name: 'GPT astra', effort: 'max' });
   assert.deepEqual(fullName(g, 'b'), { name: 'Claude opus', effort: '' });
   assert.equal(fullName({ tags: { Red: 'engine:fsf:nodes=100' } }, 'w').name, 'engine:fsf:nodes=100');
+  assert.deepEqual(fullName(g, 'w', false), { name: 'astra', effort: 'max' });   // vendor=0
 });
 
 test('token 写法', () => {

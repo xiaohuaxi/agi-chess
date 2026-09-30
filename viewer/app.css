@@ -39,8 +39,8 @@
      第二轮 0.28 往第一轮 0.78 挪三分之一（用户 2026-09-30） */
   --banner-bg: rgba(0, 0, 0, 0.45); --banner-size: 26px; --banner-why-size: 19px; --banner-name-size: 22px;
   --banner-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.6);
-  /* 标题画面的底（页面底色，略透出棋盘） */
-  --title-bg: rgba(38, 36, 33, 0.94);
+  /* 标题画面：底色同终局横幅（45% 黑）、字带同样的阴影，卡片加一点投影；左右离棋盘边 24（app.js 按棋盘位置设） */
+  --title-bg: var(--banner-bg); --title-shadow: 0 3px 12px rgba(0, 0, 0, 0.35); --title-weak: #e6e1d8;
   /* 总比分画面 */
   --sum-kind-size: 24px; --sum-title-size: 20px; --sum-name-size: 26px; --sum-score-size: 56px;
   /* 国际象棋棋盘：照 lichess 默认的 brown 主题（chessground.brown.css 与 lila 的 brown.png 取色） */
@@ -159,10 +159,12 @@ body { overflow: hidden; }
 
 /* ---- 标题画面（每盘开头一格，盖在开局局面上）：棋种与第几局、双方全称与思考深度。沿用棋手条的字号与配色 ---- */
 #title { position: absolute; left: 24px; right: 24px; top: 50%; transform: translateY(-50%); padding: 20px 24px;
-  background: var(--title-bg); border-radius: 10px; text-align: center; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); }
+  background: var(--title-bg); border-radius: 10px; text-align: center; box-shadow: var(--title-shadow);
+  color: #fff; text-shadow: var(--banner-shadow); }
 #title[hidden] { display: none; }
-#title .t-head { font-size: var(--strip-size); line-height: 20px; color: var(--text-weak); margin-bottom: 12px; }
-#title .t-vs { font-size: var(--row2-size); line-height: 28px; color: var(--text-weak); }
+#title .t-head { font-size: var(--strip-size); line-height: 20px; color: var(--title-weak); margin-bottom: 12px; }
+#title .t-vs { font-size: var(--row2-size); line-height: 28px; color: var(--title-weak); }
+#title .effort { color: var(--title-weak); }
 #title .t-row { display: flex; align-items: center; justify-content: center; height: var(--row1-lh);
   font-size: var(--row1-size); line-height: var(--row1-lh); white-space: nowrap; }
 #title .t-row .name { flex: 0 1 auto; min-width: 0; overflow: hidden; }

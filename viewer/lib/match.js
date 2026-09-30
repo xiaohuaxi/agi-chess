@@ -19,11 +19,12 @@ export function playerOf(game, side) {
 // 认不出的后端照原名；深度同 playerOf。
 const VENDORS = { claude: 'Claude', codex: 'GPT', gpt: 'GPT', openai: 'GPT', deepseek: 'DeepSeek', gemini: 'Gemini', grok: 'Grok' };
 
-export function fullName(game, side) {
+// vendor=false：不补厂商（网址参数 vendor=0）。
+export function fullName(game, side, vendor = true) {
   const p = playerOf(game, side);
   const t = game.tags, raw = side === 'w' ? (t.Red ?? t.White ?? '?') : (t.Black ?? '?');
-  const vendor = VENDORS[raw.slice(0, Math.max(0, raw.indexOf(':'))).toLowerCase()];
-  return { name: vendor ? `${vendor} ${p.name}` : p.name, effort: p.effort };
+  const v = vendor && VENDORS[raw.slice(0, Math.max(0, raw.indexOf(':'))).toLowerCase()];
+  return { name: v ? `${v} ${p.name}` : p.name, effort: p.effort };
 }
 
 // 起始局面的回合数（FEN 第 6 段），没有就是 1。
