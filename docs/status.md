@@ -1,6 +1,6 @@
 # 进度与待办
 
-更新：2026-09-30 晚（用户定模型对模型对弈双方思考延续方式一致、Claude 对 GPT 双方都带思考，drop_thinking 默认关维持；下一步巅峰对决 opus max 对 astra max 待定细节。此前同日：opus 去掉此前思考对 astra xhigh 两种棋各 4 盘；整盘接入「去掉此前思考」开关，理由措辞按棋手分简短 / 详细；opus xhigh 对 astra：国际象棋 xhigh 补到 6 盘、max 补到 4 盘；中国象棋 astra max 4 盘；棋谱阅读器第 1–5 步做完、版式定稿，已合回 main）。
+更新：2026-10-01 凌晨（巅峰对决 opus max 对 astra max 两种棋各 4 盘下完：国际象棋 opus 3 比 1、中国象棋 4 比 0，都没打平、不加赛。此前 9-30 晚：用户定模型对模型对弈双方思考延续方式一致、Claude 对 GPT 双方都带思考，drop_thinking 默认关维持。此前同日：opus 去掉此前思考对 astra xhigh 两种棋各 4 盘；整盘接入「去掉此前思考」开关，理由措辞按棋手分简短 / 详细；opus xhigh 对 astra：国际象棋 xhigh 补到 6 盘、max 补到 4 盘；中国象棋 astra max 4 盘；棋谱阅读器第 1–5 步做完、版式定稿，已合回 main）。
 
 **总结论**：`results/summary-round1.md`。一句话：下得臭主要是想得不够深、判断错，不是看不清棋盘，也不是思考接不上；调高思考深度最管用，提示技巧作用有限。以下各批摘要只留要点，数字看各批结论文档。
 
@@ -14,10 +14,12 @@
 | opus xhigh 对 astra xhigh | 中国象棋 | 4 | 4:0（红 2/2、黑 2/2） | 134.5 / 177.7 | 15 / 21（7 / 12） | $12.68 | `results/game-opus-vs-astra-xq-1.md` |
 | opus xhigh 对 astra max | 国际象棋 | 4 | 2:2（白 1/2、黑 1/2） | 35.7 / 37.1 | 6 / 6 | $12.49 | `results/game-opus-vs-astra-max-1.md` |
 | opus xhigh 对 astra max | 中国象棋 | 4 | 2:2（红 1/2、黑 1/2） | 66.7 / 71.9 | 9 / 13（7 / 13） | $24.62 | `results/game-opus-vs-astra-max-xq-1.md` |
+| **opus max 对 astra max（巅峰对决）** | 国际象棋 | 4 | 3:1（白 1/2、黑 2/2） | 47.0 / 58.0 | 12 / 16 | $42.87 | `results/game-opus-max-vs-astra-max-1.md` |
+| **opus max 对 astra max（巅峰对决）** | 中国象棋 | 4 | 4:0（红 2/2、黑 2/2） | 54.8 / 86.3 | 3 / 12（3 / 11） | $48.48 | `results/game-opus-max-vs-astra-max-1.md` |
 | opus xhigh 不带思考 对 astra xhigh（研究用） | 国际象棋 | 4 | 3:1（白 2/2、黑 1/2） | 42.4 / 52.4 | 10 / 11 | $19.36 | `results/game-opus-drop-vs-astra-1.md` |
 | opus xhigh 不带思考 对 astra xhigh（研究用） | 中国象棋 | 4 | 4:0（红 2/2、黑 2/2） | 54.6 / 75.9 | 9 / 17（7 / 16） | $36.32 | `results/game-opus-drop-vs-astra-1.md` |
 
-- 26 盘全部将死、无和棋；0 判负、0 工具调用。国际象棋 xhigh 六盘里最早两盘非法上限还是一手 4 次，六盘都没用到第 3 次，不影响。
+- 34 盘全部将死、无和棋；0 判负、0 工具调用。国际象棋 xhigh 六盘里最早两盘非法上限还是一手 4 次，六盘都没用到第 3 次，不影响。
 - 同盘两方的亏损会跟着对局走势一起升降（换 astra max、opus 不带思考时，没改设置的那方也一起变好），比两家看同盘的相对差距，别拿不同批次的绝对数直接比。
 - 不带思考这两行只作研究结论，不改默认（见「已拍板」公平原则）；它和其他四行的差别是 opus 一方的设置，不是公平对局。
 - opus vs sol 首局（每种棋 1 盘）没写理由，不进这张表。
@@ -65,6 +67,7 @@
 - 冒烟：opus 对 fsf、sol 对 opus 各一盘（medium，6 个半回合），会话续接、用量、工具调用兜底都正常；非法计数、重选、判负、续跑用离线测试桩验证。
 - **去掉此前思考接入整盘**（2026-09-30，`design.md` 第九节「去掉此前思考」）：按棋手分设 `drop_thinking`（只有 Claude 棋手能开，默认关）；理由措辞 `reason` 同日定为默认 `plain`（不修饰，见「已拍板」），`brief`（简短）可选，`detailed`（详细）弃用：opus 去掉思考 + 详细频繁被安全防护拦下，用户定不改措辞绕。冒烟（国际象棋 6 个半回合，medium，当时还是详细版）：两次续接 `thinking_dropped` 都是 1、无告警。
 - **opus 去掉此前思考 对 astra**（`results/game-opus-drop-vs-astra-1.md`，双方 xhigh，两种棋各 4 盘互换先后，理由「简短」、与之后「不修饰」合并统计，只看方向）：国际象棋 opus 3 比 1（基线带思考 6 盘 2 比 4），中国象棋 4 比 0（基线也是 4 比 0）；0 判负、0 续跑、0 工具调用。opus 每步平均亏损国际象棋 61.0→42.4、中国象棋 134.5→54.6，漏吃步数 4→2、14→2，但同盘 astra 也一起降（中国象棋 177.7→75.9），两家相对差距中国象棋几乎没动，归不全到去掉思考上。代价：opus 每步思考国际象棋约翻倍、中国象棋约三倍（中位 2,171→6,135），中国象棋每盘 $3.17→$9.08、每步多等约 45 秒。opus 389 次调用被拦 2 次（`[reasoning_extraction]`，含国际象棋第 132 个半回合那次），都一次重答就过。
+- **巅峰对决 opus max 对 astra max**（`results/game-opus-max-vs-astra-max-1.md`，两种棋各 4 盘互换先后，双方带思考、理由「不修饰」，只看方向）：国际象棋 opus 3 比 1、中国象棋 4 比 0，都没打平、没加赛；8 盘都将死，0 判负、0 续跑、0 被拦（317 次 opus 调用）、0 工具调用，非法只有 opus 1 次。同是 astra max，opus 从 xhigh 换 max 后两种棋从 2 比 2 变成 7 比 1，astra 相对 opus 的亏损比例国际象棋 1.04→1.23、中国象棋 1.08→1.57，中国象棋厘兵大失误 3 对 12。中国象棋开局挂炮（卒７进１后车二进七吃炮）opus xhigh 此前 4 盘都没吃，max 两盘都吃了。代价：opus 每步思考中位国际象棋 2,132、中国象棋 7,224 token（xhigh 448 / 2,823），8 盘 $91.35、单盘最高 $25.08（上限 $60 没碰），中国象棋最长一盘 3 小时 44 分。国际象棋 opus 执白两盘前 43 个半回合相同，中国象棋两盘 astra 开局就送炮，样本小。
 
 ## 已完成
 
@@ -104,7 +107,7 @@
 
 ## 下一步
 
-- **巅峰对决：opus max 对 astra max**（用户已提出）。棋种、局数、花费上限待定；按公平原则双方都带思考（`drop_thinking` 关），理由默认「不修饰」（`reason=plain`）。**开局前先定每局花费上限**：第三批 opus max 每次调用花费是 xhigh 的 3–8.5 倍，而 opus xhigh 带思考对 astra 单盘已是 $0.54–$12.60（见上面总览表）；「一次只开 2–4 盘」那条照旧（「已拍板」max 那条）。
+- 巅峰对决 opus max 对 astra max 已下完（见上），没有待续的对局。下一步待用户从下面候选里挑，或就此收工。
 
 其他候选方向（按性价比排，代价见总结论文档「下一步」一节）：
 1. 修正看杀判分口径，重判已有数据（不调模型）。
@@ -114,7 +117,6 @@
 
 ## 等用户拍板
 
-- 巅峰对决的棋种、局数、每局花费上限（见「下一步」）。
 - 其他候选方向做不做，或者就此收工。
 
 ## 遗留
@@ -133,7 +135,7 @@
 - Codex 升级后要重新抓请求，确认工具数还是 0（0.158.0 已核实为 0）。
 - DeepSeek 在 high 下每题 12–21 分钟。
 - 局面题用 sol 跑批时，codex 从 WebSockets 退到 HTTPS 的错误提示（「Connection reset by peer」「request timed out」「lookup address」）会被当成工具调用、整批退出（第六批崩了两次、第五批补测三档各崩一次，续跑补齐）；`codex_cli` 只放过了重连提示。
-- **安全防护拦截**（Anthropic 那边拦 opus 的回复，标 `[reasoning_extraction]`）：opus 去掉此前思考 +「详细」措辞截断重问 114 次拦 47 次（41%），「详细」已弃用；「不修饰」同样局面 84 次零拦截；「不带思考 + 简短」整盘 8 盘 389 次调用拦 2 次，都一次重答就过（`results/missed-captures.md` 3.4–3.5、`results/game-opus-drop-vs-astra-1.md`）。带思考的整盘至今没见拦过；巅峰对决 opus 换 max 后仍要看 `flag` 数。
+- **安全防护拦截**（Anthropic 那边拦 opus 的回复，标 `[reasoning_extraction]`）：opus 去掉此前思考 +「详细」措辞截断重问 114 次拦 47 次（41%），「详细」已弃用；「不修饰」同样局面 84 次零拦截；「不带思考 + 简短」整盘 8 盘 389 次调用拦 2 次，都一次重答就过（`results/missed-captures.md` 3.4–3.5、`results/game-opus-drop-vs-astra-1.md`）。带思考的整盘至今没见拦过；巅峰对决 opus max 带思考 +「不修饰」8 盘 317 次调用也是 0 次（`results/game-opus-max-vs-astra-max-1.md`）。
 - 国际象棋 opus 不带思考执黑两盘，同在第 28 个半回合先写 `a7a5` 被判不合法（a 兵早已走到 a6），下一次改成 `a6a5`；带思考的基线同一局面直接写对。可能是不带思考后「记不住走过什么」的迹象，只此一处（`results/game-opus-drop-vs-astra-1.md`）。
 - opus 有一次回复只有一行 `<reasoning_effort>40</reasoning_effort>`、0 思考、没写着法，按认不出记 1 次非法、下一次正常（中国象棋 astra max 盘 1 冒烟第一步，`results/game-opus-vs-astra-max-xq-1.md`）；全部记录里只见过这一次，原因没查。
 - DeepSeek 整盘只接通、没冒烟（整盘新协议已跑过 opus 对 sol 两盘）。
