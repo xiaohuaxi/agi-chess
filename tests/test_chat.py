@@ -222,19 +222,21 @@ class FakeChat(unittest.TestCase):
         self.assertIn('还可重选 1 次', c[1]['stdin'])
 
 
-    def test_reason_default_brief_and_goes_into_pgn_comment(self):
-        # 默认请棋手在着法前写理由；理由里提到别的着法（Nf3、d4）不影响读着法，落定那次的理由进该步评注
+    def test_reason_default_plain_and_goes_into_pgn_comment(self):
+        # 默认请棋手在着法前写理由（不修饰，不说简短 / 详细）；理由里提到别的着法（Nf3、d4）不影响读着法，落定那次的理由进该步评注
         self.plan([{'text': '也可以 Nf3，但我想先占中心，d4 留到下一步。\n\n着法: e2e4'},
                    {'text': '中心已经有兵了，再出马。\nMove: g1f3'}])
         rc = self.play(['--game', 'chess', '--tag', 'rs', '--black', 'random', '--max-plies', '3', '--seed', '2'])
         self.assertEqual(rc, 0)
         recs = self.recs('rs')
         cfg = recs[0]['cfg']
-        self.assertEqual(cfg['sides']['w']['reason'], 'brief')
+        self.assertEqual(cfg['sides']['w']['reason'], 'plain')
         self.assertEqual(cfg['sides']['w']['drop_thinking'], 'off')
-        self.assertIn(memory.ANSWER_LEAD['brief'], cfg['system']['w'])
-        self.assertIn('简短写出', cfg['system']['w'])
-        self.assertIn(memory.ANSWER_LEAD['brief'], self.calls()[0]['argv'][self.calls()[0]['argv'].index('--system') + 1])
+        self.assertIn(memory.ANSWER_LEAD['plain'], cfg['system']['w'])
+        self.assertIn('用你自己的话写出这步的理由', cfg['system']['w'])
+        for word in ('简短', '详细'):
+            self.assertNotIn(word, cfg['system']['w'])
+        self.assertIn(memory.ANSWER_LEAD['plain'], self.calls()[0]['argv'][self.calls()[0]['argv'].index('--system') + 1])
         self.assertNotIn('--drop-thinking', self.calls()[0]['argv'])
         self.assertNotIn('thinking_dropped', [r for r in recs if r['type'] == 'attempt'][0])
         self.assertNotIn('drop_warn', [r['type'] for r in recs])
@@ -260,9 +262,35 @@ class FakeChat(unittest.TestCase):
         self.assertIn('回答格式：只需给出着法，写成一行「着法: 」加着法，', cfg['system']['w'])
         self.assertNotIn('理由', cfg['system']['w'])
 
+    def test_reason_brief_still_selectable(self):
+        # 之前的默认 brief「简短」保留可选：和 plain 只差「简短」两个字
+        self.assertEqual(memory.ANSWER_LEAD['brief'], memory.ANSWER_LEAD['plain'].replace('写出', '简短写出'))
+        self.plan([{'text': '先架中炮。\n着法: h2e2'}])
+        self.play(['--game', 'xiangqi', '--tag', 'rb', '--black', 'random', '--max-plies', '2', '--reason', 'brief'])
+        cfg = self.recs('rb')[0]['cfg']
+        self.assertEqual(cfg['sides']['w']['reason'], 'brief')
+        self.assertIn(memory.ANSWER_LEAD['brief'], cfg['system']['w'])
+
+    def test_resume_keeps_prompt_stored_at_start(self):
+        # 已开局的记录续跑照开局时存下的系统提示，不按现在的措辞重拼：黑方的会话在续跑后才开，把 brief 的措辞临时换掉，
+        # 发出去的仍是开局时那句
+        self.plan([{'text': '着法: e7e5'}])
+        rc = self.play(['--game', 'chess', '--tag', 'rk', '--white', 'random', '--black', 'claude:opus', '--max-plies', '2',
+                        '--seed', '5', '--b', 'reason=brief', '--stop-after', '1'])
+        self.assertEqual(rc, 3)
+        stored = self.recs('rk')[0]['cfg']['system']['b']
+        old = memory.ANSWER_LEAD['brief']
+        self.assertIn(old, stored)
+        with mock.patch.dict(memory.ANSWER_LEAD, brief='（改过的措辞）'), \
+                contextlib.redirect_stdout(io.StringIO()):
+            rc = cli.main(['resume', os.path.join(self.tmp, 'rk')])
+        self.assertEqual(rc, 0)
+        argv = self.calls()[0]['argv']
+        self.assertEqual(argv[argv.index('--system') + 1], stored)
+
     # ------------------------------------------------------------------ 去掉此前思考（drop_thinking）
     def test_drop_thinking_per_side_flag_first_turn_and_warn(self):
-        # 白方开：只在会话首轮传 --drop-thinking，理由默认仍是简短（详细已弃用）；每次调用记 thinking_dropped，续接轮为 0 告警不中断
+        # 白方开：只在会话首轮传 --drop-thinking，理由默认仍是不修饰（详细已弃用）；每次调用记 thinking_dropped，续接轮为 0 告警不中断
         self.plan([{'text': '着法: e2e4', 'dropped': 0}, {'text': '着法: g1f3', 'dropped': 1},
                    {'text': '着法: f1c4', 'dropped': 0}])
         with contextlib.redirect_stdout(io.StringIO()) as out:
@@ -271,9 +299,9 @@ class FakeChat(unittest.TestCase):
         self.assertEqual(rc, 0)
         recs = self.recs('dt')
         cfg = recs[0]['cfg']
-        self.assertEqual((cfg['sides']['w']['drop_thinking'], cfg['sides']['w']['reason']), ('on', 'brief'))
-        self.assertEqual((cfg['sides']['b']['drop_thinking'], cfg['sides']['b']['reason']), ('off', 'brief'))
-        self.assertIn(memory.ANSWER_LEAD['brief'], cfg['system']['w'])
+        self.assertEqual((cfg['sides']['w']['drop_thinking'], cfg['sides']['w']['reason']), ('on', 'plain'))
+        self.assertEqual((cfg['sides']['b']['drop_thinking'], cfg['sides']['b']['reason']), ('off', 'plain'))
+        self.assertIn(memory.ANSWER_LEAD['plain'], cfg['system']['w'])
         self.assertIn('--drop-thinking', cfg['commands']['w'])
         c = self.calls()
         self.assertEqual(len(c), 3)
@@ -327,10 +355,10 @@ class FakeChat(unittest.TestCase):
             with self.subTest(extra=extra), self.assertRaises(SystemExit):
                 self.play(['--game', 'chess', '--tag', 'bad%d' % i, '--max-plies', '2'] + extra)
         self.assertFalse(os.path.exists(os.path.join(self.tmp, 'calls.jsonl')))
-        # 对手是引擎 / 随机时公共开关不碍事（它们不看这一项）；开了去掉思考，dry-run 里理由仍是简短
+        # 对手是引擎 / 随机时公共开关不碍事（它们不看这一项）；开了去掉思考，dry-run 里理由仍是不修饰
         with contextlib.redirect_stdout(io.StringIO()) as out:
             cli.main(['play', '--game', 'chess', '--black', 'random', '--drop-thinking', 'on', '--dry-run'])
-        self.assertIn(memory.ANSWER_LEAD['brief'], out.getvalue())
+        self.assertIn(memory.ANSWER_LEAD['plain'], out.getvalue())
         self.assertNotIn(memory.ANSWER_LEAD['detailed'], out.getvalue())
 
 
@@ -358,7 +386,7 @@ class RealProtocolPrompts(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             cli.main(['play', '--game', 'chess', '--b', 'reason=off', '--dry-run'])
         w, b = out.getvalue().split('== 系统提示（黑方')[:2]
-        self.assertIn(memory.ANSWER_LEAD['brief'], w)
+        self.assertIn(memory.ANSWER_LEAD['plain'], w)
         self.assertIn(memory.ANSWER_LEAD['off'], b)
         # 改之前的 real 记录 config 里没有 reason：按 off 走，提示和原来逐字相同
         sc = {'protocol': 'real', 'memory': 'session', 'selfcheck': 'off', 'max_plies': 200, 'retries': 3}
@@ -378,8 +406,8 @@ class RealProtocolPrompts(unittest.TestCase):
         sc = dict(quiz.side_cfg(C, 'high', {'reason': 'on'}), protocol='real', retries=3)
         s = quiz.system_of(C, 'w', sc)
         self.assertIn(quiz.REASON_ASK, s)
-        self.assertNotIn(memory.ANSWER_LEAD['brief'], s)
-        self.assertNotIn(memory.ANSWER_LEAD['detailed'], s)
+        for r in ('plain', 'brief', 'detailed'):
+            self.assertNotIn(memory.ANSWER_LEAD[r], s)
 
     def test_real_rejects_legal_list(self):
         with self.assertRaises(SystemExit):

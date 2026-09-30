@@ -650,8 +650,8 @@ ILLEGAL_RULE = '每步给出着法后，着法不合法或认不出会告诉你�
 
 
 def system_real(side, sc, memory_text):
-    """「模型就是真实棋手」的系统提示（design.md 第九节）：不要求中文；reason=brief / detailed 时着法之前简短 / 详细写出这步的理由，
-    off 时只需给出着法（memory.answer_lead）；赛制（禁着退回、非法重选上限）预先讲清。"""
+    """「模型就是真实棋手」的系统提示（design.md 第九节）：不要求中文；reason=plain / brief / detailed 时着法之前写出
+    （不修饰 / 简短 / 详细）这步的理由，off 时只需给出着法（memory.answer_lead）；赛制（禁着退回、非法重选上限）预先讲清。"""
     s = ['你在下一盘中国象棋，执%s。对手是另一位棋手。目标是赢棋。' % SIDES[side],
          '规则按标准中国象棋：将死或困毙对方为胜；不许长将、长捉，走出这类着法按不合法退回；同一局面出现三次且不属于长将、'
          '长捉判和；连续一百个半回合没有吃子判和；满 %d 个半回合仍未分胜负判和。' % sc['max_plies'] +
