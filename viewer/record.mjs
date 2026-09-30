@@ -2,12 +2,14 @@
 // 用法见 HELP（node viewer/record.mjs --help）。也可 import { record } 在测试里直接调。
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
-import { accessSync, constants, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { serve } from './serve.mjs';
+import { decodeText, parsePgn } from './lib/pgn.js';
+import { replay } from './lib/replay.js';
 
 export const FPS = 30;
 // 画幅 → 页面视口（CSS 像素）；实际像素再乘 scale（默认 2）。
@@ -94,6 +96,12 @@ function preflight(o) {
       f = path.join(f, 'game.pgn');
       if (!existsSync(f)) throw new RecordError(`目录里没有 game.pgn：${p}`);
     }
+    // 解析宽松，给个不是棋谱的文件也会读出一盘空棋、照样出一段只有标题和终局的片：这里先挡掉。
+    let moves = 0;
+    try {
+      moves = parsePgn(decodeText(readFileSync(f))).reduce((m, g) => Math.max(m, replay(g).steps.length), 0);
+    } catch { /* 读不了或解析炸了，都按没读到着法报 */ }
+    if (!moves) throw new RecordError(`棋谱里没读到任何一盘有着法的棋（不是棋谱文件？）：${p}`);
     return f;
   });
   const ffmpeg = o.ffmpeg || process.env.VIEWER_FFMPEG || '/opt/homebrew/bin/ffmpeg';

@@ -47,6 +47,9 @@ test('开工前检查：缺棋谱、输出不是 mp4、画幅不认识、ffmpeg 
   const bad = async (o, re) => assert.rejects(rec.record({ ...base, ...o }, () => {}), (e) => e instanceof rec.RecordError && re.test(e.message));
   await bad({ inputs: [join(TMP, 'nope.pgn')] }, /棋谱不存在/);
   await bad({ inputs: [TMP] }, /game\.pgn/);
+  const junk = join(TMP, `junk-${Math.random().toString(36).slice(2)}.pgn`);
+  writeFileSync(junk, '# 这不是棋谱\nhello world\n');
+  await bad({ inputs: [pgn, junk] }, /没读到任何一盘有着法的棋.*junk-/);
   await bad({ out: join(TMP, 'x.mov') }, /\.mp4/);
   await bad({ out: join(TMP, 'no-dir', 'x.mp4') }, /输出目录不存在/);
   await bad({ aspect: '1:1' }, /画幅/);
