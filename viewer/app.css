@@ -1,13 +1,13 @@
 /*
   录屏画面（窄版）的版式，docs/viewer.md「录屏画面（窄版）的版式」。页面按 540×720 设计（2 倍截图 = 1080×1440）。
-  颜色、字号、间距都是初值，待用户看截图定；逐项实测（每行实际高度、加总是否 720、最长名字会不会挤）
-  由 viewer/shot.mjs --measure 在页面里量，结果不写死在这里，以最近一次实测表为准。
+  颜色、字号、间距用户 2026-09-30 看截图定稿，改动要重新截图给用户看；逐项实测（每行实际高度、加总是否 720、
+  最长名字会不会挤）由 viewer/shot.mjs --measure 在页面里量，结果不写死在这里。
 
   竖向分配（720）：顶部细条 24 + 两条棋手条平分剩下的 + 棋盘区 544。
   单盘（没有细条）时细条的 24 自动分给两条棋手条（棋手条是 flex: 1）。9:16 同理，多出的高度分给两条。
 */
 :root {
-  /* ---- 审美取值（待用户定） ---- */
+  /* ---- 审美取值（用户 2026-09-30 定稿） ---- */
   --bg: #262421;              /* 页面底色 */
   --bar-bg: #2e2b28;          /* 棋手条：没轮到 */
   --bar-active-bg: #3b3733;   /* 棋手条：轮到走棋 */
@@ -30,11 +30,12 @@
   --tag-size: 13px;
   --row-gap: 2px;
   --disc: 14px;                        /* 执子方圆片直径 */
-  /* 终局横幅：很淡的底 + 字带阴影，基本不挡棋子 */
-  --banner-bg: rgba(0, 0, 0, 0.28); --banner-size: 26px; --banner-why-size: 19px; --banner-name-size: 22px;
+  /* 终局横幅：淡底 + 字带阴影，基本不挡棋子。底色不透明度 0.45 = 0.28 + (0.78 - 0.28) / 3（约 0.447）：
+     第二轮 0.28 往第一轮 0.78 挪三分之一（用户 2026-09-30） */
+  --banner-bg: rgba(0, 0, 0, 0.45); --banner-size: 26px; --banner-why-size: 19px; --banner-name-size: 22px;
   --banner-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.6);
   /* 总比分画面 */
-  --sum-title-size: 20px; --sum-name-size: 26px; --sum-score-size: 56px;
+  --sum-kind-size: 24px; --sum-title-size: 20px; --sum-name-size: 26px; --sum-score-size: 56px;
   /* 国际象棋棋盘：照 lichess 默认的 brown 主题（chessground.brown.css 与 lila 的 brown.png 取色） */
   --cb-light: #f0d9b5; --cb-dark: #b58863;
   --cb-last: rgba(155, 199, 0, 0.41);     /* lichess 上一步：起止两格盖黄绿色 */
@@ -95,7 +96,7 @@ body { overflow: hidden; }
 #board-area { flex: none; height: var(--board-h); position: relative; display: flex; align-items: center; justify-content: center; }
 .board[hidden] { display: none; }
 #board-chess { width: min(100vw, var(--board-h)); height: min(100vw, var(--board-h)); }
-#board-xq { height: var(--board-h); aspect-ratio: 9 / 10.72; }
+#board-xq { height: var(--board-h); }   /* 宽高比由 lib/xqboard.js 按棋盘几何设 */
 #board-xq svg { display: block; width: 100%; height: 100%; }
 
 .cm-chessboard.default .board .square.white { fill: var(--cb-light); }
@@ -136,6 +137,7 @@ body { overflow: hidden; }
 /* ---- 总比分画面（多盘连播播完后的一格） ---- */
 #summary { flex: 1 1 0; display: flex; flex-direction: column; justify-content: center; padding: 0 var(--pad-x); gap: 18px; }
 #summary[hidden] { display: none; }
+#summary .s-kind { text-align: center; font-size: var(--sum-kind-size); line-height: 32px; color: var(--text); margin-bottom: -10px; }
 #summary .s-title { text-align: center; font-size: var(--sum-title-size); line-height: 28px; color: var(--text-weak); }
 #summary .s-row { display: flex; align-items: center; height: 72px; padding: 0 20px; background: var(--bar-bg); border-radius: 8px; }
 #summary .s-row.top { background: var(--bar-active-bg); box-shadow: inset 4px 0 0 var(--accent); }

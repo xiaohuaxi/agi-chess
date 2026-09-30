@@ -58,7 +58,7 @@ function measurePage() {
   }
   const sum = document.querySelector('#summary');
   if (shown(sum)) {
-    for (const sel of ['.s-title', '.s-row', '.s-row .name', '.s-row .effort', '.s-row .score']) {
+    for (const sel of ['.s-kind', '.s-title', '.s-row', '.s-row .name', '.s-row .effort', '.s-row .score']) {
       for (const e of sum.querySelectorAll(sel)) item('#summary', sel, e);
     }
   }

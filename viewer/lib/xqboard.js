@@ -11,7 +11,9 @@ const RED_FILES = '九八七六五四三二一';
 const BLACK_FILES = '１２３４５６７８９';
 
 // 几何（SVG 用户单位，一格 = 1）：9 路 10 线外各留半格放棋子；上下各加一条标路数的带子。
-const BAND = 0.36;
+// 带子比路数字（0.3 格高）宽出一截，字略靠里，和棋盘外沿（贴着棋手条）之间留几像素空白、不贴死（用户 2026-09-30）。
+const BAND = 0.5;
+const FILE_Y = 0.3;          // 路数字中心离棋盘外沿（格）：比带子正中再往里一点
 const W = 9, H = 10 + 2 * BAND;
 const R = 0.45;              // 棋子半径（格）
 const X = (x) => 0.5 + x;    // 纵线 x（0 = 红方左手 a 线）
@@ -28,6 +30,7 @@ function el(tag, attrs, parent, text) {
 export class XiangqiBoard {
   constructor(el) {
     this.el = el;
+    el.style.aspectRatio = `${W} / ${H}`;   // 容器宽高比跟着几何走（高度由 app.css 定）
   }
 
   async load() {
@@ -79,8 +82,8 @@ export class XiangqiBoard {
     [['楚', 1.5], ['河', 2.5], ['漢', 5.5], ['界', 6.5]].forEach(([c, x]) => el('text', { class: 'xq-river', x: X(x), y: ry }, g, c));
     // 路数：黑方在上（从黑方右手数，即画面左起 1–9），红方在下（画面左起 九–一）
     for (let x = 0; x < 9; x++) {
-      el('text', { class: 'xq-file', x: X(x), y: BAND / 2 + 0.02 }, g, BLACK_FILES[x]);
-      el('text', { class: 'xq-file', x: X(x), y: H - BAND / 2 + 0.02 }, g, RED_FILES[x]);
+      el('text', { class: 'xq-file', x: X(x), y: FILE_Y + 0.02 }, g, BLACK_FILES[x]);
+      el('text', { class: 'xq-file', x: X(x), y: H - FILE_Y + 0.02 }, g, RED_FILES[x]);
     }
   }
 

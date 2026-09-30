@@ -151,11 +151,13 @@ function showBanner(d) {
   if (name) fitMiddle(name, d.winner.name);
 }
 
-// 总比分画面（多盘连播播完后的一格，docs/viewer.md「播放」的 kind=end）：标题 + 每人一行名字与总分，领先的一行点亮。
+// 总比分画面（多盘连播播完后的一格，docs/viewer.md「播放」的 kind=end）：棋种、标题 + 每人一行名字与总分，领先的一行点亮。
 function showSummary() {
   const rows = totals(games.map((g) => g.game));
   const box = $('summary');
-  const kids = [h('div', 's-title', `总比分 · 共 ${games.length} 局`)];
+  // 这格没有棋盘，所以写明棋种；清单里混了两种棋就都写上
+  const kinds = [...new Set(games.map((g) => (g.xiangqi ? '中国象棋' : '国际象棋')))].join(' / ');
+  const kids = [h('div', 's-kind', kinds), h('div', 's-title', `总比分 · 共 ${games.length} 局`)];
   const names = [];
   rows.forEach((p, i) => {
     const row = h('div', 's-row' + (i === 0 && p.score > rows[rows.length - 1].score ? ' top' : ''));
