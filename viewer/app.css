@@ -21,7 +21,11 @@
   --disc-red: #d23c32; --disc-black: #111; --disc-white: #f4f1ea; --disc-ring: #8a847b;
   --strip-h: 24px;  --strip-size: 13px;
   --board-h: 544px;
-  --xq-board-h: 564px;        /* 象棋画面的棋盘区高：有细条时棋手条各 66、单盘各 78（国际象棋 76 / 88） */
+  /* 象棋画面（窄版）：棋盘区加高、棋手条压矮（字号不变，只压行高与上下留白），棋盘因此更宽。待用户看图定（第五轮）。
+     规则与国际象棋一致（用户 2026-09-30）：棋盘区高固定，连播多出的顶部细条从两条棋手条扣（棋手条是 flex: 1）。
+     连播 (720 − 24 − 572) / 2 = 62（压到不局促的最矮）、单盘 (720 − 572) / 2 = 74；国际象棋是 544，76 / 88。 */
+  --xq-board-h: 572px;
+  --xq-row1-lh: 30px; --xq-row2-lh: 24px; --xq-row-gap: 1px;
   --pad-x: 16px;              /* 棋手条左右内边距（左边另加竖条宽） */
   --row1-size: 24px; --row1-lh: 32px;  /* 名字 */
   --effort-size: 20px;                 /* +xhigh */
@@ -100,9 +104,10 @@ body { overflow: hidden; }
 .board[hidden] { display: none; }
 #board-chess { width: min(100vw, var(--board-h)); height: min(100vw, var(--board-h)); }
 #board-xq { height: var(--board-h); }   /* 宽高比由 lib/xqboard.js 按棋盘几何设 */
-/* 象棋画面（窄版）：棋盘区加高、两条棋手条跟着变矮（棋手条是 flex: 1，自动分剩下的），棋盘因此更宽。
-   国际象棋棋盘已占满宽度，不受影响。取值待用户看图定（2026-09-30 第四轮）。 */
+/* 象棋画面（窄版）：棋盘区加高、两条棋手条跟着变矮（棋手条是 flex: 1，自动分剩下的），棋盘因此更宽；取值见 :root。
+   国际象棋棋盘已占满宽度，不受影响。页面在 #stage 上挂 xq 类（象棋）时生效。 */
 #stage.compact.xq { --board-h: var(--xq-board-h); }
+#stage.compact.xq > .bar { --row1-lh: var(--xq-row1-lh); --row2-lh: var(--xq-row2-lh); --row-gap: var(--xq-row-gap); }
 #board-xq svg { display: block; width: 100%; height: 100%; }
 
 .cm-chessboard.default .board .square.white { fill: var(--cb-light); }
