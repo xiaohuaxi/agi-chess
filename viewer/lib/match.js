@@ -66,11 +66,37 @@ export function scoresBefore(games, index) {
 
 export const fmtScore = (x) => (Number.isInteger(x) ? String(x) : x.toFixed(1));
 
-// 结果横幅：「红方胜 · 将死」「和棋 · 三次重复」。xiangqi 决定叫红方还是白方。
-export function resultText(game, xiangqi) {
+// 结束原因只留事实：去掉括注（导出端写的「满 200 个半回合（研究设的上限），判和」→「满 200 个半回合，判和」），
+// 导出不改，显示时处理。
+export function cleanReason(why) {
+  return (why || '').replace(/\s*[（(][^（）()]*[）)]\s*/g, '').replace(/\s+([，,。])/g, '$1').trim();
+}
+
+// 结果横幅要的几样：head「红方胜」「和棋」，why 结束原因（已去括注，可能为空），winner 胜方 'w' / 'b' / null。
+// 未完的盘返回 null。xiangqi 决定叫红方还是白方。
+export function resultParts(game, xiangqi) {
   const r = game.result ?? game.tags.Result;
   const head = r === '1-0' ? (xiangqi ? '红方胜' : '白方胜') : r === '0-1' ? '黑方胜' : r === '1/2-1/2' ? '和棋' : null;
   if (!head) return null;
-  const why = game.tags.Termination;
-  return why ? head + ' · ' + why : head;
+  return { head, why: cleanReason(game.tags.Termination), winner: r === '1-0' ? 'w' : r === '0-1' ? 'b' : null };
+}
+
+export function resultText(game, xiangqi) {
+  const p = resultParts(game, xiangqi);
+  return p && (p.why ? p.head + ' · ' + p.why : p.head);
+}
+
+// 连播播完后的总比分：每个出场的人（名字 + 思考深度）一行，按总分从高到低，同分按出场先后。
+export function totals(games) {
+  const s = scoresBefore(games, games.length);
+  const seen = [];
+  for (const g of games) {
+    for (const side of ['w', 'b']) {
+      const p = playerOf(g, side);
+      if (!seen.some((x) => x.key === p.key)) seen.push(p);
+    }
+  }
+  return seen.map((p, i) => ({ ...p, score: s[p.key] || 0, i }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map(({ i, ...p }) => p);
 }

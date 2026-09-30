@@ -30,12 +30,23 @@
   --tag-size: 13px;
   --row-gap: 2px;
   --disc: 14px;                        /* 执子方圆片直径 */
-  --banner-bg: rgba(20, 18, 16, 0.78); --banner-size: 26px; --banner-why-size: 19px;
-  /* 棋盘 */
-  --xq-bg: #e8c98f; --xq-line: #4a3520;
-  --last-fill: rgba(246, 208, 64, 0.5);   /* 国际象棋上一步起止格 */
-  --xq-last: #2a6fdb;                     /* 中国象棋上一步：起点圆点、落点方框 */
-  --xq-check: rgba(220, 40, 30, 0.55);
+  /* 终局横幅：很淡的底 + 字带阴影，基本不挡棋子 */
+  --banner-bg: rgba(0, 0, 0, 0.28); --banner-size: 26px; --banner-why-size: 19px; --banner-name-size: 22px;
+  --banner-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.6);
+  /* 总比分画面 */
+  --sum-title-size: 20px; --sum-name-size: 26px; --sum-score-size: 56px;
+  /* 国际象棋棋盘：照 lichess 默认的 brown 主题（chessground.brown.css 与 lila 的 brown.png 取色） */
+  --cb-light: #f0d9b5; --cb-dark: #b58863;
+  --cb-last: rgba(155, 199, 0, 0.41);     /* lichess 上一步：起止两格盖黄绿色 */
+  /* 中国象棋：照象棋巫师 / 象棋小巫师（xqbase）取色 */
+  --xq-font: "Kaiti SC", "STKaiti", "KaiTi", "BiauKai", "Kaiti TC", serif;  /* 棋子、河界、路数 */
+  --xq-bg: #f6d49b; --xq-line: #3b2a17; --xq-file-color: #5a4126;
+  --xq-red-hi: #f7c8a0; --xq-red-lo: #d98d5a;       /* 红方棋子木面（偏橙红） */
+  --xq-black-hi: #fad9a0; --xq-black-lo: #e0a651;   /* 黑方棋子木面（偏金黄） */
+  --xq-mated-hi: #e4e4e4; --xq-mated-lo: #9a9a9a;   /* 被将死的将 / 帅变灰 */
+  --xq-red-ink: #b8200f; --xq-black-ink: #1c1a17;
+  --xq-last: #1f4fe0;                     /* 上一步：起点、落点的蓝色角框 */
+  --xq-check: rgba(230, 30, 20, 0.6);     /* 被将军的将 / 帅外圈红晕 */
 }
 
 html, body { margin: 0; background: var(--bg); color: var(--text);
@@ -84,21 +95,51 @@ body { overflow: hidden; }
 #board-area { flex: none; height: var(--board-h); position: relative; display: flex; align-items: center; justify-content: center; }
 .board[hidden] { display: none; }
 #board-chess { width: min(100vw, var(--board-h)); height: min(100vw, var(--board-h)); }
-#board-xq { height: var(--board-h); aspect-ratio: 9 / 10; }
+#board-xq { height: var(--board-h); aspect-ratio: 9 / 10.72; }
 #board-xq svg { display: block; width: 100%; height: 100%; }
-.cm-chessboard .markers .marker.marker-last { fill: var(--last-fill); opacity: 1; }
+
+.cm-chessboard.default .board .square.white { fill: var(--cb-light); }
+.cm-chessboard.default .board .square.black { fill: var(--cb-dark); }
+.cm-chessboard.default .coordinates .coordinate.white { fill: var(--cb-dark); }
+.cm-chessboard.default .coordinates .coordinate.black { fill: var(--cb-light); }
+.cm-chessboard .markers .marker.marker-last { fill: var(--cb-last); opacity: 1; }
+.cm-chessboard .markers .marker.marker-check { fill: url(#cb-check); opacity: 1; }
 
 .xq-bg { fill: var(--xq-bg); }
-.xq-lines line { stroke: var(--xq-line); stroke-width: 0.022; }
-.xq-frame { fill: none; stroke: var(--xq-line); stroke-width: 0.045; }
-.xq-river { font-size: 0.48px; fill: var(--xq-line); text-anchor: middle; dominant-baseline: central; }
+.xq-lines line, .xq-lines polyline { stroke: var(--xq-line); stroke-width: 0.024; fill: none; }
+.xq-frame { fill: none; stroke: var(--xq-line); stroke-width: 0.05; }
+.xq-river { font-family: var(--xq-font); font-size: 0.36px; fill: var(--xq-line); text-anchor: middle; dominant-baseline: central; }
+.xq-file { font-family: var(--xq-font); font-size: 0.3px; fill: var(--xq-file-color); text-anchor: middle; dominant-baseline: central; }
 .xq-check { fill: var(--xq-check); }
-.xq-last-from { fill: var(--xq-last); }
-.xq-last-to { fill: none; stroke: var(--xq-last); stroke-width: 0.04; }
+.xq-last { fill: none; stroke: var(--xq-last); stroke-width: 0.05; stroke-linecap: square; }
+.xq-shadow { fill: rgba(0, 0, 0, 0.35); }
+.xq-face { stroke: rgba(90, 50, 10, 0.55); stroke-width: 0.025; }
+.xq-face-hi.red { stop-color: var(--xq-red-hi); } .xq-face-lo.red { stop-color: var(--xq-red-lo); }
+.xq-face-hi.black { stop-color: var(--xq-black-hi); } .xq-face-lo.black { stop-color: var(--xq-black-lo); }
+.xq-face-hi.mated { stop-color: var(--xq-mated-hi); } .xq-face-lo.mated { stop-color: var(--xq-mated-lo); }
+.xq-ring { fill: none; stroke-width: 0.03; }
+.xq-glyph { font-family: var(--xq-font); font-weight: 700; font-size: 0.56px; text-anchor: middle; dominant-baseline: central; }
+.xq-piece.red .xq-ring { stroke: var(--xq-red-ink); } .xq-piece.red .xq-glyph { fill: var(--xq-red-ink); }
+.xq-piece.black .xq-ring { stroke: var(--xq-black-ink); } .xq-piece.black .xq-glyph { fill: var(--xq-black-ink); }
 
-#banner { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); padding: 14px 24px;
-  background: var(--banner-bg); color: #fff; font-size: var(--banner-size); line-height: 1.35; text-align: center; font-weight: 600; }
+/* ---- 终局横幅：第一行「黑方胜 · 将死」，第二行胜方名字（和棋没有这行） ---- */
+#banner { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); padding: 10px 24px;
+  background: var(--banner-bg); color: #fff; text-align: center; text-shadow: var(--banner-shadow); }
 #banner[hidden] { display: none; }
-#banner:not(.split) { white-space: nowrap; }
-#banner.split .sep { display: none; }
-#banner.split .why { display: block; font-size: var(--banner-why-size); font-weight: 400; white-space: normal; }
+#banner .b-head { font-size: var(--banner-size); line-height: 1.35; font-weight: 600; white-space: nowrap; }
+#banner.split .b-head .sep { display: none; }
+#banner.split .b-head .why { display: block; font-size: var(--banner-why-size); font-weight: 400; white-space: normal; }
+#banner .b-name { display: flex; justify-content: center; font-size: var(--banner-name-size); line-height: 1.35; white-space: nowrap; }
+#banner .b-name .name { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+#banner .b-name .effort { flex: none; font-size: inherit; color: #e6e1d8; }
+
+/* ---- 总比分画面（多盘连播播完后的一格） ---- */
+#summary { flex: 1 1 0; display: flex; flex-direction: column; justify-content: center; padding: 0 var(--pad-x); gap: 18px; }
+#summary[hidden] { display: none; }
+#summary .s-title { text-align: center; font-size: var(--sum-title-size); line-height: 28px; color: var(--text-weak); }
+#summary .s-row { display: flex; align-items: center; height: 72px; padding: 0 20px; background: var(--bar-bg); border-radius: 8px; }
+#summary .s-row.top { background: var(--bar-active-bg); box-shadow: inset 4px 0 0 var(--accent); }
+#summary .s-row .name { font-size: var(--sum-name-size); flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; }
+#summary .s-row .effort { flex: none; font-size: var(--effort-size); color: var(--text-weak); white-space: nowrap; }
+#summary .s-row .score { font-size: var(--sum-score-size); line-height: 72px; }
+#stage.summary > .bar, #stage.summary > #board-area { display: none; }

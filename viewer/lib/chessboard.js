@@ -2,14 +2,15 @@
 // 棋子、标记两张精灵图由这里先 fetch 好、塞进 cm-chessboard 认的缓存 div（它自己用 XHR 异步加载、不给完成信号），
 // 这样 load() 兑现时图已经在页面里，截图不用轮询。
 import { Chessboard } from '../vendor/cm-chessboard/src/Chessboard.js';
-import { Markers, MARKER_TYPE } from '../vendor/cm-chessboard/src/extensions/markers/Markers.js';
+import { Markers } from '../vendor/cm-chessboard/src/extensions/markers/Markers.js';
 
 const ASSETS = new URL('../vendor/cm-chessboard/assets/', import.meta.url).href;
 const SPRITES = { 'cm-chessboard-sprite': 'pieces/cburnett.svg', 'cm-chessboard-markers': 'extensions/markers/markers.svg' };
 
-// 上一步起止格：自定义样式（app.css 的 .marker-last）；被将军的王：cm-chessboard 自带的红色实心圆，垫在棋子下面。
+// 照 lichess：上一步起止两格盖一层黄绿色（app.css 的 .marker-last），被将军的王所在格垫一团红色径向渐变
+// （.marker-check，渐变 #cb-check 定义在 index.html）。两者都画在棋子下面。
 const LAST = { class: 'marker-last', slice: 'markerSquare' };
-const CHECK = MARKER_TYPE.circleDangerFilled;
+const CHECK = { class: 'marker-check', slice: 'markerSquare' };
 
 async function preloadSprites() {
   await Promise.all(Object.entries(SPRITES).map(async ([id, file]) => {

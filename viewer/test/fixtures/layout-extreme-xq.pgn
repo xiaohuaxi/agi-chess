@@ -1,5 +1,5 @@
 % 版式极限用的造局（docs/viewer.md「录屏画面」）：最长的名字、三位数回合、带升变的记谱、百万级 token、两位数加半分的比分、
-% 最长的结束原因。前 10 盘只有结果、用来垫比分，第 11 盘几步就结束。局面是摆的，不是真实对局。
+% 最长的结束原因。前 10 盘只有结果、用来垫比分，第 11 盘几步就和棋，第 12 盘一步将死（终局横幅写胜方的长名字）。局面是摆的，不是真实对局。
 
 [Game "Chinese Chess"]
 [Event "layout extreme 1"]
@@ -111,3 +111,14 @@
 [Termination "满 200 个半回合（研究设的上限），判和"]
 
 149... 将５平６ { [%think 877000] } 150. 车九进九 { [%think 999999] } 1/2-1/2
+
+[Game "Chinese Chess"]
+[Event "layout extreme 12"]
+[Red "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[RedEffort "xhigh"]
+[FEN "4k4/R8/9/9/9/9/9/9/9/3K4R w - - 0 150"]
+[Result "1-0"]
+[Termination "将死"]
+
+150. 车一进九 { [%think 99999] } 1-0

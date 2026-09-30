@@ -1,5 +1,5 @@
 % 版式极限用的造局（docs/viewer.md「录屏画面」）：最长的名字、三位数回合、带升变的记谱、百万级 token、两位数加半分的比分、
-% 最长的结束原因。前 10 盘只有结果、用来垫比分，第 11 盘几步就结束。局面是摆的，不是真实对局。
+% 最长的结束原因。前 10 盘只有结果、用来垫比分，第 11 盘几步就和棋，第 12 盘一步将死（终局横幅写胜方的长名字）。局面是摆的，不是真实对局。
 
 [Event "layout extreme 1"]
 [White "deepseek:deepseek-v4-pro"]
@@ -102,3 +102,14 @@
 
 121... Rb3 { [%think 877000] } 122. Kf2 { [%think 912345] } Rb2+ { [%think 77777] }
 123. Kg3 { [%think 88888] } Rb6 { [%think 99999] } 124. exd8=Q+ { [%think 99999] } 1/2-1/2
+
+[Event "layout extreme 12"]
+[White "deepseek:deepseek-v4-pro"]
+[Black "engine:fsf:nodes=1000"]
+[WhiteEffort "xhigh"]
+[FEN "6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 150"]
+[SetUp "1"]
+[Result "1-0"]
+[Termination "将死"]
+
+150. Ra8# { [%think 99999] } 1-0

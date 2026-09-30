@@ -27,31 +27,40 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 function measurePage() {
   const r = (e) => { const b = e.getBoundingClientRect(); return { top: b.top, height: b.height, left: b.left, width: b.width }; };
   const font = (e) => { const s = getComputedStyle(e); return { size: s.fontSize, lh: s.lineHeight, weight: s.fontWeight }; };
-  const q = (sel) => [...document.querySelectorAll(sel)].filter((e) => e.offsetParent !== null || e.id === 'stage');
-  const blocks = ['#stage', '#strip', '#bar-top', '#board-area', '#bar-bottom', '#board-chess', '#board-xq', '#banner']
-    .map((s) => [s, document.querySelector(s)]).filter(([, e]) => e && !e.hidden && getComputedStyle(e).display !== 'none')
-    .map(([s, e]) => ({ sel: s, ...r(e) }));
+  const shown = (e) => e && !e.hidden && getComputedStyle(e).display !== 'none';
+  const blocks = ['#stage', '#strip', '#bar-top', '#board-area', '#bar-bottom', '#board-chess', '#board-xq', '#banner', '#summary']
+    .map((s) => [s, document.querySelector(s)]).filter(([, e]) => shown(e)).map(([s, e]) => ({ sel: s, ...r(e) }));
   const texts = [];
+  const item = (where, sel, e, extra = {}) => texts.push({ where, sel, text: e.textContent, ...font(e), ...r(e),
+    scrollWidth: e.scrollWidth, clientWidth: e.clientWidth, ...extra });
   for (const bar of ['#bar-top', '#bar-bottom']) {
+    const b = document.querySelector(bar);
+    if (!shown(b)) continue;
     for (const sel of ['.row1', '.row2', '.disc', '.name', '.effort', '.score', '.win', '.move', '.mv', '.tag', '.think', '.delta']) {
-      for (const e of document.querySelectorAll(`${bar} ${sel}`)) {
-        texts.push({ where: bar, sel, text: e.textContent, ...font(e), ...r(e),
-          scrollWidth: e.scrollWidth, clientWidth: e.clientWidth });
-      }
+      for (const e of b.querySelectorAll(sel)) item(bar, sel, e);
     }
-    const b = document.querySelector(bar), row1 = b.querySelector('.row1'), row2 = b.querySelector('.row2');
+    const row1 = b.querySelector('.row1'), row2 = b.querySelector('.row2');
     const cs = getComputedStyle(b);
     texts.push({ where: bar, sel: '(padding)', padTop: cs.paddingTop, padBottom: cs.paddingBottom, padLeft: cs.paddingLeft,
       padRight: cs.paddingRight, gap: cs.rowGap, contentTop: row1.getBoundingClientRect().top - b.getBoundingClientRect().top,
       contentBottom: b.getBoundingClientRect().bottom - row2.getBoundingClientRect().bottom });
   }
   const strip = document.querySelector('#strip');
-  if (!strip.hidden) texts.push({ where: '#strip', sel: '#strip', text: strip.textContent, ...font(strip), ...r(strip) });
+  if (shown(strip)) item('#strip', '#strip', strip);
   const banner = document.querySelector('#banner');
-  if (!banner.hidden) {
-    const range = document.createRange(); range.selectNodeContents(banner);
-    texts.push({ where: '#banner', sel: '#banner', text: banner.textContent, ...font(banner), ...r(banner),
-      lines: range.getClientRects().length });
+  if (shown(banner)) {
+    const cs = getComputedStyle(banner);
+    item('#banner', '#banner', banner, { split: banner.classList.contains('split'), bg: cs.backgroundColor, padTop: cs.paddingTop,
+      padLeft: cs.paddingLeft, padRight: cs.paddingRight });
+    for (const sel of ['.b-head', '.b-head .res', '.b-head .why', '.b-name', '.b-name .name', '.b-name .effort']) {
+      for (const e of banner.querySelectorAll(sel)) item('#banner', sel, e);
+    }
+  }
+  const sum = document.querySelector('#summary');
+  if (shown(sum)) {
+    for (const sel of ['.s-title', '.s-row', '.s-row .name', '.s-row .effort', '.s-row .score']) {
+      for (const e of sum.querySelectorAll(sel)) item('#summary', sel, e);
+    }
   }
   return { viewport: [innerWidth, innerHeight], blocks, texts };
 }
