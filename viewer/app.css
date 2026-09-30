@@ -41,6 +41,8 @@
   --banner-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.6);
   /* 标题画面：底色同终局横幅（45% 黑）、字带同样的阴影，卡片加一点投影；左右离棋盘边 24（app.js 按棋盘位置设） */
   --title-bg: var(--banner-bg); --title-shadow: 0 3px 12px rgba(0, 0, 0, 0.35); --title-weak: #e6e1d8;
+  /* 标题卡片第一行「第 N 局 · 共 M 局」：比名字 24 小、比「对」17 略大（用户 2026-09-30 要求放大，原来同顶部细条 13 / 20） */
+  --title-head-size: 18px; --title-head-lh: 26px;
   /* 总比分画面 */
   --sum-kind-size: 24px; --sum-title-size: 20px; --sum-name-size: 26px; --sum-score-size: 56px;
   /* 国际象棋棋盘：照 lichess 默认的 brown 主题（chessground.brown.css 与 lila 的 brown.png 取色） */
@@ -162,7 +164,7 @@ body { overflow: hidden; }
   background: var(--title-bg); border-radius: 10px; text-align: center; box-shadow: var(--title-shadow);
   color: #fff; text-shadow: var(--banner-shadow); }
 #title[hidden] { display: none; }
-#title .t-head { font-size: var(--strip-size); line-height: 20px; color: var(--title-weak); margin-bottom: 12px; }
+#title .t-head { font-size: var(--title-head-size); line-height: var(--title-head-lh); color: var(--title-weak); margin-bottom: 12px; }
 #title .t-vs { font-size: var(--row2-size); line-height: 28px; color: var(--title-weak); }
 #title .effort { color: var(--title-weak); }
 #title .t-row { display: flex; align-items: center; justify-content: center; height: var(--row1-lh);

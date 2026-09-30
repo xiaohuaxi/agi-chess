@@ -64,6 +64,15 @@ function measurePage() {
       for (const e of sum.querySelectorAll(sel)) item('#summary', sel, e);
     }
   }
+  const title = document.querySelector('#title');
+  if (shown(title)) {
+    const cs = getComputedStyle(title), area = document.querySelector('#board-area').getBoundingClientRect();
+    item('#title', '#title', title, { padTop: cs.paddingTop, padBottom: cs.paddingBottom,
+      areaTop: area.top, areaBottom: area.bottom });
+    for (const sel of ['.t-head', '.t-row', '.t-row .name', '.t-row .effort', '.t-vs']) {
+      for (const e of title.querySelectorAll(sel)) item('#title', sel, e);
+    }
+  }
   return { viewport: [innerWidth, innerHeight], blocks, texts };
 }
 
