@@ -3,7 +3,7 @@
 
 // 网址参数 → 播放设置。时长单位是秒，不合法（非数字、负数）时用默认值。
 // anim：走子滑动动画的时长，算在这步的 gap 之内（这格停 gap − anim），0 关掉动画。
-export const DEFAULTS = { gap: 2.5, titlehold: 3, resulthold: 4, summaryhold: 5, anim: 0.3 };
+export const DEFAULTS = { gap: 1.8, titlehold: 3, resulthold: 4, summaryhold: 5, anim: 0.3 };
 
 export function playOptions(params) {
   const sec = (k) => {

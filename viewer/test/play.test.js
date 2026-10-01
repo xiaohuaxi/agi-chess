@@ -20,7 +20,7 @@ test('播放设置：默认值、自定、不合法回默认', () => {
   assert.deepEqual(o, { ...DEFAULTS, title: false });                 // 标题画面默认不加
   assert.equal(playOptions(new URLSearchParams('title=1')).title, true);
   assert.equal(playOptions(new URLSearchParams('title=0')).title, false);   // 旧写法仍表示关
-  assert.equal(o.gap, 2.5);
+  assert.equal(o.gap, 1.8);
   assert.equal(o.anim, 0.3);
   const p = playOptions(new URLSearchParams('gap=1.5&titlehold=0&resulthold=x&summaryhold=-1&title=0&anim=0'));
   assert.deepEqual(p, { gap: 1.5, titlehold: 0, resulthold: DEFAULTS.resulthold, summaryhold: DEFAULTS.summaryhold, anim: 0, title: false });
@@ -50,7 +50,7 @@ test('播放顺序：走子动画算在 gap 之内——只有走子那几格有
 const plies = (file) => parsePgn(decodeText(readFileSync(join(ROOT, FIX, file)))).map((g) => replay(g).steps.length);
 
 // 不看实现，照方案手写的期望：[kind, hold, anim]。走子那几格先滑 anim 秒、再停 gap − anim，一格总长仍是 gap。
-function expected(counts, { gap = 2.5, titlehold = 3, resulthold = 4, summaryhold = 5, title = false, anim = 0.3 } = {}) {
+function expected(counts, { gap = 1.8, titlehold = 3, resulthold = 4, summaryhold = 5, title = false, anim = 0.3 } = {}) {
   const out = [];
   for (const n of counts) {
     out.push(title ? ['title', titlehold, 0] : ['move', gap, 0]);
