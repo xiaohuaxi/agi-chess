@@ -46,6 +46,16 @@ test('播放顺序：走子动画算在 gap 之内——只有走子那几格有
   assert.deepEqual(short.map((f) => [f.hold, f.anim]), [[0.2, 0], [0, 0.2], [0, 0]]);
 });
 
+test('播放顺序：每格响哪声——吃子格 capture、其余走子格 move、结果格 end，开局 / 标题 / 总比分不响', () => {
+  const opt = { gap: 2, titlehold: 3, resulthold: 4, summaryhold: 5, title: true, anim: 0.3 };
+  const one = sequence([{ plies: 3, over: true, captures: [false, true, false] }, { plies: 1, over: false }], opt);
+  assert.deepEqual(one.map((f) => [f.kind, f.ply, f.sound]), [
+    ['title', 0, null], ['move', 1, 'move'], ['move', 2, 'capture'], ['move', 3, 'move'], ['result', 3, 'end'],
+    ['title', 0, null], ['move', 1, 'move'], ['end', null, null]]);   // 第二盘没给 captures、没结果：只有落子声
+  const plain = sequence([{ plies: 1, over: true }], { ...opt, title: false });
+  assert.deepEqual(plain.map((f) => f.sound), [null, 'move', 'end', null]);
+});
+
 // ---------------------------------------------------------------- 浏览器
 const plies = (file) => parsePgn(decodeText(readFileSync(join(ROOT, FIX, file)))).map((g) => replay(g).steps.length);
 
@@ -108,7 +118,7 @@ test('录制接口：单盘默认参数（默认没有标题画面）', { skip }
     assert.deepEqual(res, { sprite: true, fonts: 'loaded', done: false, title: false });   // ready 时第一格（开局局面）已画好
     assert.deepEqual(await walk(page), expected(plies('chess-sample.pgn')));
     assert.equal(await page.evaluate(() => document.body.dataset.done), '1');
-    assert.deepEqual(await page.evaluate(() => window.viewer.next()), { kind: 'end', hold: 0, anim: 0 });
+    assert.deepEqual(await page.evaluate(() => window.viewer.next()), { kind: 'end', hold: 0, anim: 0, sound: null });
   });
 });
 

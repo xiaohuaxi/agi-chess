@@ -1,7 +1,8 @@
 // 录制脚本（viewer/record.mjs，docs/viewer.md「录屏：脚本出片」）。
 // 前半不碰浏览器：命令行解析、秒数换帧数、服务只供给点名的文件、开工前的检查。
 // 后半真出片：用自带样例、把停留时长调小，ffprobe 核对编码 H.264/High、yuv420p、30 帧恒定、1080×1440、+faststart，
-// 时长 = 各格停留之和（误差 < 1 帧），换 gap 时长跟着变。没有 playwright-core / 浏览器 / ffmpeg / ffprobe 时跳过。
+// 时长 = 各格停留之和（误差 < 1 帧），换 gap 时长跟着变；默认带 AAC 音轨、时长与画面一致、每声起点落在棋子落地那一帧，
+// --no-sound 出无声片。没有 playwright-core / 浏览器 / ffmpeg / ffprobe 时跳过。
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -11,6 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { decodeText, parsePgn } from '../lib/pgn.js';
 import { replay } from '../lib/replay.js';
+import { stepSound } from '../lib/sound.js';
 import { serve } from '../serve.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -43,6 +45,38 @@ test('命令行：停留时长透传、默认无标题 / --title 加 / --no-titl
   assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--bogus']));
   assert.deepEqual(rec.parseCli(['a', '-o', 'x.mp4', '--anim', '0']).params, { anim: '0' });
   assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--anim', 'x']), /--anim/);
+});
+
+test('命令行：默认有声、--no-sound 关掉；--vol 是正的倍数', { skip: recSkip }, () => {
+  const o = rec.parseCli(['a', '-o', 'x.mp4']);
+  assert.equal(o.sound, true);
+  assert.equal(o.vol, 1);
+  assert.deepEqual(o.params, {});                                   // 声音选项不透传给页面
+  assert.equal(rec.parseCli(['a', '-o', 'x.mp4', '--no-sound']).sound, false);
+  assert.equal(rec.parseCli(['a', '-o', 'x.mp4', '--vol', '0.5']).vol, 0.5);
+  for (const v of ['0', '-1', 'x', '']) assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', `--vol=${v}`]), /--vol/, v);
+});
+
+test('声音时刻：和画面同一套累计帧数——响在动画帧之后那张静止画面的开头', { skip: recSkip }, () => {
+  // 开局 1.8 秒；第 1 步 9 张动画帧（各 1/30）+ 静止 1.5；第 2 步没动画、停 1；结果格停 4
+  const sec = [1.8, ...Array(9).fill(1 / 30), 1.5, 1, 4];
+  const t = rec.cueTimes(sec, [[10, 'move'], [11, 'capture'], [12, 'end'], [13, 'end']]);
+  assert.deepEqual(t.map((c) => c.sound), ['move', 'capture', 'end', 'end']);
+  for (const [got, want] of [[t[0].t, 2.1], [t[1].t, 3.6], [t[2].t, 4.6], [t[3].t, 8.6]]) assert.ok(Math.abs(got - want) < 1e-9, `${got} ≠ ${want}`);
+  // 秒数不是整帧时，时刻跟着帧数取整走（第 2 张从第 round(0.25×30)=8 帧起）
+  assert.equal(rec.cueTimes([0.25, 1], [[1, 'move']])[0].t, 8 / 30);
+});
+
+test('混音：按时刻叠进全长音轨、乘增益，超出片尾截掉、叠爆削到 ±1', { skip: recSkip }, () => {
+  const pcm = { move: new Float32Array([0.5, 0.5]), capture: new Float32Array([1, 1, 1]), end: new Float32Array([0.9]) };
+  const out = rec.mixTrack([{ t: 0, sound: 'move' }, { t: 2 / rec.RATE, sound: 'capture' }], 4 / rec.RATE, pcm, 1);
+  assert.equal(out.length, 4);
+  const km = 10 ** (1.7 / 20), kc = 10 ** (-7.9 / 20);
+  assert.ok(Math.abs(out[0] - 0.5 * km) < 1e-6 && Math.abs(out[1] - 0.5 * km) < 1e-6);
+  assert.ok(Math.abs(out[2] - kc) < 1e-6 && Math.abs(out[3] - kc) < 1e-6);   // 第三个样本超出片长，截掉
+  const loud = rec.mixTrack([{ t: 0, sound: 'end' }, { t: 0, sound: 'end' }], 1 / rec.RATE, pcm, 2);
+  assert.equal(loud[0], 1);
+  assert.equal(rec.mixTrack([], 0.5, pcm).length, rec.RATE / 2);
 });
 
 test('开工前检查：缺棋谱、输出不是 mp4、画幅不认识、ffmpeg 不在都直接报错', { skip: recSkip }, async () => {
@@ -115,9 +149,9 @@ function moovFirst(file) {
   } finally { closeSync(fd); }
 }
 
-async function make(name, files, params) {
+async function make(name, files, params, extra = {}) {
   const out = join(TMP, `${name}-${Math.random().toString(36).slice(2)}.mp4`);
-  const r = await rec.record({ inputs: files.map((f) => join(FIX, f)), out, params, ffmpeg: FFMPEG }, () => {});
+  const r = await rec.record({ inputs: files.map((f) => join(FIX, f)), out, params, ffmpeg: FFMPEG, ...extra }, () => {});
   return { r, p: probe(out), out };
 }
 
@@ -170,6 +204,53 @@ test('出片：走子动画算在 gap 之内——时长不变，每步多出 ro
   const b = await make('anim0', ['anim-special.pgn'], { ...H, gap: '0.5', anim: '0' });
   checkSpec(b.p, b.out, 0.2 + n * 0.5);
   assert.equal(b.r.shots, 1 + n);
+});
+
+// 音轨：codec、采样率、声道、时长；没有音轨时返回 null。
+function probeAudio(file) {
+  const j = JSON.parse(execFileSync(FFPROBE, ['-v', 'error', '-select_streams', 'a', '-show_entries',
+    'stream=codec_name,sample_rate,channels,duration', '-of', 'json', file]));
+  return j.streams[0] || null;
+}
+
+// 解码音轨，找每声的起点（幅度超过 −40 dBFS、且之前静了 50 ms 以上）。
+function onsets(file) {
+  const raw = execFileSync(FFMPEG, ['-v', 'error', '-i', file, '-vn', '-ac', '1', '-ar', '48000', '-f', 'f32le', '-'], { maxBuffer: 1 << 28 });
+  const x = new Float32Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.length));
+  const out = [];
+  let last = -Infinity;
+  for (let i = 0; i < x.length; i++) {
+    if (Math.abs(x[i]) > 0.01) { if (i - last > 2400) out.push(i / 48000); last = i; }
+  }
+  return out;
+}
+
+test('出片：默认带音轨——AAC 48k 单声道、时长同画面；每声起点对上棋子落地那一帧；--no-sound 没有音轨', { skip }, async () => {
+  const [rep] = parsePgn(decodeText(readFileSync(join(FIX, 'xq-sample.pgn')))).map((g) => replay(g));
+  const n = rep.steps.length;
+  const a = await make('snd', ['xq-sample.pgn'], { gap: '0.5', anim: '0.3', resulthold: '0.8' });
+  const seconds = 0.5 + n * 0.5 + 0.8;
+  checkSpec(a.p, a.out, seconds);
+  const au = probeAudio(a.out);
+  assert.deepEqual([au.codec_name, au.sample_rate, au.channels], ['aac', '48000', 1]);
+  assert.ok(Math.abs(Number(au.duration) - seconds) < 1 / 30, `音轨时长 ${au.duration}，应为 ${seconds}`);
+  // 哪几声：每步 capture / move，最后终局
+  assert.deepEqual(a.r.sounds.map((c) => c.sound), [...rep.steps.map(stepSound), 'end']);
+  // 什么时候：第 k 步落地在 0.5（开局格）+ (k − 1) × 0.5 + 0.3；终局在 0.5 + n × 0.5
+  const want = [...rep.steps.map((_, k) => 0.5 + k * 0.5 + 0.3), 0.5 + n * 0.5];
+  a.r.sounds.forEach((c, i) => assert.ok(Math.abs(c.t - want[i]) < 1e-9, `第 ${i + 1} 声在 ${c.t}，应为 ${want[i]}`));
+  // 成片里真的在那儿：解码出的起点比该响的时刻晚一点点，是素材开头自带的静音——落子 / 吃子约 8–11 ms，
+  // 终局声（一串碰撞声）约 30–40 ms，都不到一帧多
+  const on = onsets(a.out);
+  assert.equal(on.length, want.length);
+  on.forEach((t, i) => {
+    const late = i < n ? 0.015 : 0.045;
+    assert.ok(t - want[i] >= -0.002 && t - want[i] < late, `第 ${i + 1} 声起点 ${t}，应在 ${want[i]}`);
+  });
+  const b = await make('mute', ['xq-sample.pgn'], { gap: '0.5', anim: '0.3', resulthold: '0.8' }, { sound: false });
+  checkSpec(b.p, b.out, seconds);
+  assert.equal(probeAudio(b.out), null);
+  assert.deepEqual(b.r.sounds, []);
 });
 
 // 放在文件末尾：顶层 await 之后才登记的测试，要在它们之后收临时目录。

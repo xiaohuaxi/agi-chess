@@ -1,4 +1,5 @@
-// 录屏：脚本驱动页面一格一格截图，ffmpeg 拼成 mp4（docs/viewer.md「录屏：脚本出片」）。
+// 录屏：脚本驱动页面一格一格截图，ffmpeg 拼成 mp4（docs/viewer.md「录屏：脚本出片」）；
+// 默认带走子音效：按 next() 给的 sound 在棋子落地那一刻混一声，作为 AAC 音轨（docs/viewer.md「走子音效」）。
 // 用法见 HELP（node viewer/record.mjs --help）。也可 import { record } 在测试里直接调。
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
@@ -10,8 +11,10 @@ import { parseArgs } from 'node:util';
 import { serve } from './serve.mjs';
 import { decodeText, parsePgn } from './lib/pgn.js';
 import { replay } from './lib/replay.js';
+import { SOUNDS, linear } from './lib/sound.js';
 
 export const FPS = 30;
+export const RATE = 48000;   // 音轨采样率
 // 画幅 → 页面视口（CSS 像素）；实际像素再乘 scale（默认 2）。
 export const ASPECTS = { '3:4': [540, 720], '9:16': [540, 960], '16:9': [960, 540] };
 const VIEWER = path.dirname(fileURLToPath(import.meta.url));
@@ -21,6 +24,7 @@ const STEP_TIMEOUT = 30_000;   // 页面画一格的上限；超了多半是页�
 const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -o <输出.mp4>
 
 把棋谱按页面的录制模式（rec=1）一格一格截图，拼成 H.264 mp4（30 帧恒定、yuv420p、+faststart）。
+默认带走子音效（AAC 音轨）：落子 / 吃子声响在棋子落地那一刻，终局横幅出现时再响一声。
 棋谱可以是任意本机路径（绝对、相对都行）；给目录时取其中的 game.pgn（如 runs/<tag>）。
 多个棋谱按给出的顺序连播，末尾加一格总比分。
 
@@ -32,6 +36,8 @@ const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -
   --summaryhold <秒>       多盘时总比分停多久（页面默认 5）
   --anim <秒>              走子滑动多久（页面默认 0.3，0 关掉）；算在 gap 之内，不拉长视频：
                            每步一格总长仍是 gap（先滑 anim 秒，再停 gap − anim 秒）
+  --vol <倍数>             音效整体音量倍数（默认 1；0.5 约轻 6 dB，2 约响 6 dB）
+  --no-sound               不要音效，出无声视频（没有音轨）
   --title                  加标题画面（网址参数 title=1）；默认不加
   --no-title               不加标题画面（默认就是这样，留着兼容旧命令）
   --aspect <比例>          3:4（默认，1080×1440）、9:16（1080×1920）、16:9（1920×1080）
@@ -56,7 +62,7 @@ export function parseCli(argv) {
     options: {
       out: { type: 'string', short: 'o' }, help: { type: 'boolean', short: 'h' }, title: { type: 'boolean' }, 'no-title': { type: 'boolean' },
       aspect: { type: 'string' }, scale: { type: 'string' }, set: { type: 'string', multiple: true },
-      chromium: { type: 'string' }, ffmpeg: { type: 'string' },
+      chromium: { type: 'string' }, ffmpeg: { type: 'string' }, vol: { type: 'string' }, 'no-sound': { type: 'boolean' },
       ...Object.fromEntries(HOLDS.map((k) => [k, { type: 'string' }])),
     },
   });
@@ -78,9 +84,11 @@ export function parseCli(argv) {
   }
   const scale = values.scale === undefined ? 2 : Number(values.scale);
   if (!(scale > 0)) throw new RecordError(`--scale 要给正数，收到「${values.scale}」`);
+  const vol = values.vol === undefined ? 1 : Number(values.vol);
+  if (values.vol?.trim() === '' || !(vol > 0) || !Number.isFinite(vol)) throw new RecordError(`--vol 要给正数（音量倍数），收到「${values.vol}」；不要声音用 --no-sound`);
   return {
     inputs: positionals, out: values.out, params, aspect: values.aspect || '3:4', scale,
-    chromium: values.chromium, ffmpeg: values.ffmpeg,
+    chromium: values.chromium, ffmpeg: values.ffmpeg, sound: !values['no-sound'], vol,
   };
 }
 
@@ -132,6 +140,28 @@ export function toFrames(seconds, fps = FPS) {
   return seconds.map((s) => { acc += s * fps; const end = Math.round(acc); const n = end - prev; prev = end; return n; });
 }
 
+// 每声的时刻（秒）：seconds 是各张截图的秒数，cues 是 [第几张截图开始响, 哪声]（可以等于张数，即片尾）。
+// 和画面用同一套累计帧数：第 i 张从第 sum(toFrames(seconds)[0..i-1]) 帧开始，声音就从那一帧的时刻起。
+export function cueTimes(seconds, cues, fps = FPS) {
+  const counts = toFrames(seconds, fps);
+  const start = [0];
+  for (const c of counts) start.push(start.at(-1) + c);
+  return cues.map(([at, sound]) => ({ t: start[Math.min(at, counts.length)] / fps, sound }));
+}
+
+// 把各声按时刻叠成一条单声道音轨（32 位浮点，RATE 采样率），长 seconds 秒。pcm[sound] 是解码好的样本，
+// 每声乘 linear(sound, vol)；超出片长的尾巴截掉，叠爆了的削到 ±1（默认音量下各声峰值都在 −5 dBFS 以下，碰不到）。
+export function mixTrack(times, seconds, pcm, vol = 1) {
+  const out = new Float32Array(Math.round(seconds * RATE));
+  for (const { t, sound } of times) {
+    const src = pcm[sound], k = linear(sound, vol);
+    const at = Math.round(t * RATE);
+    for (let i = 0; i < src.length && at + i < out.length; i++) out[at + i] += src[i] * k;
+  }
+  for (let i = 0; i < out.length; i++) out[i] = Math.max(-1, Math.min(1, out[i]));
+  return out;
+}
+
 // 正在跑的子资源（浏览器、服务、ffmpeg、临时目录），收到中断信号时由 main 统一收掉。
 const live = new Set();
 
@@ -153,7 +183,8 @@ function runFfmpeg(bin, args) {
 
 /**
  * 录一段视频。o：{ inputs, out, params, aspect, scale, chromium, ffmpeg }，log 为进度输出（默认 stderr）。
- * → { out, seconds, frames, shots, cells: [{kind, hold, anim}], ms }
+ * o.sound 为 false 时出无声视频（默认 true），o.vol 是音效整体音量倍数（默认 1）。
+ * → { out, seconds, frames, shots, cells: [{kind, hold, anim, sound}], sounds: [{t, sound}]（无声时为空）, ms }
  */
 export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
   const t0 = Date.now();
@@ -196,7 +227,7 @@ export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
     }
 
     // 一格一格走。cells 是 next() 的原始返回；list 是 [截图文件, 秒数]。
-    const cells = [], list = [];
+    const cells = [], list = [], cues = [];   // cues：[第几张截图开始响, 哪声]
     let n = 0;
     const shot = async () => {
       const f = path.join(shots, `f${String(n++).padStart(6, '0')}.png`);
@@ -227,6 +258,8 @@ export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
           await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
         });
       }
+      // 声音响在棋子落地那一刻：动画帧之后、静止画面那一张的开头（没有动画时就是这格开头）。
+      if (r.sound) cues.push([list.length, r.sound]);
       if (r.hold > 0) list.push([await shot(), r.hold]);
       if (r.kind === 'end') break;
       if ((i + 1) % 100 === 0) log(`已截 ${i + 1} 格…`);
@@ -247,16 +280,37 @@ export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
     lines.push(`file '${path.basename(kept.at(-1)[0])}'`);
     const listFile = path.join(shots, 'list.txt');
     writeFileSync(listFile, lines.join('\n') + '\n');
+
+    // 音轨：各声解码成 RATE 采样率的单声道浮点样本，在这里按时刻叠好写成一个文件，作为 ffmpeg 的第二路输入。
+    // 不对整条音轨做响度归一化（稀疏的敲击声拉到 −14 LUFS 会刺耳），音量全由 lib/sound.js 的增益定。
+    let sounds = [], audioIn = [], audioOut = ['-an'];
+    if (o.sound !== false) {
+      sounds = cueTimes(list.map(([, s]) => s), cues);
+      const pcm = {};
+      for (const [k, s] of Object.entries(SOUNDS)) {
+        const f = path.join(tmp, `${k}.f32`);
+        await runFfmpeg(cfg.ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', '-i', path.join(VIEWER, s.file),
+          '-ac', '1', '-ar', String(RATE), '-f', 'f32le', f]);
+        const b = readFileSync(f);
+        pcm[k] = new Float32Array(b.buffer.slice(b.byteOffset, b.byteOffset + b.length));   // 拷一份，免得 byteOffset 不对齐
+      }
+      const mix = path.join(tmp, 'mix.f32');
+      writeFileSync(mix, mixTrack(sounds, frames / FPS, pcm, o.vol ?? 1));
+      audioIn = ['-f', 'f32le', '-ar', String(RATE), '-ac', '1', '-i', mix];
+      // 单声道：素材本来就是单声道；转双声道时 ffmpeg 默认每路压 3 dB，照原样复制又会让 LUFS 读数多 3 dB，
+      // 单声道出片则峰值、响度和 lib/sound.js 里定的数一一对得上，手机外放两个喇叭照样都响。
+      audioOut = ['-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '128k', '-ar', String(RATE), '-ac', '1'];
+    }
     await runFfmpeg(cfg.ffmpeg, [
-      '-hide_banner', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', listFile,
+      '-hide_banner', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', listFile, ...audioIn,
       // 截图是全范围 RGB：转 bt709 矩阵的有限范围 yuv420p，并在码流里如实标注。
       '-vf', `fps=${FPS},scale=in_range=full:out_range=tv:out_color_matrix=bt709,format=yuv420p,setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709`,
       '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
       '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-color_range', 'tv',
-      '-r', String(FPS), '-frames:v', String(frames), '-movflags', '+faststart', '-an', '-f', 'mp4', tmpOut,
+      '-r', String(FPS), '-frames:v', String(frames), ...audioOut, '-movflags', '+faststart', '-f', 'mp4', tmpOut,
     ]);
     renameSync(tmpOut, cfg.out);
-    return { out: cfg.out, seconds: frames / FPS, frames, shots: n, cells, ms: Date.now() - t0 };
+    return { out: cfg.out, seconds: frames / FPS, frames, shots: n, cells, sounds, ms: Date.now() - t0 };
   } finally {
     if (browser) await browser.close().catch(() => {});
     if (server) await server.close().catch(() => {});
@@ -288,8 +342,11 @@ async function main() {
     const r = await record(o);
     const kinds = {};
     for (const c of r.cells) kinds[c.kind] = (kinds[c.kind] || 0) + 1;
+    const snd = {};
+    for (const c of r.sounds) snd[c.sound] = (snd[c.sound] || 0) + 1;
     console.log(`已出片 ${r.out}：${r.seconds.toFixed(2)} 秒（${r.frames} 帧），截图 ${r.shots} 张，`
-      + `格数 ${Object.entries(kinds).map(([k, v]) => `${k} ${v}`).join('、')}，用时 ${(r.ms / 1000).toFixed(1)} 秒`);
+      + `格数 ${Object.entries(kinds).map(([k, v]) => `${k} ${v}`).join('、')}，`
+      + `音效 ${r.sounds.length ? Object.entries(snd).map(([k, v]) => `${k} ${v}`).join('、') : '无'}，用时 ${(r.ms / 1000).toFixed(1)} 秒`);
   } catch (e) {
     if (stopping) return;
     console.error(e instanceof RecordError ? `录制失败：${e.message}` : `录制失败（意外错误）：${e.stack || e}`);

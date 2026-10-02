@@ -67,7 +67,7 @@ const playState = (page) => page.evaluate(() => document.getAnimations().map((a)
 test('国际象棋：录制模式停在起点，拨到一半在两格正中，走完落定、叠的子收掉', { skip }, async () => {
   await withPage(`rec=1&files=${FIX}chess-sample.pgn`, async (page) => {
     const r = await toPly(page, 13);                       // 7. Nxe5：f3 → e5，吃兵
-    assert.deepEqual(r, { kind: 'move', hold: 1.5, anim: 0.3 });
+    assert.deepEqual(r, { kind: 'move', hold: 1.5, anim: 0.3, sound: 'capture' });
     assert.ok((await playState(page)).every((s) => s === 'paused'));
     const S = { mv: top, from: sq('f3'), to: sq('e5'), taken: "#board-chess g.pieces > g[data-piece='bp'][data-square='e5']" };
     const t0 = await probe(page, 0, S);
@@ -123,7 +123,7 @@ test('中国象棋：拨到一半在两点正中，被吃的子垫在下面、�
   await withPage(`rec=1&files=${FIX}xq-sample.pgn`, async (page) => {
     await page.evaluate(async () => { for (let i = 0; i < 7; i++) await window.viewer.next(); });
     const r = await page.evaluate(() => window.viewer.next());   // 第 7 步：c4 → c5 吃卒
-    assert.deepEqual(r, { kind: 'move', hold: 1.5, anim: 0.3 });
+    assert.deepEqual(r, { kind: 'move', hold: 1.5, anim: 0.3, sound: 'capture' });
     const S = { mv: '.xq-pieces > g:last-child', under: '.xq-pieces > g:first-child' };
     const t0 = await probe(page, 0, S);
     const th = await probe(page, 150, S);
@@ -143,7 +143,7 @@ test('静态看某一格不带动画；anim=0 时 next() 的 anim 为 0、hold =
     assert.equal(await page.evaluate(() => document.getAnimations().length), 0);
   });
   await withPage(`rec=1&anim=0&gap=1&files=${FIX}chess-sample.pgn`, async (page) => {
-    assert.deepEqual(await toPly(page, 3), { kind: 'move', hold: 1, anim: 0 });
+    assert.deepEqual(await toPly(page, 3), { kind: 'move', hold: 1, anim: 0, sound: 'move' });
     assert.equal(await page.evaluate(() => document.getAnimations().length), 0);
   });
 });

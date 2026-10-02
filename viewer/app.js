@@ -9,9 +9,12 @@
 //   autoplay=1 打开就自动播放；gap / titlehold / resulthold / summaryhold 各格停几秒；title=1 加标题画面（默认不加）；
 //   anim=走子滑动的秒数（默认 0.3，算在 gap 之内，0 关掉）。静态看某一格不带动画。
 //   rec=1 录制模式：隐含 layout=compact，不起任何计时器，由脚本调 viewer.next() 一格一格走。
+//   sound=1 打开走子音效（默认静音；浏览器要等页面上有过一次点击或按键才放得出声），vol=整体音量倍数（默认 1）。
+//   录制时页面不出声，声音由录制脚本按 next() 给的 sound 混进视频。
 //   静态看某一格（截图用）：game=第几盘（从 1 起）&ply=半回合数或 end；多盘时 summary=1 看总比分。
 // window.viewer.ready：棋谱、棋子图、字体都加载好并画完第一格才兑现；失败时 reject，并在 body 上写 data-error。
-// window.viewer.next()：前进一格，画完（再等两帧）才兑现 {kind, hold, anim}；播完后再调返回 {kind: 'end', hold: 0, anim: 0}。
+// window.viewer.next()：前进一格，画完（再等两帧）才兑现 {kind, hold, anim, sound}；播完后再调返回 {kind: 'end', hold: 0, anim: 0, sound: null}。
+//   sound 是这格响哪声（'move' / 'capture' / 'end' / null），响在这格开头再过 anim 秒（棋子落地那一刻）。
 //   anim > 0 时这格开头有走子滑动：rec=1 下兑现时动画已开始、停在起点，由录制脚本拨进度；这格总长 anim + hold = gap。
 // 播完（到了 end 那格）在 body 上置 data-done="1"，window.viewer.done 为 true。
 // window.viewer.play() / pause()：自动播放的开关（rec=1 时不起作用）；空格键同样切换。
@@ -21,6 +24,7 @@ import { replay } from './lib/replay.js';
 import { playerOf, fullName, startMoveNumber, fmtTokens, thinkTotals, points, scoresBefore, fmtScore, resultParts, resultText, totals } from './lib/match.js';
 import { moveRows, nagLabel, noteItems } from './lib/panel.js';
 import { playOptions, sequence } from './lib/play.js';
+import { SOUNDS, linear, soundOptions, stepSound } from './lib/sound.js';
 import { ChessBoard, kingSquare } from './lib/chessboard.js';
 import { XiangqiBoard, xqKingSquare } from './lib/xqboard.js';
 
@@ -28,6 +32,7 @@ const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const REC = params.get('rec') === '1';   // 录制模式，隐含 layout=compact
 const OPT = playOptions(params);
+const SND = REC ? { on: false, vol: 1 } : soundOptions(params);   // 录制时页面不出声，脚本自己混音
 const VENDOR = params.get('vendor') !== '0';   // 标题画面名字前补厂商（「GPT astra」），vendor=0 不补
 const TITLE_INSET = 24;                        // 标题卡片左右各离棋盘边多远
 const FORCED = REC ? 'compact' : ['compact', 'wide'].includes(params.get('layout')) ? params.get('layout') : null;
@@ -388,10 +393,13 @@ function setDone(v) {
   else delete document.body.dataset.done;
 }
 
+const hasEnd = (g) => !!g.rep.error || points(g.game.result ?? g.game.tags.Result) !== null;
+
 function resetSequence() {
   seq = sequence(games.map((g) => ({
     plies: g.rep.steps.length,
-    over: !!g.rep.error || points(g.game.result ?? g.game.tags.Result) !== null,
+    over: hasEnd(g),
+    captures: g.rep.steps.map((st) => stepSound(st) === 'capture'),
   })), OPT);
   cur = -1;
   setDone(false);
@@ -408,11 +416,11 @@ async function draw(f) {
 
 function next() {
   const step = async () => {
-    if (!seq.length || cur >= seq.length - 1) return { kind: 'end', hold: 0, anim: 0 };
+    if (!seq.length || cur >= seq.length - 1) return { kind: 'end', hold: 0, anim: 0, sound: null };
     const f = seq[++cur];
     await draw(f);
     if (f.kind === 'end') setDone(true);
-    return { kind: f.kind, hold: f.hold, anim: f.anim };
+    return { kind: f.kind, hold: f.hold, anim: f.anim, sound: f.sound };
   };
   const p = chain.then(step);
   chain = p.catch(() => {});
@@ -434,6 +442,7 @@ async function play() {
   try {
     while (me === run) {
       const r = await next();
+      if (me === run) ring(r.sound, r.anim);
       if (me !== run || cur >= seq.length - 1) break;
       await new Promise((ok) => { wake = ok; setTimeout(ok, (r.anim + r.hold) * 1000); });
     }
@@ -475,8 +484,13 @@ function goto(gi, ply) {
   ply = Math.max(0, Math.min(games[gi].rep.steps.length, ply));
   const me = want = { gi, ply, final: true };
   const p = chain.then(async () => {
-    // 同一盘往前走一步才滑（上一段没走完的由棋盘直接结束）；往回、跳步、换盘直接画
-    await show(gi, ply, { anim: pos.gi === gi && pos.ply === ply - 1 && !summaryShown() ? OPT.anim : 0 });
+    // 同一盘往前走一步才滑（上一段没走完的由棋盘直接结束）、才响落子 / 吃子声；往回、跳步、换盘直接画、不出声。
+    // 停在最后一步还没出横幅时（自动播放停下的那格）再往前，是补上终局那格，响终局声。
+    const one = pos.gi === gi && pos.ply === ply - 1 && !summaryShown();
+    const fin = pos.gi === gi && pos.ply === ply && pos.opts.final === false && !summaryShown() && hasEnd(games[gi]);
+    await show(gi, ply, { anim: one ? OPT.anim : 0 });
+    if (one) ring(stepSound(games[gi].rep.steps[ply - 1]), OPT.anim);
+    else if (fin) ring('end');
     cur = seqIndex(gi, ply);
     setDone(false);
   }).finally(() => { if (want === me) want = null; });
@@ -505,6 +519,38 @@ const toGame = (d) => goto(here().gi + d, 0);
 
 function toggle() {
   if (playing) pause(); else play();
+}
+
+// ---------------------------------------------------------------- 走子音效
+// 看棋谱时默认静音（sound=1 打开）。声音文件在载入时读好（不挡 ready），没读好或浏览器还不让出声时就不响。
+// 浏览器的自动播放限制：页面上没点过、没按过键时音频是挂起的，第一次点击或按键时恢复。
+let audio = null;   // { ctx, bufs: { move, capture, end } }
+
+function loadAudio() {
+  if (!SND.on || audio || typeof AudioContext === 'undefined') return;
+  const ctx = new AudioContext();
+  audio = { ctx, bufs: {} };
+  for (const [k, s] of Object.entries(SOUNDS)) {
+    fetch(s.file).then((r) => r.arrayBuffer()).then((b) => ctx.decodeAudioData(b))
+      .then((buf) => { audio.bufs[k] = buf; })
+      .catch((e) => console.warn(`音效 ${k} 读不了：${e.message || e}`));   // 只是少一声，不影响看棋
+  }
+  const resume = () => { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); };
+  for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, resume, true);
+}
+
+// 过 delay 秒响一声 sound（null 不响）。
+function ring(sound, delay = 0) {
+  const buf = audio?.bufs[sound];
+  if (!SND.on || !buf) return;
+  try {
+    const src = audio.ctx.createBufferSource();
+    const g = audio.ctx.createGain();
+    src.buffer = buf;
+    g.gain.value = linear(sound, SND.vol);
+    src.connect(g).connect(audio.ctx.destination);
+    src.start(audio.ctx.currentTime + delay);
+  } catch (e) { console.warn(`音效没放出来：${e.message || e}`); }
 }
 
 // ---------------------------------------------------------------- 版式
@@ -553,6 +599,7 @@ function showHint(text) {
 }
 
 async function init() {
+  loadAudio();
   const files = (params.get('files') || '').split(',').map((s) => s.trim()).filter(Boolean);
   if (!files.length) {
     if (REC) throw new Error('没给棋谱：网址加 ?files=/runs/xxx/game.pgn');
