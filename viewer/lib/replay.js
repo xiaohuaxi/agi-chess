@@ -13,7 +13,7 @@ export function isXiangqi(game) {
 // → { kind: 'xiangqi' / 'chess', start: 起始 FEN, steps: [...], error: null 或 { ply, text, message } }。
 // steps[i] 是第 i+1 个半回合：{ ply, side: 'w'/'b', text: 记谱原文, from, to, move: 坐标着法（象棋 ICCS，
 // 国际象棋 UCI 含升变字母）, capture: 被吃的子或 null, check: 走完对方是否被将军, fen: 走完的局面 }。
-// 国际象棋另有 san（chess.js 规范化后的写法）。走不下去时停在那一步，error 说明原因，steps 只到出错前。
+// 国际象棋另有 san（chess.js 规范化后的写法），中国象棋另有 wxf（xiangqi.js 的 wxfMove 从坐标算出的 WXF 记法，英文界面显示用）。走不下去时停在那一步，error 说明原因，steps 只到出错前。
 export function replay(game) {
   return isXiangqi(game) ? replayXiangqi(game) : replayChess(game);
 }
@@ -32,9 +32,9 @@ export function replayXiangqi(game) {
     if (out.error) return;
     try {
       const mv = XQ.parseMove(pos, m.text);
-      const side = pos.turn;
+      const side = pos.turn, wxf = XQ.wxfMove(pos, mv.iccs);
       pos = XQ.makeMove(pos, mv.iccs);
-      out.steps.push({ ply: i + 1, side, text: m.text, from: mv.from, to: mv.to, move: mv.iccs,
+      out.steps.push({ ply: i + 1, side, text: m.text, wxf, from: mv.from, to: mv.to, move: mv.iccs,
                        capture: mv.capture, check: XQ.inCheck(pos, pos.turn), fen: XQ.toFen(pos) });
     } catch (e) {
       out.error = { ply: i + 1, text: m.text, message: e.message };

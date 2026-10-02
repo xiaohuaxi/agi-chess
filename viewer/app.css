@@ -63,6 +63,10 @@ html, body { margin: 0; background: var(--bg); color: var(--text);
   font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
   -webkit-font-smoothing: antialiased; }
 body { overflow: hidden; }
+/* 英文界面（lang=en，app.js 把 html 的 lang 换成 en）：拉丁字母用系统字体（本机即 -apple-system，与中文界面里的拉丁字母同一款），
+   不拷字体文件；棋谱里的中文（模型写的理由）仍退回中文字体。中文界面不受影响。 */
+html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+  "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; }
 
 #stage.compact { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
 

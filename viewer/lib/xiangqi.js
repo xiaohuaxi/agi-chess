@@ -209,3 +209,41 @@ export function parseMove(pos, text) {
   const from = sqName(x1, y1), to = sqName(x2, y2);
   return { iccs: from + to, from, to, piece, capture: pos.board[y2 * 9 + x2] || null };
 }
+
+// ---------------------------------------------------------------- WXF 记法（只为英文界面显示，docs/viewer.md「英文界面」）
+// 从局面和坐标算，不看棋谱里的中文原文，所以别人棋谱里不规范的写法也能写成规范的 WXF。规则照 xqbase《着法表示》第五节
+// 与导出端 pgn_move（llmchess/xiangqi.py）的消歧规则逐条对应，只把汉字换成字母和符号：
+//   棋子 K A E H R C P（世界象棋联合会推荐的字母：相 E、马 H）；进 +、退 -、平 .；纵线与格数都用阿拉伯数字，两方各从自己右手数。
+//   车马炮兵同一纵线两个：「前」「后」写成 + / -，放在棋子字母后面、代替纵线号（前炮退二 → C+-2）。
+//   兵卒同一纵线三个以上，或两条纵线各有多个（这时两条线的兵一起编号）：从前往后编 a b c d e（xqbase：「一二三四五」用 abcde），
+//   三兵的「前中后」也写成 a b c——原文「前中后分别用 + - .」与「前炮 → C+」放在一起读不通中兵，这里取不会有歧义的编号写法。
+//   仕相同线不写前后（能退的在前、能进的在后），照常写纵线号。
+const WXF_LETTER = { k: 'K', a: 'A', b: 'E', n: 'H', r: 'R', c: 'C', p: 'P' };
+
+export function wxfMove(pos, iccs) {
+  const [x1, y1] = sqXY(iccs.slice(0, 2)), [x2, y2] = sqXY(iccs.slice(2, 4));
+  const p = pos.board[y1 * 9 + x1];
+  if (!p) return iccs;                               // 起点没子（不会发生：parseMove 已认出这个子）
+  const red = isRed(p), kind = p.toLowerCase(), L = WXF_LETTER[kind];
+  const ahead = (a, b) => (red ? b - a : a - b);     // 越靠前（越接近对方底线）越先
+  let head = L + xToFile(red, x1);
+  if ('rncp'.includes(kind)) {
+    const files = new Map();                         // x → [y]
+    pos.board.forEach((q, i) => {
+      if (q !== p) return;
+      const x = i % 9;
+      if (!files.has(x)) files.set(x, []);
+      files.get(x).push((i - x) / 9);
+    });
+    const mine = files.get(x1).slice().sort(ahead);
+    const multi = [...files.keys()].filter((x) => files.get(x).length >= 2).sort((a, b) => xToFile(red, a) - xToFile(red, b));
+    if (kind === 'p' && multi.length >= 2 && multi.includes(x1)) {
+      const order = multi.flatMap((x) => files.get(x).slice().sort(ahead).map((y) => [x, y]));
+      head = L + 'abcde'[order.findIndex(([x, y]) => x === x1 && y === y1)];
+    } else if (mine.length === 2) head = L + '+-'[mine.indexOf(y1)];
+    else if (mine.length >= 3) head = L + 'abcde'[mine.indexOf(y1)];
+  }
+  const dy = (y2 - y1) * (red ? 1 : -1);
+  const op = dy === 0 ? '.' : dy > 0 ? '+' : '-';
+  return head + op + ('rcpk'.includes(kind) && dy !== 0 ? Math.abs(dy) : xToFile(red, x2));
+}

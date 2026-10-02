@@ -10,6 +10,9 @@ const NS = 'http://www.w3.org/2000/svg';
 const GLYPH = { K: '帥', A: '仕', B: '相', N: '傌', R: '俥', C: '炮', P: '兵', k: '將', a: '士', b: '象', n: '馬', r: '車', c: '砲', p: '卒' };
 const RED_FILES = '九八七六五四三二一';
 const BLACK_FILES = '１２３４５６７８９';
+// 英文界面（lang=en）：红方路数也用数字（WXF 记法两方都用阿拉伯数字），和黑方一样写全角、用同一字体，两边看着一致；
+// 河界「楚河 漢界」不画——英文画面上只留棋子的汉字（docs/viewer.md「英文界面」）。中文界面不变。
+const RED_FILES_EN = '９８７６５４３２１';
 
 // 几何（SVG 用户单位，一格 = 1）：9 路 10 线外各留半格放棋子；上下各加一条标路数的带子。
 // 带子只比路数字（0.3 格高）略宽：字靠外、离棋子近些，和棋盘外沿（贴着棋手条）之间仍留几像素空白、不贴死。
@@ -32,8 +35,9 @@ function el(tag, attrs, parent, text) {
 }
 
 export class XiangqiBoard {
-  constructor(el) {
+  constructor(el, { lang = 'zh' } = {}) {
     this.el = el;
+    this.lang = lang;
     el.style.aspectRatio = `${W} / ${H}`;   // 容器宽高比跟着几何走（高度由 app.css 定）
     this.moves = new Moves();
   }
@@ -84,11 +88,12 @@ export class XiangqiBoard {
     el('rect', { class: 'xq-frame', x: X(0) - m, y: Y(9) - m, width: 8 + 2 * m, height: 9 + 2 * m }, g);
     // 河界字放在两条纵线之间的格子正中、字号小，棋子站在河岸时也碰不到（棋子画在上层）
     const ry = (Y(4) + Y(5)) / 2;
-    [['楚', 1.5], ['河', 2.5], ['漢', 5.5], ['界', 6.5]].forEach(([c, x]) => el('text', { class: 'xq-river', x: X(x), y: ry }, g, c));
+    if (this.lang !== 'en') [['楚', 1.5], ['河', 2.5], ['漢', 5.5], ['界', 6.5]].forEach(([c, x]) => el('text', { class: 'xq-river', x: X(x), y: ry }, g, c));
     // 路数：黑方在上（从黑方右手数，即画面左起 1–9），红方在下（画面左起 九–一）
+    const red = this.lang === 'en' ? RED_FILES_EN : RED_FILES;
     for (let x = 0; x < 9; x++) {
       el('text', { class: 'xq-file', x: X(x), y: FILE_TOP }, g, BLACK_FILES[x]);
-      el('text', { class: 'xq-file', x: X(x), y: H - FILE_BOTTOM }, g, RED_FILES[x]);
+      el('text', { class: 'xq-file', x: X(x), y: H - (this.lang === 'en' ? FILE_TOP : FILE_BOTTOM) }, g, red[x]);
     }
   }
 

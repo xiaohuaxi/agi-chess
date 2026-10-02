@@ -46,6 +46,8 @@ const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -
   --scale <倍数>           像素倍数，默认 2（视口 540×720 出 1080×1440）
   --set <名=值>            再透传一个网址参数给页面（可多次），如 --set layout=compact；
                            --set vendor=0 标题画面名字前不补厂商（「GPT astra」→「astra」）
+                           --set lang=en 英文界面；--set 'names=claude:opus=Claude Opus,codex:astra=GPT astra'
+                           覆盖棋手显示名（棋谱里的名字=显示名，逗号分隔；值里有空格要加引号）。参数名写错不报错，出片后抽帧核对
   --chromium <路径>        浏览器可执行文件；默认环境变量 VIEWER_CHROMIUM，再默认 playwright-core 配套的缓存浏览器
   --ffmpeg <路径>          ffmpeg；默认环境变量 VIEWER_FFMPEG，再默认 /opt/homebrew/bin/ffmpeg
   -h, --help               显示本说明

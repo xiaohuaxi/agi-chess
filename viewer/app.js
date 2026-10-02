@@ -13,6 +13,8 @@
 //   sound=1 打开走子音效（默认静音；浏览器要等页面上有过一次点击或按键才放得出声），vol=整体音量倍数（默认 1）。
 //   录制时页面不出声，声音由录制脚本按 next() 给的 sound 混进视频。
 //   静态看某一格（截图用）：game=第几盘（从 1 起）&ply=半回合数或 end；多盘时 summary=1 看总比分。
+//   lang=en 英文界面（默认中文；对照表在 lib/i18n.js，象棋着法改显示 WXF 记法）；
+//   names=棋谱里的名字=显示名,…  覆盖棋手显示名（两种语言都认，写法见 lib/i18n.js 的 parseNames）。
 // window.viewer.ready：棋谱、棋子图、字体都加载好并画完第一格才兑现；失败时 reject，并在 body 上写 data-error。
 // window.viewer.next()：前进一格，画完（再等两帧）才兑现 {kind, hold, anim, sound}；播完后再调返回 {kind: 'end', hold: 0, anim: 0, sound: null}。
 //   sound 是这格响哪声（'move' / 'capture' / 'end' / null），响在这格开头再过 anim 秒（棋子落地那一刻）。
@@ -25,6 +27,7 @@ import { replay } from './lib/replay.js';
 import { playerOf, fullName, startMoveNumber, fmtTokens, thinkTotals, points, scoresBefore, fmtScore, resultParts, resultText, totals } from './lib/match.js';
 import { moveRows, nagLabel, noteItems } from './lib/panel.js';
 import { playOptions, sequence } from './lib/play.js';
+import { T, langOf, parseNames } from './lib/i18n.js';
 import { SOUNDS, linear, soundOptions, stepSound } from './lib/sound.js';
 import { ChessBoard, kingSquare } from './lib/chessboard.js';
 import { XiangqiBoard, xqKingSquare } from './lib/xqboard.js';
@@ -35,6 +38,9 @@ const REC = params.get('rec') === '1';   // 录制模式，隐含 layout=compact
 const OPT = playOptions(params);
 const SND = REC ? { on: false, vol: 1 } : soundOptions(params);   // 录制时页面不出声，脚本自己混音
 const VENDOR = params.get('vendor') !== '0';   // 标题画面名字前补厂商（「GPT astra」），vendor=0 不补
+const LANG = langOf(params), L = T(LANG);      // 界面语言：lang=en 英文，默认中文
+const NAMES = parseNames(params.get('names')); // 显示名覆盖，没给就是空表
+const pl = (game, side) => playerOf(game, side, NAMES);
 const TITLE_INSET = 24;                        // 标题卡片左右各离棋盘边多远
 const FORCED = REC ? 'compact' : ['compact', 'wide'].includes(params.get('layout')) ? params.get('layout') : null;
 // 自动选版式的分界。录 16:9 时页面宽 960 会判成宽版，所以录制靠 rec=1（恒为窄版），不靠自动判断
@@ -79,14 +85,14 @@ function frameData(games, gi, ply, final = true) {
   const toMove = ply === 0 ? startTurn : steps[ply - 1].side === 'w' ? 'b' : 'w';
   const moveNo0 = startMoveNumber(game);
   const side = (s) => {
-    const p = playerOf(game, s);
+    const p = pl(game, s);
     let j = ply - 1;
     while (j >= 0 && steps[j].side !== s) j--;
     let move = null;
     if (j >= 0) {
       const st = steps[j];
       const n = moveNo0 + Math.floor((j + (startTurn === 'b' ? 1 : 0)) / 2);
-      const text = xiangqi ? st.text : st.san.replace(/[+#]$/, '');
+      const text = xiangqi ? (LANG === 'en' ? st.wxf : st.text) : st.san.replace(/[+#]$/, '');
       // 回合号：国际象棋黑方照标准写「11...」；中国象棋黑方不带省略号，写「11. 马３退２」（用户 2026-09-30 定，只改显示）
       move = { text: s === 'w' || xiangqi ? `${n}. ${text}` : `${n}... ${text}`, check: st.check && j === ply - 1 };
     }
@@ -105,15 +111,15 @@ function frameData(games, gi, ply, final = true) {
   const kingSq = inCheck ? (xiangqi ? xqKingSquare(fen, toMove) : kingSquare(fen, toMove)) : null;
   let banner = null;
   if (over) {
-    const r = resultParts(game, xiangqi);
-    banner = { head: r.head, why: r.why, winner: r.winner ? playerOf(game, r.winner) : null };
+    const r = resultParts(game, xiangqi, LANG);
+    banner = { head: r.head, why: r.why, winner: r.winner ? pl(game, r.winner) : null };
   }
-  if (rep.error && ply === steps.length && final) banner = { head: `第 ${rep.error.ply} 步读不懂：${rep.error.text}`, why: '', winner: null };
+  if (rep.error && ply === steps.length && final) banner = { head: L.unreadable(rep.error.ply, rep.error.text), why: '', winner: null };
   const mated = !!(over && inCheck && pts && pts.w !== pts.b);
   return {
     xiangqi, fen, last: last ? { from: last.from, to: last.to } : null, check: kingSq, mated, banner,
     prev: ply > 1 ? steps[ply - 2].fen : ply === 1 ? rep.start : null,   // 走这步之前的局面（画走子滑动用）
-    strip: match ? `第 ${gi + 1} 局 · 共 ${games.length} 局` : null,
+    strip: match ? L.gameOf(gi + 1, games.length) : null,
     top: side('b'), bottom: side('w'),
   };
 }
@@ -145,17 +151,17 @@ function renderBar(el, d) {
   const name = h('span', 'name');
   row1.append(name);
   if (d.effort) row1.append(h('span', 'effort', '+' + d.effort));
-  if (d.won) row1.append(h('span', 'win', '胜'));
+  if (d.won) row1.append(h('span', 'win', L.won));
   if (d.score !== null) row1.append(h('span', 'score', d.score));
   const row2 = h('div', 'row2');
   const mv = h('span', 'move');
   if (d.move) {
     mv.append(h('span', 'mv', d.move.text));
-    if (d.move.check) mv.append(h('span', 'tag', '将军'));
+    if (d.move.check) mv.append(h('span', 'tag', L.check));
   }
   row2.append(mv);
   if (d.think) {
-    const t = h('span', 'think', '思考 ' + d.think.total);
+    const t = h('span', 'think', L.thinking + ' ' + d.think.total);
     if (d.think.delta) t.append(h('span', 'delta', d.think.delta));
     row2.append(t);
   }
@@ -188,11 +194,11 @@ function showBanner(d) {
 
 // 总比分画面（多盘连播播完后的一格，docs/viewer.md「播放」的 kind=end）：棋种、标题 + 每人一行名字与总分，领先的一行点亮。
 function showSummary() {
-  const rows = totals(games.map((g) => g.game));
+  const rows = totals(games.map((g) => g.game), NAMES);
   const box = $('summary');
   // 这格没有棋盘，所以写明棋种；清单里混了两种棋就都写上
-  const kinds = [...new Set(games.map((g) => (g.xiangqi ? '中国象棋' : '国际象棋')))].join(' / ');
-  const kids = [h('div', 's-kind', kinds), h('div', 's-title', `总比分 · 共 ${games.length} 局`)];
+  const kinds = [...new Set(games.map((g) => (g.xiangqi ? L.xiangqi : L.chess)))].join(' / ');
+  const kids = [h('div', 's-kind', kinds), h('div', 's-title', L.finalScore(games.length))];
   const names = [];
   rows.forEach((p, i) => {
     const row = h('div', 's-row' + (i === 0 && p.score > rows[rows.length - 1].score ? ' top' : ''));
@@ -212,11 +218,11 @@ function showSummary() {
 // 卡片左右各离棋盘边 24：象棋棋盘比页面窄，按棋盘实际位置算，两种棋看着一样。
 function showTitle(gi) {
   const g = games[gi], box = $('title');
-  const kids = games.length > 1 ? [h('div', 't-head', `第 ${gi + 1} 局 · 共 ${games.length} 局`)] : [];
+  const kids = games.length > 1 ? [h('div', 't-head', L.gameOf(gi + 1, games.length))] : [];
   const names = [];
   for (const s of ['w', 'b']) {
-    if (s === 'b') kids.push(h('div', 't-vs', '对'));
-    const p = fullName(g.game, s, VENDOR);
+    if (s === 'b') kids.push(h('div', 't-vs', L.vs));
+    const p = fullName(g.game, s, VENDOR, NAMES);
     const row = h('div', 't-row');
     row.append(h('span', 'disc ' + (s === 'w' ? (g.xiangqi ? 'red' : 'white') : 'black')));
     const name = h('span', 'name');
@@ -243,14 +249,13 @@ function renderSide(gi, ply, final) {
   if (side.games !== games || side.gi !== gi) {
     side = { games, gi, cells: new Map() };
     // 对局信息：棋种、第几局（多盘时是下拉框，可以换盘）
-    const head = [h('span', null, xiangqi ? '中国象棋' : '国际象棋')];
+    const head = [h('span', null, xiangqi ? L.xiangqi : L.chess)];
     if (games.length > 1) {
       const sel = h('select');
       sel.id = 's-game';
-      sel.title = '换盘（PgUp / PgDn）';
+      sel.title = L.switchGame;
       games.forEach((x, i) => {
-        const o = h('option', null, `第 ${i + 1} 局 · ${playerOf(x.game, 'w').name} 对 ${playerOf(x.game, 'b').name}`
-          + ` · ${x.game.result ?? x.game.tags.Result ?? '*'}`);
+        const o = h('option', null, L.gameItem(i + 1, pl(x.game, 'w').name, pl(x.game, 'b').name, x.game.result ?? x.game.tags.Result ?? '*'));
         o.value = i;
         sel.append(o);
       });
@@ -260,22 +265,22 @@ function renderSide(gi, ply, final) {
     $('s-head').replaceChildren(...head);
     // 双方：圆片、全称、思考深度；最后一行结果
     const ps = ['w', 'b'].map((s) => {
-      const p = fullName(game, s), row = h('div', 'p');
+      const p = fullName(game, s, true, NAMES), row = h('div', 'p');
       row.append(h('span', 'disc ' + (s === 'w' ? (xiangqi ? 'red' : 'white') : 'black')), h('span', 'pname', p.name));
-      if (p.effort) { const e = h('span', 'eff', '思考深度 '); e.append(h('b', null, p.effort)); row.append(e); }
+      if (p.effort) { const e = h('span', 'eff', L.effort + ' '); e.append(h('b', null, p.effort)); row.append(e); }
       return row;
     });
-    const res = rep.error ? `第 ${rep.error.ply} 步读不懂：${rep.error.text}` : resultText(game, xiangqi) || '未完';
-    $('s-players').replaceChildren(...ps, h('div', 'res', '结果：' + res));
+    const res = rep.error ? L.unreadable(rep.error.ply, rep.error.text) : resultText(game, xiangqi, LANG) || L.unfinished;
+    $('s-players').replaceChildren(...ps, h('div', 'res', L.result + res));
     // 着法列表：开局一格，之后每回合一行（回合号、红 / 白、黑），末尾写结果
     const list = [];
     const start = h('div', 'r');
-    const s0 = h('div', 'm start', '开局');
+    const s0 = h('div', 'm start', L.start);
     s0.dataset.ply = 0;
     side.cells.set(0, s0);
     start.append(h('div', 'no'), s0);
     list.push(start);
-    for (const r of moveRows(steps, game.moves, startTurn, startMoveNumber(game), xiangqi)) {
+    for (const r of moveRows(steps, game.moves, startTurn, startMoveNumber(game), xiangqi, LANG === 'en')) {
       const row = h('div', 'r');
       row.append(h('div', 'no', r.no + '.'));
       for (const s of ['w', 'b']) {
@@ -311,19 +316,20 @@ function renderSide(gi, ply, final) {
 function noteView(g, ply, final) {
   const { game, rep, notes, startTurn, xiangqi } = g;
   if (ply === 0) {
-    const kids = [h('div', 'n-head', '开局局面')];
-    if (game.pre.length) kids.push(h('div', 'lbl', '评注'), h('div', 'why', game.pre.join('\n')));
+    const kids = [h('div', 'n-head', L.startPos)];
+    if (game.pre.length) kids.push(h('div', 'lbl', L.comment), h('div', 'why', game.pre.join('\n')));
     return kids;
   }
   const st = rep.steps[ply - 1], note = notes[ply - 1], move = game.moves[ply - 1];
   const no = startMoveNumber(game) + Math.floor((ply - 1 + (startTurn === 'b' ? 1 : 0)) / 2);
-  const head = h('div', 'n-head', `${no}${st.side === 'w' || xiangqi ? '.' : '...'} ${xiangqi ? st.text : st.san}`);   // 象棋黑方不带省略号
-  for (const n of move.nags) head.append(h('span', 'nag' + ([2, 4, 6].includes(n) ? ' bad' : [1, 3, 5].includes(n) ? ' good' : ''), nagLabel(n)));
-  if (st.check) head.append(h('span', 'nag bad', '将军'));
-  const p = playerOf(game, st.side);
+  const text = xiangqi ? (LANG === 'en' ? st.wxf : st.text) : st.san;
+  const head = h('div', 'n-head', `${no}${st.side === 'w' || xiangqi ? '.' : '...'} ${text}`);   // 象棋黑方不带省略号
+  for (const n of move.nags) head.append(h('span', 'nag' + ([2, 4, 6].includes(n) ? ' bad' : [1, 3, 5].includes(n) ? ' good' : ''), nagLabel(n, LANG)));
+  if (st.check) head.append(h('span', 'nag bad', L.check));
+  const p = pl(game, st.side);
   head.append(h('span', 'who', p.name + (p.effort ? '+' + p.effort : '')));
   const kids = [head];
-  const items = noteItems(note);
+  const items = noteItems(note, LANG);
   if (items.length) {
     const dl = h('dl');
     for (const it of items) {
@@ -332,12 +338,12 @@ function noteView(g, ply, final) {
     }
     kids.push(dl);
   }
-  if (note.text) kids.push(h('div', 'lbl', '理由 / 评注'), h('div', 'why', note.text));
-  if (note.unknown.length) kids.push(h('div', 'lbl', '其他命令'), h('div', 'raw', note.unknown.join(' ')));
-  if (!items.length && !note.text && !note.unknown.length) kids.push(h('div', 'none', '这步没有评注'));
+  if (note.text) kids.push(h('div', 'lbl', L.reason), h('div', 'why', note.text));
+  if (note.unknown.length) kids.push(h('div', 'lbl', L.otherCmds), h('div', 'raw', note.unknown.join(' ')));
+  if (!items.length && !note.text && !note.unknown.length) kids.push(h('div', 'none', L.noNote));
   if (final && ply === rep.steps.length) {
-    const r = rep.error ? `第 ${rep.error.ply} 步读不懂：${rep.error.text}` : resultText(game, xiangqi);
-    if (r) kids.push(h('div', 'lbl', '终局'), h('div', null, r));
+    const r = rep.error ? L.unreadable(rep.error.ply, rep.error.text) : resultText(game, xiangqi, LANG);
+    if (r) kids.push(h('div', 'lbl', L.finalLbl), h('div', null, r));
   }
   return kids;
 }
@@ -463,7 +469,7 @@ function pause() {
 
 function syncPlay() {
   const b = $('s-play');
-  b.textContent = playing ? '暂停' : '播放';
+  b.textContent = playing ? L.pause : L.play;
   b.classList.toggle('on', playing);
 }
 
@@ -554,6 +560,23 @@ function ring(sound, delay = 0) {
   } catch (e) { console.warn(`音效没放出来：${e.message || e}`); }
 }
 
+// ---------------------------------------------------------------- 界面语言
+// index.html 里写的是中文；英文界面在这里换掉页面上那几处固定文字（html 的 lang、标题、按钮提示、快捷键提示）。
+// 中文界面什么都不动，页面与加语言之前逐字节一致。
+function applyLang() {
+  if (LANG === 'zh') return;
+  document.documentElement.lang = L.htmlLang;
+  document.title = L.pageTitle;
+  for (const b of $('s-ctrl').querySelectorAll('button')) b.title = L.btn[b.dataset.act];
+  syncPlay();
+  $('s-keys').replaceChildren(...L.keys.map(([keys, what]) => {
+    const sp = h('span');
+    keys.forEach((k) => sp.append(h('b', null, k), ' '));
+    sp.append(what);
+    return sp;
+  }));
+}
+
 // ---------------------------------------------------------------- 版式
 function applyLayout() {
   const w = FORCED ? FORCED === 'wide' : innerWidth >= WIDE_MIN;
@@ -579,7 +602,7 @@ async function ensureBoards() {
     boards.chess = new ChessBoard($('board-chess'));
     await boards.chess.load();
   }
-  if (!boards.xq && games.some((g) => g.xiangqi)) { boards.xq = new XiangqiBoard($('board-xq')); await boards.xq.load(); }
+  if (!boards.xq && games.some((g) => g.xiangqi)) { boards.xq = new XiangqiBoard($('board-xq'), { lang: LANG }); await boards.xq.load(); }
 }
 
 async function useTexts(texts) {
@@ -604,7 +627,7 @@ async function init() {
   const files = (params.get('files') || '').split(',').map((s) => s.trim()).filter(Boolean);
   if (!files.length) {
     if (REC) throw new Error('没给棋谱：网址加 ?files=/runs/xxx/game.pgn');
-    showHint('把棋谱文件（.pgn）拖进来\n或在网址后加 ?files=/runs/xxx/game.pgn');
+    showHint(L.hint);
     return true;
   }
   await useTexts(await fetchTexts(files));
@@ -667,6 +690,7 @@ $('s-head').addEventListener('change', (e) => {
   e.target.blur();
   goto(Number(e.target.value), 0).catch(fail);
 });
+applyLang();
 applyLayout();
 addEventListener('resize', applyLayout);
 
