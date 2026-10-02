@@ -31,6 +31,7 @@ node viewer/record.mjs runs/a runs/b -o /tmp/ab.mp4 --gap 1.5 --title   # 连播
   - `--aspect 3:4|9:16|16:9`：默认 3:4 出 1080×1440，这是发布用的比例
   - `--scale` 像素倍数（默认 2）
   - `--set 名=值` 再透传一个网址参数；`--set vendor=0` 标题画面名字前不补厂商（「GPT astra」→「astra」）
+  - 声音：默认有走子音效（落子 / 吃子声响在棋子落地那一刻，终局横幅出现时再响一声）；`--vol <倍数>` 调整体音量（默认 1，`0.5` 约轻 6 dB），`--no-sound` 出无声片
 - 出片时长大约等于「标题 + 步数 × gap + 终局 + 总比分」。默认参数下，出一分钟视频要跑约 6 秒。
 - 成功时打印时长、帧数、各类格数；失败时打印中文原因，退出码 1。完整说明看 `node viewer/record.mjs --help`。
 
@@ -40,7 +41,13 @@ node viewer/record.mjs runs/a runs/b -o /tmp/ab.mp4 --gap 1.5 --title   # 连播
 ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,profile,pix_fmt,width,height,r_frame_rate:format=duration -of default=nw=1 /tmp/g1.mp4
 ```
 
-应该是 h264 / High、yuv420p、30/1，尺寸对得上画幅，时长和上面的估算差不到一帧。再抽几帧看一眼，棋子、中文要清楚，终局横幅要在：
+应该是 h264 / High、yuv420p、30/1，尺寸对得上画幅，时长和上面的估算差不到一帧。有声的片还有一路 AAC 音轨（48000 Hz、单声道），时长和画面一样；看音量：
+
+```
+ffmpeg -hide_banner -nostats -i /tmp/g1.mp4 -vn -af ebur128=peak=sample -f null - 2>&1 | tail -12
+```
+
+默认音量下峰值约 −6 dBFS（终局那声），落子、吃子各约 −10 dBFS。再抽几帧看一眼，棋子、中文要清楚，终局横幅要在：
 
 ```
 ffmpeg -v error -y -ss 5 -i /tmp/g1.mp4 -frames:v 1 /tmp/g1-5s.png
@@ -60,6 +67,7 @@ cd ~/repos/llm-chess && python3 -m http.server --bind 127.0.0.1 8000
 
 - 网址参数：`?files=/runs/a/game.pgn,/runs/b/game.pgn&autoplay=1&gap=1.5`。路径从站点根算起，所以要在同时有 `viewer/` 和 `runs/` 的目录下起服务。静态看某一格用 `game=2&ply=30`（`ply=end` 是终局），多盘总比分用 `summary=1`；`layout=wide` / `layout=compact` 强制宽版或窄版。
 - 也可以不带参数打开页面，把 `.pgn` 文件拖进去。多个文件按文件名排序连播。
+- 声音默认关着，网址加 `sound=1` 打开（`vol=0.5` 调轻）。浏览器要页面上点过一下或按过键才放得出声，所以 `autoplay=1&sound=1` 打开后先点一下页面。
 - 快捷键：← → 单步，空格播放 / 暂停，Home / End 跳到本盘首尾，PgUp / PgDn 换盘。宽版（窗口宽 ≥ 900）右栏可以点着法跳步，看每步的评注、用时、token。
 
 ## 常见坑
