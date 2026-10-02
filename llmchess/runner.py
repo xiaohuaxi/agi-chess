@@ -13,6 +13,7 @@ from .engine import Engine, EngineError
 FORFEIT_NOTE = ('重试用完仍非法判负：替它随便走一步会把随机或引擎的着法混进它的棋里，判负最干净；'
                 '实际很少触发，触发了也在记录里单列')
 MAX_FLAGS = 2          # 一个半回合里回复被安全分类器拦掉或正文为空的次数上限，超过就暂停，交给人看
+BRIEF_AFTER = 2        # 同一个半回合里被拦到第几次起，之后的重问改附「简短」写理由要求（用户 2026-10-02 定，见 model_turn）
 
 
 def other(side):
@@ -71,7 +72,7 @@ def load(G, run_dir):
 
 def pending_ply(recs, ply):
     """暂停时还没落子的那个半回合里模型已经用掉的尝试：续跑接着算重试次数、错着反馈和用量，不重新给满机会。"""
-    p = {'ply': ply, 'bad': [], 'k': 0, 'flags': 0, 'redo': False, 'stat': records.new_stat()}
+    p = {'ply': ply, 'bad': [], 'k': 0, 'flags': 0, 'blocks': 0, 'redo': False, 'stat': records.new_stat()}
     costs = records.attempt_costs(recs)[0]            # 旧记录里 session 档的 cost 是会话累计值，按会话做差
     for r in recs:
         if r['type'] != 'attempt' or r['ply'] != ply or player_kind(str(r.get('player', ''))) not in MODEL_KINDS:
@@ -82,6 +83,7 @@ def pending_ply(recs, ply):
         if r.get('flagged') or r.get('empty'):
             p['flags'] += 1
             p['stat']['flags' if r.get('flagged') else 'empty'] += 1
+            p['blocks'] += bool(r.get('flagged'))      # 「简短」兜底只看被拦的次数，旧记录照样数得出
             p['redo'] = True
             continue
         p['redo'] = False
@@ -124,12 +126,18 @@ def model_turn(ctx, side, moves, ban):
         if nt:
             body += '\n\n' + nt
     base = body + '\n\n' + memory.ask(sc)
-    bad, flags, k, redo = [], 0, 0, False
+    bad, flags, blocks, k, redo = [], 0, 0, 0, False
     stat = records.new_stat()
     p = ctx.pop('pending', None)
     if p and p['ply'] == ply:                  # 续跑：接上暂停前这一步已经用掉的尝试
-        bad, flags, k, redo, stat = p['bad'], p['flags'], p['k'], p['redo'], p['stat']
+        bad, flags, blocks, k, redo, stat = p['bad'], p['flags'], p.get('blocks', 0), p['k'], p['redo'], p['stat']
+    # 被拦兜底（用户 2026-10-02 定，避免误拦反复）：同一手里被拦后第一次重问照旧；重问又被拦（这一手累计被拦
+    # BRIEF_AFTER 次）起，这一手之后因被拦 / 空回复的重问在提示末尾附「简短」那段写理由要求（memory.brief_format，
+    # 现成措辞，系统提示不动——会话里系统提示只在首轮给，换了会带到整盘）。只限这一手，下一手回到默认；只由被拦触发，
+    # 空回复本身不算；非法着的重选照旧。系统提示本来就是简短或不要理由时 brief 为 None，什么都不变、也不记兜底。
+    brief = memory.brief_format(system) if real else None
     while k < cfg['retries'] + 1:
+        fallback = bool(redo and brief and blocks >= BRIEF_AFTER)
         if redo and mem == 'session' and ctx['sessions'].get(side):   # 上一条回复被拦或为空，前文已在会话里
             prompt = '请重新回答这一步。' + memory.ask(sc)
         elif bad and real:
@@ -139,6 +147,8 @@ def model_turn(ctx, side, moves, ban):
             prompt = memory.retry_prompt(sc, base, [(t, why) for t, why, _ in bad], cfg['retries'] + 1 - k)
         else:
             prompt = base
+        if fallback:
+            prompt += '\n\n' + brief
         if via_chat:
             new = False
             sid = ctx['sessions'].get(side) if mem == 'session' else None
@@ -170,7 +180,7 @@ def model_turn(ctx, side, moves, ban):
             # 撞额度在程序里等解除：开始、结束各一条，同样落进这盘（这题）自己的记录
             log(ctx, dict({'type': 'limit_wait', 'ply': ply, 'side': side, 'attempt': k + 1}, **ctx.get('tags', {}),
                           **info))
-        extra = {}
+        extra = {'reason_fallback': 'brief'} if fallback else {}     # 记录里看得出这一问用了「简短」兜底
         if via_chat:
             resumed = bool(sid)
             d, dt = chat.call(cmd, prompt, on_fail=on_fail, on_wait=on_wait)
@@ -226,6 +236,7 @@ def model_turn(ctx, side, moves, ban):
         empty = not blocked and not reply.strip()
         if blocked or empty:
             flags += 1
+            blocks += blocked
             stat['flags' if blocked else 'empty'] += 1
             if blocked:
                 log(ctx, {'type': 'flag', 'ply': ply, 'side': side, 'source': 'result', 'session': sid, 'text': reply[:500]})

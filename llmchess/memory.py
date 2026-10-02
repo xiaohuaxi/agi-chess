@@ -64,6 +64,18 @@ def answer_lead(sc):
     return ANSWER_LEAD['detailed' if r == 'on' else r if r in ANSWER_LEAD else 'off']
 
 
+def brief_format(system):
+    """被拦兜底（用户 2026-10-02 定，runner.model_turn）用的「简短」写理由要求：取系统提示里「回答格式：」那一段，
+    把不修饰 / 详细那半句换成 brief 的，其余一字不差，附在重问后面。按存下的系统提示判、不按 sc 的 reason 判：
+    旧记录 reason=on 的措辞因开局日期而异，看原文最准。本来就是简短、off（不要理由，硬加理由反倒改了要求）、
+    旧协议（没有这一段）都返回 None——兜底不改变什么，重问照旧。"""
+    para = next((x for x in (system or '').split('\n\n') if x.startswith('回答格式：')), None)
+    for r in ('plain', 'detailed'):
+        if para and ANSWER_LEAD[r] in para:
+            return para.replace(ANSWER_LEAD[r], ANSWER_LEAD['brief'])
+    return None
+
+
 # 非法后告诉棋手的话（astra 定，design.md 第九节）：纯写法问题照实说，和局面有关的一律只说「不合法」，
 # 不点明被将、牵制、照面、长将长捉这类会泄露对方攻击关系的原因。完整原因只进记录（attempt.reason）。
 FEEDBACK = {'no_move': '回答里没有找到着法', 'unreadable': '这步的写法认不出来',

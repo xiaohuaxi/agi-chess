@@ -221,6 +221,76 @@ class FakeChat(unittest.TestCase):
         self.assertIn('还可重选 2 次', c[0]['stdin'])            # 暂停前用掉的一次照记录接上
         self.assertIn('还可重选 1 次', c[1]['stdin'])
 
+    # ------------------------------------------------------------------ 被拦兜底「简短」（用户 2026-10-02 定）
+    BRIEF = '先用你自己的话简短写出这步的理由'
+
+    def test_refusal_twice_then_brief_only_this_ply(self):
+        # 第 3 个半回合：被拦 → 照旧重问（不修饰）→ 又被拦 → 第三问附「简短」；下一手回到默认
+        self.plan([{'text': '着法: e2e4'}, {'refuse': True}, {'refuse': True}, {'text': '着法: d2d4'},
+                   {'text': '着法: g1f3'}])
+        rc = self.play(['--game', 'chess', '--tag', 'bf', '--black', 'random', '--max-plies', '5', '--seed', '1'])
+        self.assertEqual(rc, 0)
+        calls = self.calls()
+        self.assertEqual(len(calls), 5)
+        self.assertEqual(calls[2]['stdin'], '请重新回答这一步。' + memory.ASK_REAL)       # 第一次重问一字不变
+        self.assertTrue(calls[3]['stdin'].startswith('请重新回答这一步。' + memory.ASK_REAL + '\n\n回答格式：'))
+        self.assertIn(self.BRIEF, calls[3]['stdin'])
+        self.assertNotIn(memory.ANSWER_LEAD['plain'], calls[3]['stdin'])
+        self.assertIn('--session', calls[3]['argv'])
+        self.assertNotIn('--system', calls[3]['argv'])                # 系统提示不动
+        for c in (calls[0], calls[1], calls[2], calls[4]):
+            self.assertNotIn('简短', c['stdin'])
+        atts = [r for r in self.recs('bf') if r['type'] == 'attempt' and r['side'] == 'w']
+        self.assertEqual([a.get('reason_fallback') for a in atts], [None, None, None, 'brief', None])
+        self.assertEqual([bool(a.get('flagged')) for a in atts], [False, True, True, False, False])
+
+    def test_refusal_then_empty_no_brief(self):
+        # 「简短」只由被拦触发：被拦一次、再空回复一次，第三问照旧
+        self.plan([{'text': '着法: e2e4'}, {'refuse': True}, {'empty': True}, {'text': '着法: d2d4'}])
+        rc = self.play(['--game', 'chess', '--tag', 'be', '--black', 'random', '--max-plies', '3', '--seed', '1'])
+        self.assertEqual(rc, 0)
+        calls = self.calls()
+        self.assertEqual(calls[3]['stdin'], '请重新回答这一步。' + memory.ASK_REAL)
+        self.assertFalse(any(r.get('reason_fallback') for r in self.recs('be') if r['type'] == 'attempt'))
+
+    def test_refusal_twice_under_brief_changes_nothing(self):
+        # 本来就是「简短」：兜底不改变什么，第三问照旧、记录不标
+        self.plan([{'text': '着法: e2e4'}, {'refuse': True}, {'refuse': True}, {'text': '着法: d2d4'}])
+        rc = self.play(['--game', 'chess', '--tag', 'bb', '--black', 'random', '--max-plies', '3', '--seed', '1',
+                        '--reason', 'brief'])
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.calls()[3]['stdin'], '请重新回答这一步。' + memory.ASK_REAL)
+        self.assertFalse(any(r.get('reason_fallback') for r in self.recs('bb') if r['type'] == 'attempt'))
+
+    def test_brief_fallback_survives_resume(self):
+        # 连拦两次后调不通暂停：续跑从记录数出被拦次数，第一问就附「简短」，记录里标出来
+        self.plan([{'text': '着法: e2e4'}, {'refuse': True}, {'refuse': True}])
+        with mock.patch.object(runner.claude_cli, '_wait', lambda s: True):
+            rc = self.play(['--game', 'chess', '--tag', 'br', '--black', 'random', '--max-plies', '3', '--seed', '1'])
+        self.assertEqual(rc, 3)
+        ctx = runner.load(C, os.path.join(self.tmp, 'br'))
+        self.assertEqual((ctx['pending']['blocks'], ctx['pending']['redo']), (2, True))
+        self.plan([{'text': '着法: d2d4'}])
+        os.remove(os.path.join(self.tmp, 'calls.jsonl'))
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = cli.main(['resume', os.path.join(self.tmp, 'br')])
+        self.assertEqual(rc, 0)
+        c = self.calls()
+        self.assertTrue(c[0]['stdin'].startswith('请重新回答这一步。' + memory.ASK_REAL + '\n\n回答格式：'))
+        self.assertIn(self.BRIEF, c[0]['stdin'])
+        att = [r for r in self.recs('br') if r['type'] == 'attempt' and r['side'] == 'w'][-1]
+        self.assertEqual((att['move'], att.get('reason_fallback')), ('d2d4', 'brief'))
+
+    def test_brief_format_by_stored_system(self):
+        # 按存下的系统提示判：不修饰 / 详细换成简短、其余一字不差；本来简短、off、旧协议都不兜底
+        for r in ('plain', 'detailed'):
+            sys_ = '前文\n\n回答格式：' + memory.ANSWER_LEAD[r] + '用 UCI 坐标。\n\n后文'
+            self.assertEqual(memory.brief_format(sys_), '回答格式：' + memory.ANSWER_LEAD['brief'] + '用 UCI 坐标。')
+        for r in ('brief', 'off'):
+            self.assertIsNone(memory.brief_format('回答格式：' + memory.ANSWER_LEAD[r] + '用 UCI 坐标。'))
+        self.assertIsNone(memory.brief_format('回答格式：请用中文回答。可以先写简短的思路，最后一行只写「着法: 」加着法'))
+        self.assertIsNone(memory.brief_format(None))
+
 
     def test_reason_default_plain_and_goes_into_pgn_comment(self):
         # 默认请棋手在着法前写理由（不修饰，不说简短 / 详细）；理由里提到别的着法（Nf3、d4）不影响读着法，落定那次的理由进该步评注
