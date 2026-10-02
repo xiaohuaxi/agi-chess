@@ -195,8 +195,10 @@ def wide(c):
     return unicodedata.east_asian_width(c) in 'WF'
 
 
-# 这些全角标点后面优先断行（中文句子里没有空格，只能在字与字之间断）
-CJK_BREAK_AFTER = set('，。、；：！？）」』】》…—～')
+# 这些全角标点后面优先断行（中文句子里没有空格，只能在字与字之间断）。断点必须两边都是 wide（W/F）：阅读器读回时
+# 只认这一条判法（viewer/lib/pgn.js 的 unwrap），换行两边都 wide 才不补空格。「…」「—」的东亚宽度是 A（不是 W/F），
+# 在它们后面断行读回来会多一个空格（本机 zx/fsf-nodes100-s2-w 第 71 步中过招），所以集合按 wide 过滤、不收它们。
+CJK_BREAK_AFTER = {c for c in '，。、；：！？）」』】》～' if wide(c)}
 
 
 class Glue(str):
@@ -212,7 +214,7 @@ def chunks(w, width=WIDTH):
     for i, c in enumerate(w):
         cur += c
         nxt = w[i + 1] if i + 1 < len(w) else None
-        if c in CJK_BREAK_AFTER and nxt is not None and wide(nxt):
+        if c in CJK_BREAK_AFTER and nxt is not None and wide(nxt):   # c 本身 wide 由 CJK_BREAK_AFTER 保证
             segs.append(cur)
             cur = ''
     if cur:

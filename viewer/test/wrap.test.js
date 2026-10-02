@@ -17,7 +17,7 @@ from llmchess import chess_ as C, records, xiangqi as X
 rng = random.Random(7)
 zh = ['红方', '中炮', '过河', '黑方', '必须', '马上', '应对', '中卒', '丢掉', '被动', '先手', '兑子', '控制', '肋道']
 en = ['Nf3', 'e5', 'h2e2', 'the', 'centre', 'is', 'open', 'x']
-punct = ['，', '。', '：', '；', '、']
+punct = ['，', '。', '：', '；', '、', '……', '——', '…']   # 「…」「—」是 A 宽度：在它们后面断行读回会多空格
 def reason():
     out = ''
     for _ in range(rng.randint(3, 60)):

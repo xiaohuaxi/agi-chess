@@ -54,6 +54,17 @@ class Wrap(unittest.TestCase):
         cut_after_punct = sum(l[-1] in records.CJK_BREAK_AFTER for l in lines[:-1] if records.wide(l[-1]))
         self.assertGreaterEqual(cut_after_punct, len(lines) // 2)   # 大多数行在标点后断
 
+    def test_ellipsis_and_dash_round_trip(self):
+        # 回归：「…」「—」东亚宽度是 A，阅读器不当全角；以前在「……」后断行，读回来多一个空格
+        why = ('黑车就会退回 d3，我再进炮打它……这样反复追捉同一个车——就是犯规的长捉。' * 8)
+        self.assertTrue(all(records.wide(c) for c in records.CJK_BREAK_AFTER))
+        for width in (records.WIDTH, 79):
+            text = records.wrap(records.meta_tokens({'emt': 1, 'why': why}), width)
+            for line in text.split('\n'):
+                self.assertLessEqual(records.cols(line), width, line)
+                self.assertFalse(line.endswith(('…', '—')), line)
+            self.assertEqual(unwrap(text), '[%emt 0:00:01] ' + why, width)
+
     def test_long_run_without_punctuation_hard_cut_between_wide_chars(self):
         why = '中' * 100 + 'abc'
         c = records.meta_comment({'emt': 1, 'why': why})
