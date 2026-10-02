@@ -1,6 +1,6 @@
 # 进度与待办
 
-更新：2026-10-01 凌晨（巅峰对决 opus max 对 astra max 两种棋各 4 盘下完：国际象棋 opus 3 比 1、中国象棋 4 比 0，都没打平、不加赛。此前 9-30 晚：用户定模型对模型对弈双方思考延续方式一致、Claude 对 GPT 双方都带思考，drop_thinking 默认关维持。此前同日：opus 去掉此前思考对 astra xhigh 两种棋各 4 盘；整盘接入「去掉此前思考」开关，理由措辞按棋手分简短 / 详细；opus xhigh 对 astra：国际象棋 xhigh 补到 6 盘、max 补到 4 盘；中国象棋 astra max 4 盘；棋谱阅读器第 1–5 步做完、版式定稿，已合回 main）。
+更新：2026-10-02（棋谱阅读器加走子音效，已合回 main。此前 2026-10-01 凌晨：巅峰对决 opus max 对 astra max 两种棋各 4 盘下完：国际象棋 opus 3 比 1、中国象棋 4 比 0，都没打平、不加赛。此前 9-30 晚：用户定模型对模型对弈双方思考延续方式一致、Claude 对 GPT 双方都带思考，drop_thinking 默认关维持。此前同日：opus 去掉此前思考对 astra xhigh 两种棋各 4 盘；整盘接入「去掉此前思考」开关，理由措辞按棋手分简短 / 详细；opus xhigh 对 astra：国际象棋 xhigh 补到 6 盘、max 补到 4 盘；中国象棋 astra max 4 盘；棋谱阅读器第 1–5 步做完、版式定稿，已合回 main）。
 
 **总结论**：`results/summary-round1.md`。一句话：下得臭主要是想得不够深、判断错，不是看不清棋盘，也不是思考接不上；调高思考深度最管用，提示技巧作用有限。以下各批摘要只留要点，数字看各批结论文档。
 
@@ -77,6 +77,7 @@
 - 棋谱每步带元信息（2026-09-28）：`game.pgn` / `record.txt` 每步评注里写 `[%emt 用时]`（PGN 标准命令）和自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite]`、非法 / 被拦 / 空回复次数，后端没给的项省掉不补 0（`design.md` 第四节）。已结束的盘不用重下：`python3 -m llmchess export runs/<tag>`。
 - 局面给法开关 `show`（all / board / pieces / fen / boardpieces），整盘和局面题共用，默认按第四批结论。
 - 棋谱阅读器（`docs/viewer.md`，2026-09-30）：方案第 1–5 步（导出、解析、打样、页面含窄版 / 宽版 / 播放 / 录制接口、录制脚本 `viewer/record.mjs`）已实施完，版式用户已定稿，2026-09-30 合回 main（阅读器认得 `drop_thinking` 对局的 `[%dropped]` 评注）。一条命令出 3:4 mp4，用法见项目 skill `.agents/skills/replay-video/`。第 6 步走子滑动动画（两种棋，默认 0.3 秒、算在每步间隔内）2026-09-30 做完并合回 main。合回时已用新代码把当时已结束的对局重导（`python3 -m llmchess export runs/<tag>`）；合回时还在下的对局（进程里跑的仍是旧代码，如 g6-x-opusdrop-astra-2）结束后要再重导一次。
+- 阅读器走子音效（2026-10-02 合回 main）：落子 / 吃子各一声、将军不单配、终局再一声，两种棋共用 CC0 素材（`viewer/vendor/sounds/`）。录视频默认有声（单声道，落子峰值约 -10 dBFS、不做整体归一化），`--vol` 调、`--no-sound` 关；网页默认静音，`sound=1` 开。默认音量按「多数人手机音量约一半」的实测研究定，不再压低（调研见 `docs/viewer.md` 音效一节）。同次修了评注在「……」「——」后断行、读回多一个空格的问题，受影响的已结束对局已重导。
 
 ## 已拍板
 
