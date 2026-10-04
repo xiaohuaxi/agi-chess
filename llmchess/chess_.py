@@ -411,6 +411,15 @@ def system_prompt(side, sc, memory_text):
     return '\n\n'.join(s)
 
 
+def cap_rule(sc):
+    """系统提示里满半回合上限那句：有引擎一方的对局按评分判（sc 里有 cap_margin，cli.cap_margin），其余照旧判和、逐字不变。
+    不提「引擎」，免得透露对手是引擎（第九节：对手是另一位棋手）。"""
+    if sc.get('cap_margin'):
+        return '满 %d 个半回合仍未分胜负时由裁判评估局面：一方领先至少 %d 厘兵判该方胜，否则判和。' % (
+            sc['max_plies'], sc['cap_margin'])
+    return '满 %d 个半回合仍未分胜负判和。' % sc['max_plies']
+
+
 ILLEGAL_RULE = '每步给出着法后，着法不合法或认不出会告诉你，由你重新选；一步里连续 %d 次都没给出合法着法判负。'
 
 
@@ -418,7 +427,7 @@ def system_real(side, sc, memory_text):
     """「模型就是真实棋手」的系统提示（design.md 第九节），和 xiangqi.system_real 同构。"""
     s = ['你在下一盘国际象棋，执%s。对手是另一位棋手。目标是赢棋。' % SIDES[side],
          '规则按标准国际象棋：将死对方为胜；逼和、双方子力都不足以将死判和；同一局面出现三次、或五十回合没有吃子和兵的走动，'
-         '程序自动替你们申诉判和；满 %d 个半回合仍未分胜负判和。' % sc['max_plies'] + ILLEGAL_RULE % (sc.get('retries', 3) + 1),
+         '程序自动替你们申诉判和；' + cap_rule(sc) + ILLEGAL_RULE % (sc.get('retries', 3) + 1),
          '坐标：纵线 a 到 h 从白方左手边数起，横线 1 到 8 从白方底线数起。',
          memory_text]
     if sc['selfcheck'] == 'on':

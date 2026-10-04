@@ -151,6 +151,19 @@ def default_retries(protocol):
     return 2 if protocol == 'real' else 3
 
 
+def cap_margin(a, players):
+    """满半回合上限怎么算（--cap-rule）：返回判胜的厘兵领先门槛，判和返回 None。auto（默认）：real 协议下有引擎一方的对局
+    按引擎评分判（用户 2026-10-04 定：对引擎的棋力评测里到上限判和的盘太多、结论只能给范围），模型对模型、随机走子、
+    legacy 照旧判和。eval 只在 real、且有引擎一方时可用；draw 回到以前的判和（复现旧批次）。"""
+    rule = getattr(a, 'cap_rule', 'auto') or 'auto'
+    has_engine = any(runner.player_kind(p) == 'engine' for p in players.values())
+    if rule == 'draw':
+        return None
+    if rule == 'eval' and not (a.protocol == 'real' and has_engine):
+        raise SystemExit('--cap-rule eval 只用于 real 协议下有引擎一方的对局')
+    return runner.CAP_MARGIN if a.protocol == 'real' and has_engine else None
+
+
 def build_cfg(a):
     G = game_module(a.game)
     if a.retries is None:
@@ -161,6 +174,10 @@ def build_cfg(a):
             players[s] = 'deepseek:' + chat.DEEPSEEK_DEFAULT
         check_player(G, players[s], a.protocol)
     sides = {'w': side_cfg(a, G, a.w, a.max_plies), 'b': side_cfg(a, G, a.b, a.max_plies)}
+    margin = cap_margin(a, players)
+    if margin:
+        for s in 'wb':
+            sides[s]['cap_margin'] = margin        # 系统提示里的规则跟着写（棋手事先知道赛制）
     for s in 'wb':
         kind = runner.player_kind(players[s])
         # 去掉此前思考只有 Claude 路支持（llm-chat：GPT 一给就报错，DeepSeek 本来就不回传思考）；引擎、随机不看这一项
@@ -170,6 +187,8 @@ def build_cfg(a):
     cfg = {'game': a.game, 'tag': a.tag, 'players': players, 'sides': sides, 'retries': a.retries,
            'max_plies': a.max_plies, 'seed': a.seed if a.seed is not None else random.randrange(10 ** 9),
            'forfeit': runner.FORFEIT_NOTE, 'timeout': a.timeout}
+    if margin:
+        cfg['adjudicate'] = {'margin': margin}
     cfg['system'] = {s: G.system_prompt(s, sides[s], memory.system_text(sides[s])) for s in 'wb'}
     models = [s for s in 'wb' if runner.player_kind(players[s]) in runner.MODEL_KINDS]
     if a.protocol == 'real':
@@ -332,6 +351,9 @@ def main(argv=None):
     p.add_argument('--retries', type=int, default=None,
                    help='一步里还能重选几次（一步最多 retries+1 次，用完判负）；默认 real 2（一步最多 3 次）、legacy 3')
     p.add_argument('--max-plies', dest='max_plies', type=int, default=200)
+    p.add_argument('--cap-rule', dest='cap_rule', choices=('auto', 'draw', 'eval'), default='auto',
+                   help='满 --max-plies 时怎么判。auto（默认）：real 下有引擎一方的对局按引擎评分判（一方领先 ≥%d 厘兵判胜，'
+                   '否则和），其余判和；draw：一律判和（复现旧批次）；eval：同 auto，但不是 real 下有引擎一方的对局就报错' % runner.CAP_MARGIN)
     p.add_argument('--seed', type=int, help='随机走子的种子，默认随机取一个并记进 config')
     p.add_argument('--opening', help='random:N：前 N 个半回合由程序替双方走（随机开局），默认不用')
     p.add_argument('--opening-seed', dest='opening_seed', type=int, help='随机开局的种子，默认随机取一个并记进 config')

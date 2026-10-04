@@ -690,6 +690,15 @@ def system_prompt(side, sc, memory_text):
     return '\n\n'.join(s)
 
 
+def cap_rule(sc):
+    """系统提示里满半回合上限那句：有引擎一方的对局按评分判（sc 里有 cap_margin，cli.cap_margin），其余照旧判和、逐字不变。
+    不提「引擎」，免得透露对手是引擎（第九节：对手是另一位棋手）。"""
+    if sc.get('cap_margin'):
+        return '满 %d 个半回合仍未分胜负时由裁判评估局面：一方领先至少 %d 厘兵判该方胜，否则判和。' % (
+            sc['max_plies'], sc['cap_margin'])
+    return '满 %d 个半回合仍未分胜负判和。' % sc['max_plies']
+
+
 ILLEGAL_RULE = '每步给出着法后，着法不合法或认不出会告诉你，由你重新选；一步里连续 %d 次都没给出合法着法判负。'
 
 
@@ -698,7 +707,7 @@ def system_real(side, sc, memory_text):
     （不修饰 / 简短 / 详细）这步的理由，off 时只需给出着法（memory.answer_lead）；赛制（禁着退回、非法重选上限）预先讲清。"""
     s = ['你在下一盘中国象棋，执%s。对手是另一位棋手。目标是赢棋。' % SIDES[side],
          '规则按标准中国象棋：将死或困毙对方为胜；不许长将、长捉，走出这类着法按不合法退回；同一局面出现三次且不属于长将、'
-         '长捉判和；连续一百个半回合没有吃子判和；满 %d 个半回合仍未分胜负判和。' % sc['max_plies'] +
+         '长捉判和；连续一百个半回合没有吃子判和；' + cap_rule(sc) +
          ILLEGAL_RULE % (sc.get('retries', 3) + 1),
          '坐标用 ICCS：纵线 a 到 i 从红方左手边数起，横线 0 到 9 从红方底线数起；一步棋写成起点加终点，例如 h2e2（红炮二平五）。',
          memory_text]

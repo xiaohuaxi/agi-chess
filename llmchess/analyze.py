@@ -237,6 +237,35 @@ def analyse_run(run_dir, depth=None, force=False, log=print):
     return summ
 
 
+def cap_verdict(score, margin):
+    """走子方视角评分 → 'stm'（走子方胜）/ 'other'（对方胜）/ None（和）。杀棋分数算领先；厘兵领先 ≥margin 判胜。"""
+    if score[0] == 'mate':
+        return 'stm' if score[1] > 0 else 'other'
+    return 'stm' if score[1] >= margin else 'other' if score[1] <= -margin else None
+
+
+def adjudicate(G, game, st, margin, max_plies, depth=None):
+    """满半回合上限时按引擎评分判（design.md 第三节 max_plies，用户 2026-10-04 定）：用事后分析同一口径的裁判引擎
+    （国际象棋 Stockfish 深度 18、中国象棋 Fairy-Stockfish 深度 16，单线程、清哈希、带完整历史）评当前局面，
+    一方领先 ≥margin 厘兵（或已算出杀棋）判该方胜，否则判和。返回终局 dict，adjudication 里记引擎、深度、评分。"""
+    depth = depth or DEPTH[game]
+    with Analyser(analysis_spec(game, depth), timeout=ENGINE_TIMEOUT) as eng:
+        score, d, _ = eng.evaluate(st['fens'][0], [G.to_engine(m) for m in st['moves']])
+        eng_id = eng.id
+    stm = G.turn(st)
+    opp = 'b' if stm == 'w' else 'w'
+    v = cap_verdict(score, margin)
+    winner = None if v is None else stm if v == 'stm' else opp
+    if score[0] == 'mate':
+        what = '%s已有杀棋（%d 步杀），判%s胜' % (G.SIDES[winner], abs(score[1]), G.SIDES[winner])
+    elif winner:
+        what = '%s领先 %d 厘兵（≥%d），判%s胜' % (G.SIDES[winner], abs(score[1]), margin, G.SIDES[winner])
+    else:
+        what = '%s %+d 厘兵，差距不到 %d，判和' % (G.SIDES['w'], score[1] if stm == 'w' else -score[1], margin)
+    return {'winner': winner, 'reason': '满 %d 个半回合（研究设的上限），到上限按引擎评分判：%s' % (max_plies, what),
+            'adjudication': {'engine': eng_id, 'depth': d, 'score': show(score), 'stm': stm, 'margin': margin}}
+
+
 def write_atomic(path, text):
     tmp = path + '.tmp'
     with open(tmp, 'w', encoding='utf-8') as f:

@@ -13,6 +13,7 @@ from .engine import Engine, EngineError
 FORFEIT_NOTE = ('重试用完仍非法判负：替它随便走一步会把随机或引擎的着法混进它的棋里，判负最干净；'
                 '实际很少触发，触发了也在记录里单列')
 MAX_FLAGS = 2          # 一个半回合里回复被安全分类器拦掉或正文为空的次数上限，超过就暂停，交给人看
+CAP_MARGIN = 300       # 有引擎一方的对局满半回合上限时，一方领先这么多厘兵判胜，否则判和（用户 2026-10-04 定，cli.cap_margin）
 BRIEF_AFTER = 2        # 同一个半回合里被拦到第几次起，之后的重问改附「简短」写理由要求（用户 2026-10-02 定，见 model_turn）
 
 
@@ -346,7 +347,12 @@ def play(ctx, stop_after=None, stop_file=None):
         while end is None:
             end = G.ending(st)
             if end is None and len(st['moves']) >= cfg['max_plies']:
-                end = {'winner': None, 'reason': '满 %d 个半回合（研究设的上限），判和' % cfg['max_plies']}
+                if cfg.get('adjudicate'):
+                    # 有引擎一方的对局到上限按引擎评分判（用户 2026-10-04 定）；旧记录没有这一项，照旧判和
+                    from . import analyze       # analyze 导入 cli、cli 导入本模块，放在这里免得循环导入
+                    end = analyze.adjudicate(G, cfg['game'], st, cfg['adjudicate']['margin'], cfg['max_plies'])
+                else:
+                    end = {'winner': None, 'reason': '满 %d 个半回合（研究设的上限），判和' % cfg['max_plies']}
             if end is not None:
                 break
             if stop_after is not None and moved >= stop_after:
