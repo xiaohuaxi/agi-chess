@@ -18,7 +18,7 @@ export const RATE = 48000;   // 音轨采样率
 // 画幅 → 页面视口（CSS 像素）；实际像素再乘 scale（默认 2）。
 export const ASPECTS = { '3:4': [540, 720], '9:16': [540, 960], '16:9': [960, 540] };
 const VIEWER = path.dirname(fileURLToPath(import.meta.url));
-const HOLDS = ['gap', 'titlehold', 'resulthold', 'summaryhold', 'anim'];   // 秒数选项，原样透传成同名网址参数
+const HOLDS = ['gap', 'openhold', 'titlehold', 'resulthold', 'summaryhold', 'anim'];   // 秒数选项，原样透传成同名网址参数
 const STEP_TIMEOUT = 30_000;   // 页面画一格的上限；超了多半是页面卡住
 
 const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -o <输出.mp4>
@@ -31,6 +31,8 @@ const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -
 选项：
   -o, --out <文件>         输出 mp4 路径（必填；目录须已存在，先写临时文件再改名）
   --gap <秒>               每步停多久（页面默认 1.8）
+  --openhold <秒>          每盘开局局面（第一步之前）停多久（页面默认同 gap）；视频开头想快点动起来就调短，
+                           如 0.5；加了 --title 时开局那格换成标题画面，这项不起作用
   --titlehold <秒>         标题画面停多久（页面默认 3；配 --title 才有用）
   --resulthold <秒>        终局横幅停多久（页面默认 4）
   --summaryhold <秒>       多盘时总比分停多久（页面默认 5）

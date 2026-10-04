@@ -17,14 +17,18 @@ const FIX = '/viewer/test/fixtures/';
 
 test('播放设置：默认值、自定、不合法回默认', () => {
   const o = playOptions(new URLSearchParams(''));
-  assert.deepEqual(o, { ...DEFAULTS, title: false });                 // 标题画面默认不加
+  assert.deepEqual(o, { ...DEFAULTS, openhold: DEFAULTS.gap, title: false });   // 标题画面默认不加；开局局面停得和每步一样久
   assert.equal(playOptions(new URLSearchParams('title=1')).title, true);
   assert.equal(playOptions(new URLSearchParams('title=0')).title, false);   // 旧写法仍表示关
   assert.equal(o.gap, 1.8);
   assert.equal(o.anim, 0.3);
   const p = playOptions(new URLSearchParams('gap=1.5&titlehold=0&resulthold=x&summaryhold=-1&title=0&anim=0'));
-  assert.deepEqual(p, { gap: 1.5, titlehold: 0, resulthold: DEFAULTS.resulthold, summaryhold: DEFAULTS.summaryhold, anim: 0, title: false });
+  assert.deepEqual(p, { gap: 1.5, openhold: 1.5, titlehold: 0, resulthold: DEFAULTS.resulthold, summaryhold: DEFAULTS.summaryhold, anim: 0, title: false });
   assert.equal(playOptions(new URLSearchParams('anim=-1')).anim, DEFAULTS.anim);
+  // openhold 单独给就用它（0 也算），不合法时跟着 gap 走
+  assert.equal(playOptions(new URLSearchParams('gap=1.5&openhold=0.5')).openhold, 0.5);
+  assert.equal(playOptions(new URLSearchParams('openhold=0')).openhold, 0);
+  for (const v of ['x', '-1', '', ' ']) assert.equal(playOptions(new URLSearchParams(`gap=2&openhold=${v}`)).openhold, 2, v);
 });
 
 test('播放顺序：单盘 title → move… → result → end(0)；多盘 end 停 summaryhold；没结果的盘没有 result', () => {
@@ -35,6 +39,16 @@ test('播放顺序：单盘 title → move… → result → end(0)；多盘 end
   const two = sequence([{ plies: 1, over: false }, { plies: 0, over: true }], { ...opt, title: false });
   assert.deepEqual(two.map((f) => [f.kind, f.game, f.ply, f.hold]),
     [['move', 0, 0, 2], ['move', 0, 1, 2], ['move', 1, 0, 2], ['result', 1, 0, 4], ['end', null, null, 5]]);
+});
+
+test('播放顺序：openhold 只管每盘开局局面那格（每盘都管），标题画面、走子格不受影响', () => {
+  const opt = { gap: 2, openhold: 0.5, titlehold: 3, resulthold: 4, summaryhold: 5, title: false, anim: 0.3 };
+  const two = sequence([{ plies: 1, over: true }, { plies: 1, over: true }], opt);
+  assert.deepEqual(two.map((f) => [f.kind, f.game, f.ply, f.hold, f.anim]), [
+    ['move', 0, 0, 0.5, 0], ['move', 0, 1, 1.7, 0.3], ['result', 0, 1, 4, 0],
+    ['move', 1, 0, 0.5, 0], ['move', 1, 1, 1.7, 0.3], ['result', 1, 1, 4, 0], ['end', null, null, 5, 0]]);
+  const titled = sequence([{ plies: 1, over: false }], { ...opt, title: true });
+  assert.deepEqual(titled.map((f) => [f.kind, f.hold]), [['title', 3], ['move', 1.7], ['end', 0]]);
 });
 
 test('播放顺序：走子动画算在 gap 之内——只有走子那几格有 anim，hold = gap − anim，anim 超过 gap 时截到 gap', () => {
@@ -60,10 +74,11 @@ test('播放顺序：每格响哪声——吃子格 capture、其余走子格 mo
 const plies = (file) => parsePgn(decodeText(readFileSync(join(ROOT, FIX, file)))).map((g) => replay(g).steps.length);
 
 // 不看实现，照方案手写的期望：[kind, hold, anim]。走子那几格先滑 anim 秒、再停 gap − anim，一格总长仍是 gap。
-function expected(counts, { gap = 1.8, titlehold = 3, resulthold = 4, summaryhold = 5, title = false, anim = 0.3 } = {}) {
+// openhold 是开局局面那格停多久，不给时同 gap。
+function expected(counts, { gap = 1.8, openhold = gap, titlehold = 3, resulthold = 4, summaryhold = 5, title = false, anim = 0.3 } = {}) {
   const out = [];
   for (const n of counts) {
-    out.push(title ? ['title', titlehold, 0] : ['move', gap, 0]);
+    out.push(title ? ['title', titlehold, 0] : ['move', openhold, 0]);
     for (let i = 0; i < n; i++) out.push(['move', gap - anim, anim]);
     out.push(['result', resulthold, 0]);                 // 样例每盘都有结果
   }
@@ -148,6 +163,13 @@ test('录制接口：连播（一个文件多盘 + 多个文件、两种棋）�
       kind: document.querySelector('#summary .s-kind').textContent, done: window.viewer.done,
     }));
     assert.deepEqual(end, { summary: true, kind: '国际象棋 / 中国象棋', done: true });
+  });
+});
+
+test('录制接口：连播 openhold=0.2，每盘开局局面那格都停 0.2，其余照 gap', { skip }, async () => {
+  const files = ['chess-sample.pgn', 'xq-sample.pgn'];
+  await withPage(`rec=1&gap=0.5&openhold=0.2&files=${files.map((f) => FIX + f).join(',')}`, async (page) => {
+    assert.deepEqual(await walk(page), expected(files.flatMap(plies), { gap: 0.5, openhold: 0.2 }));
   });
 });
 

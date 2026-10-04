@@ -6,7 +6,8 @@
 //
 // 网址参数（docs/viewer.md「播放」有完整清单）：
 //   files=逗号分隔的棋谱路径（按站点根解析，一个文件可以有多盘）；也可以把文件拖进页面。
-//   autoplay=1 打开就自动播放；gap / titlehold / resulthold / summaryhold 各格停几秒；title=1 加标题画面（默认不加）；
+//   autoplay=1 打开就自动播放；gap / titlehold / resulthold / summaryhold 各格停几秒，openhold 每盘开局局面停几秒（默认同 gap）；
+//   title=1 加标题画面（默认不加）；
 //   anim=走子滑动的秒数（默认 0.3，算在 gap 之内，0 关掉）。静态看某一格不带动画。
 //   rec=1 录制模式：隐含 layout=compact，不起任何计时器，由脚本调 viewer.next() 一格一格走。
 //   sound=1 打开走子音效（默认静音；浏览器要等页面上有过一次点击或按键才放得出声），vol=整体音量倍数（默认 1）。

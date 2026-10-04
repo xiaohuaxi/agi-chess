@@ -45,6 +45,8 @@ test('命令行：停留时长透传、默认无标题 / --title 加 / --no-titl
   assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--bogus']));
   assert.deepEqual(rec.parseCli(['a', '-o', 'x.mp4', '--anim', '0']).params, { anim: '0' });
   assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--anim', 'x']), /--anim/);
+  assert.deepEqual(rec.parseCli(['a', '-o', 'x.mp4', '--openhold', '0.5']).params, { openhold: '0.5' });
+  assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--openhold', '-1']), /--openhold/);
 });
 
 test('命令行：默认有声、--no-sound 关掉；--vol 是正的倍数', { skip: recSkip }, () => {
@@ -193,6 +195,10 @@ test('出片：两个文件连播、不要标题，末尾总比分停 summaryhol
   checkSpec(m.p, m.out, want);
   assert.equal(m.r.cells.at(-1).kind, 'end');
   assert.equal(m.r.cells.at(-1).hold, 0.5);
+  // --openhold：每盘开局局面那格改停 0.3，别的格不变——两盘共长 2 × (0.3 − 0.05) 秒
+  const o = await make('match-open', ['chess-sample.pgn', 'xq-sample.pgn'], { gap: '0.05', resulthold: '0.2', summaryhold: '0.5', openhold: '0.3' });
+  checkSpec(o.p, o.out, want + 2 * (0.3 - 0.05));
+  assert.equal(o.r.cells.filter((c) => c.kind === 'move' && c.anim === 0 && c.hold === 0.3).length, 2);
 });
 
 test('出片：走子动画算在 gap 之内——时长不变，每步多出 round(anim×30) 张动画帧', { skip }, async () => {
