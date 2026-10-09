@@ -2,6 +2,7 @@
 - [尽力而为、别做成大工程](best-effort-not-big-project.md) — 事不可为就停；额度充裕，可开 xhigh/max。
 - [思考延续的假设与现状](thinking-carryover-is-key.md) — 丢思考不是根源；用户仍认为带思考才对，对弈默认带。
 - [本轮范围与额度](round1-scope-and-quota.md) — 跑到方向性结论；冒烟后不等用户；Codex 额度紧，sol 可当棋手但要省。
+- [额度节奏](quota-pacing.md) — 长跑盘按 /usage 控节奏：5h 窗口有上限且摊匀、别的会话忙时让路、周日 05:00 重置后不烧。
 - [基础设施定案、棋手当真人](converge-infra-real-player.md) — 只给局面、写理由（不修饰）、会话带思考、连错 3 次判负。
 - [每批汇报附总览表](report-with-tally-table.md) — 各组合 × 棋种的局数、比分、关键指标，一眼看清进度。
 - [对弈双方思考方式一致](fair-thinking-carryover.md) — Claude 对 GPT 双方都带思考；测单模型棋力时才用对它最好的方式。
