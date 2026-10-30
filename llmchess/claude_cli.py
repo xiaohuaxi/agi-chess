@@ -53,8 +53,16 @@ def install_stop_handlers(on_stop=None, on_force=None):
     return restore
 
 
+class Refused(Exception):
+    """明确拒答：终止本盘，不允许自动重问或续跑。"""
+
+
 class Paused(Exception):
     """撞额度（--on-limit pause）、连续调不通或收到停止信号：停在两步之间，写 pause 后退出，之后用 resume 接着下。"""
+
+
+class ToolAttempt(Paused):
+    """棋手尝试工具：暂停分析、锁住续跑，批次中也停止其他任务的新调用。"""
 
 
 def command(model, effort, system, session=None, new_session=False):
@@ -89,10 +97,63 @@ def limit_hit(text):
     return ('limit' in t and any(w in t for w in ('usage', 'reset', 'hit', 'reached', 'rate'))) or ' 429' in t
 
 
+def refusal_text(text):
+    """只认明确拦截标记或拒绝披露内部思考的句子；提到理由、思考本身不算。"""
+    t = (text or '').lower().replace('’', "'")
+    if any(mark in t for mark in ('safeguards flagged', '[reasoning_extraction]',
+                                  'safety filter blocked the answer',
+                                  'flagged by our safeguards',
+                                  "unexpected codex item 'refusal'")):
+        return True
+    # CLI 常把后端元数据串进 stderr（有时同时写 empty answer），仍属明确拒答。
+    if re.search(r"\b(?:stop_reason|finish_reason|finishreason)[\"']?\s*[:=]\s*[\"']?"
+                 r"(?:refusal|content_filter|safety)\b", t):
+        return True
+    return bool(re.search(
+        r"(?:i (?:cannot|can't|won't|am unable to)|i'm unable to)\s+"
+        r"(?:provide|share|reveal|disclose|show)[^.!?\n]{0,100}"
+        r"(?:chain[- ]of[- ]thought|hidden (?:reasoning|thoughts)|private (?:reasoning|thoughts)|internal reasoning)"
+        r"|(?:不能|无法|不会|不便)(?:提供|分享|披露|展示|透露|公开)[^。！？\n]{0,50}"
+        r"(?:思维链|内部推理|隐藏思考|内部思考|私密推理)", t))
+
+
 def flagged(d):
-    """安全分类器拒答：claude 以 is_error、stop_reason=refusal 返回，正文是 "... safeguards flagged this message ..."
-    （冒烟里见过 Details: [reasoning_extraction]）。这是模型那边的回复，不是调用失败，交给对局循环记 flag。"""
-    return d.get('stop_reason') == 'refusal' or FLAG_TEXT in (d.get('result') or '')
+    """各服务商明确拒答或安全拦截，调用层必须在任何重试之前交回。"""
+    meta = d.get('meta') or {}
+    return (any(x.get('stop_reason') == 'refusal'
+                or str(x.get('finish_reason', '')).lower() in ('safety', 'refusal', 'content_filter')
+                for x in (d, meta))
+            or refusal_text(d.get('result')))
+
+
+def tool_error_text(text):
+    """只认包装器明确报告的工具事件；普通网络错误或正文提到工具不算。"""
+    text = (text or '').lower()
+    return any(mark in text for mark in (
+        'the model called a tool; plain chat allows none',
+        'the model used server-side tools (',
+        'the answer carries annotations (web citations); plain chat allows no web access',
+        'the model opened files that were not attached:',
+        'agy soft-denied a tool and ended the turn',
+        'agy called tools outside this preset:',
+    )) or bool(re.search(r"unexpected codex item ['\"](?!refusal['\"])[^'\"]+['\"]; plain chat allows no tools", text))
+
+
+def tool_used(d):
+    """已解析响应中的明确工具证据（包含被拒绝的尝试）。不扫描可见正文作猜测。"""
+    if not isinstance(d, dict):
+        return False
+    for obj in (d, d.get('meta')):
+        if not isinstance(obj, dict):
+            continue
+        if obj.get('stop_reason') == 'tool_call' or any(obj.get(k) for k in (
+                'tool_calls', 'denied_actions', 'permission_denials')):
+            return True
+        content = obj.get('content')
+        if isinstance(content, list) and any(isinstance(item, dict) and item.get('type') in (
+                'tool_use', 'server_tool_use') for item in content):
+            return True
+    return False
 
 
 _MONTHS = {m: i + 1 for i, m in enumerate(('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'))}
@@ -172,7 +233,7 @@ def _iso(t):
 
 
 def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, on_fail=None, on_wait=None, parse=None,
-         run=None):
+         run=None, refusal_check=None, fail_closed=False, on_start=None):
     """跑一次 claude -p。返回 (解析后的 JSON, 用时秒)。调不通按 waits 重试；撞额度见下。
     rebuild：每次重试前重新拼命令（新会话第一次调用超时时，会话可能已经建好，重试要改用 --resume）。
     timeout：单次调用的超时秒数。
@@ -187,6 +248,10 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, 
     on_fail / on_wait 自己出错只打一行，不影响调用。
     parse(stdout)：把输出解析成 dict（认不出返回 None 或抛 ValueError）；不给就按 claude -p 的单个 JSON 读。
     codex exec 的棋手（codex_cli）借这一套重试和等额度，只换解析。
+    refusal_check(d)：每次收到返回后、任何重试前检查 transcript，返回新拦截的原文列表。
+    fail_closed：失败时结果可能已写进远端会话，记录完整 stdout/stderr 后立即暂停，不走重试或额度等待。
+    仅 agy 后端（Gemini / agy 棋手）整盘调用启用；明确拒答仍优先返回拒答结果。
+    on_start()：通过停止检查后、真正 dispatch 前持久记录调用；失败直接退出，不发送提示。
     run(cmd, prompt, cwd, env, timeout) -> (stdout, stderr, 退出码)：换掉「提示放在命令行最后一个参数」这种跑法，超时抛
     subprocess.TimeoutExpired。整盘走 llm-chat（chat.run）时用它：提示走 stdin，输出折成一个 JSON 串。"""
     env = dict(os.environ, CLAUDE_CODE_DISABLE_CLAUDE_MDS='1')
@@ -205,6 +270,8 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, 
             raise Paused('收到停止信号，不再发起新调用')
         if calls and rebuild:
             cmd = rebuild()
+        if on_start:
+            on_start()
         calls += 1
         t0 = time.time()
         timed_out = False
@@ -215,15 +282,47 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, 
                 p = subprocess.run(cmd + [prompt], cwd=cwd, env=env, capture_output=True, text=True,
                                    stdin=subprocess.DEVNULL, timeout=timeout)
                 out, err, rc = p.stdout, p.stderr, p.returncode
-        except subprocess.TimeoutExpired:
-            out, err, rc, timed_out = '', 'timeout %ds' % timeout, -1, True
+        except subprocess.TimeoutExpired as e:
+            # 超时前已经返回的拒答证据不能丢，否则会把拒答当网络失败重问。
+            out, err = e.output or '', e.stderr or ''
+            out = out.decode('utf-8', errors='replace') if isinstance(out, bytes) else out
+            err = err.decode('utf-8', errors='replace') if isinstance(err, bytes) else err
+            err += '\ntimeout %ds' % timeout
+            rc, timed_out = -1, True
+        except (OSError, ValueError, TypeError) as e:
+            if not fail_closed:
+                raise
+            out, err, rc = '', '%s: %s' % (type(e).__name__, e), -1
         dt = time.time() - t0
+        if refusal_text(err) or (rc != 0 and refusal_text(out)):
+            return {'result': out or err, 'stop_reason': 'refusal', 'is_error': True,
+                    'refusal_evidence': {'stdout': out, 'stderr': err, 'rc': rc}}, dt
         try:
             d = parse(out) if parse else json.loads(out)
         except ValueError:
             d = None
+        if fail_closed and not isinstance(d, dict):
+            d = None
+        if d is None and refusal_text(out):
+            return {'result': out, 'stop_reason': 'refusal', 'is_error': True,
+                    'refusal_evidence': {'stdout': out, 'stderr': err, 'rc': rc}}, dt
+        hits = refusal_check(d) if refusal_check else None
+        if hits:
+            return dict(d or {}, stop_reason='refusal', is_error=True,
+                        refusal_evidence={'stdout': out, 'stderr': err, 'rc': rc, 'transcript': hits}), dt
+        if d is not None and flagged(d):
+            return d, dt
+        if tool_error_text(err) or (rc != 0 and tool_error_text(out)) or tool_used(d):
+            return {'result': '', 'stop_reason': 'tool_call', 'is_error': True,
+                    'tool_evidence': {'stdout': out, 'stderr': err, 'rc': rc}}, dt
         if d is not None and ((rc == 0 and not d.get('is_error')) or flagged(d)):
             return d, dt
+        if fail_closed:
+            # CLI 失败不证明后端没执行；额度错误也可能是恢复会话时重放的旧错误。
+            info = {'try': calls, 'timeout': timed_out, 'rc': rc, 'elapsed': round(dt, 1),
+                    'stderr': err, 'stdout': out, 'next_wait': None, 'outcome': 'uncertain'}
+            notify(on_fail, info)
+            raise Paused('会话调用结果不确定，禁止自动重发；请核验本地记录（%s）' % err[-500:])
         last = {'rc': rc, 'stdout': out[-2000:], 'stderr': err[-2000:]}
         text = err + ((d.get('result') or '') if d else out)
         if limit_hit(text) or (d and d.get('api_error_status') == 429):
@@ -301,5 +400,5 @@ def transcript_flags_at(path):
             continue
         text = json.dumps((r.get('message') or {}).get('content'), ensure_ascii=False)
         if 'safeguard' in text.lower() or 'flagged' in text.lower():
-            hits.append(text[:500])
+            hits.append(text)
     return hits

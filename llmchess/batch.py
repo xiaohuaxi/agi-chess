@@ -17,14 +17,14 @@ w / b 是「我方」（--player，默认 claude:opus）执先走的一方（红
 批次的我方设置记在 runs/<批>/batch.json，再跑同一批次时必须一致（对手、种子可以追加）。
 局面呈现照 play 的默认给法（中国象棋 pieces、国际象棋 all），--set show=all 回到旧提示；改默认之前开的中国象棋批次要续跑、
   追加，得带 --set show=all（batch.json 记的是实际给法，见 batch_meta）。
-再跑同一条命令 = 续跑：下完的跳过、没下完的 resume、没开的开。
+再跑同一条命令 = 续跑：下完的跳过、可续的 resume、没开的开；拒答、工具事件、结果不确定的盘会锁住。
 撞额度：--on-limit（默认 wait，同 play）透传给每盘。wait 时撞了额度的盘在自己的进程里等到解除接着下，驱动照常开新盘
 （新盘也跟着等）；pause 时撞额度的盘写 pause 退出码 3，驱动就按下面的「停下」处理。--timeout 也透传给每盘的 play / resume。
-停下：任何一盘暂停（pause 模式撞额度、连续调不通、被拦次数超限），或驱动收到 Ctrl-C / SIGTERM，都走同一条路——
+停下：任何一盘暂停或终止（含拒答、工具尝试、调用结果不确定），或驱动收到 Ctrl-C / SIGTERM，都走同一条路——
 驱动置 claude_cli.STOP（不再开新盘）、在批次目录放 .stop（在跑的盘在下一步之前看到就写 pause 停下），并给每个在跑的盘
 发一次 SIGTERM（它的 play 装了 claude_cli 的停止处理：正在等额度 / 等重试的调用马上醒来写 pause；已在跑的 claude -p
-答完为止，然后在下一步之前停）。xhigh 一步可能要几分钟。全部停下后退出码 3，再跑同一条命令接着跑。
-再来一次信号就直接打断在跑的盘（向它的进程组发 SIGINT；打断的那一步重新问，已用掉的尝试照记录接上），同样退出码 3。
+答完为止，然后在下一步之前停）。xhigh 一步可能要几分钟。全部停下后退出码 3，先查看暂停原因；被锁住的盘不得自动续跑。
+再来一次信号就直接打断在跑的盘（向它的进程组发 SIGINT），同样退出码 3；agy 后端已发出的调用结果待核验，不重新问。
 有盘出错（非暂停）退出码 1，其余照跑。
 每盘在自己的进程组里跑，终端的 Ctrl-C 只到驱动，由驱动转告。同一批次同时只能有一个驱动（.lock）。
 驱动被 kill -9 时在跑的盘不会跟着停（它们在自己的进程组里），要等它们下完或手动停掉，再跑同一条命令。
@@ -62,7 +62,7 @@ def parse_seeds(text):
 
 
 def full_spec(spec):
-    return spec if spec.split(':', 1)[0] in ('claude', 'codex', 'deepseek', 'engine', 'random') else 'engine:' + spec
+    return spec if spec.split(':', 1)[0] in runner.TURNS else 'engine:' + spec
 
 
 def slug(spec):
@@ -364,7 +364,7 @@ def cmd_run(a):
     counts = {k: sum(v == k for v in res.values()) for k in sorted(set(res.values()))}
     print('本次：%s；汇总已写 %s' % (json.dumps(counts, ensure_ascii=False), os.path.join(bdir, 'summary.md')))
     if any(v in ('paused', 'not started') for v in res.values()):
-        print('有盘暂停，没下完的盘等额度恢复后用同一条命令续跑')
+        print('有盘暂停，请先查看各盘原因；拒答、工具尝试或调用结果不确定的盘禁止自动续跑')
         return 3
     return 1 if any(v in ('error', 'analyze-error') for v in res.values()) else 0
 

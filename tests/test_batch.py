@@ -230,6 +230,20 @@ class PassThrough(unittest.TestCase):
             self.assertEqual(self.opt(cmd, '--on-limit'), 'pause')
             self.assertEqual(self.opt(cmd, '--timeout'), '100')
 
+    def test_agy_player_and_opponent_build_real_config(self):
+        from llmchess import cli
+        player, opp = 'agy:claude-opus-5-5-high', 'gemini:gemini-4-argon-high'
+        self.assertEqual(B.full_spec(player), player)
+        a = ns(player=player, protocol='real', memory='session', effort='high')
+        seen = {}
+        def capture(args):
+            seen.update(cli.build_cfg(args)[1])
+            return 0
+        with mock.patch.object(cli, 'cmd_play', capture):
+            self.assertEqual(cli.main(B.play_cmd(a, 'runs/b/agymodel-s1-b', opp, 1, 'b')[3:]), 0)
+        self.assertEqual(seen['models'], {'w': 'gemini-4-argon-high', 'b': 'agy/claude-opus-5-5-high'})
+        self.assertEqual(seen['backend'], 'llm-chat')
+
     def test_commands_parse(self):
         """拼出来的 play / resume 命令，play / resume 自己的命令行都认。"""
         from llmchess import cli

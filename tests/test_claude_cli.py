@@ -295,6 +295,52 @@ class Flagged(unittest.TestCase):
     def test_result_text_mentions_flag(self):
         self.assertTrue(CL.flagged({'stop_reason': 'end_turn', 'result': 'blah safeguards flagged this message blah'}))
 
+    def test_explicit_refusal_markers_and_prose(self):
+        for text in ("Gemini’s safety filter blocked the answer", '[reasoning_extraction]',
+                     "I can't disclose my internal reasoning.", '我不能展示思维链。',
+                     'empty answer (finish_reason=content_filter)', '{"stop_reason": "refusal"}',
+                     '{"finishReason": "SAFETY"}'):
+            with self.subTest(text=text):
+                self.assertTrue(CL.flagged({'result': text}))
+        for text in ('我思考后选择出马，理由是控制中心。', '503 No capacity available', '',
+                     "I cannot provide a good reason to exchange queens."):
+            self.assertFalse(CL.flagged({'result': text}))
+
+    def test_direct_nonzero_refusal_never_retries(self):
+        for evidence in ('[reasoning_extraction]', "Gemini’s safety filter blocked the answer"):
+            with mock.patch.object(CL, '_wait') as wait:
+                run = mock.Mock(return_value=('', evidence, 1))
+                d, _ = CL.call(['fake'], 'prompt', '/tmp', run=run)
+            self.assertTrue(CL.flagged(d))
+            self.assertEqual(d['refusal_evidence']['stderr'], evidence)
+            run.assert_called_once()
+            wait.assert_not_called()
+
+    def test_transcript_refusal_prevents_retry_after_failure(self):
+        run = mock.Mock(return_value=('', 'connection reset', 1))
+        evidence = ['Your last response was flagged by our safeguards system.']
+        with mock.patch.object(CL, '_wait') as wait:
+            d, _ = CL.call(['fake'], 'prompt', '/tmp', run=run, refusal_check=lambda d: evidence)
+        self.assertTrue(CL.flagged(d))
+        self.assertEqual(d['refusal_evidence']['transcript'], evidence)
+        run.assert_called_once()
+        wait.assert_not_called()
+
+    def test_metadata_refusal(self):
+        self.assertTrue(CL.flagged({'result': '', 'meta': {'stop_reason': 'refusal'}}))
+        self.assertTrue(CL.flagged({'result': '', 'finish_reason': 'SAFETY'}))
+
+    def test_timeout_preserves_refusal_evidence(self):
+        for output, stderr in ((b'[reasoning_extraction]', b''),
+                               ('', "Gemini’s safety filter blocked the answer")):
+            run = mock.Mock(side_effect=CL.subprocess.TimeoutExpired('fake', 30, output=output, stderr=stderr))
+            with mock.patch.object(CL, '_wait') as wait:
+                d, _ = CL.call(['fake'], 'prompt', '/tmp', run=run)
+            self.assertTrue(CL.flagged(d))
+            self.assertIn('timeout', d['refusal_evidence']['stderr'])
+            run.assert_called_once()
+            wait.assert_not_called()
+
     def test_normal_reply_not_flagged(self):
         self.assertFalse(CL.flagged({'stop_reason': 'end_turn', 'result': '着法: e2e4'}))
 

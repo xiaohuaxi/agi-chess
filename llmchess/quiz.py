@@ -52,8 +52,8 @@
 
 整批停下（--on-limit pause 时撞额度、连续调不通、停止信号；claude_cli 抛 Paused）时：不再开新题，已经在跑的等它们答完，
 退出码 3，下次跑同一条命令接着来。
-一次作答里被安全分类器拦或空回复超过 runner.MAX_FLAGS 次，整盘模式会暂停交给人看；局面题里只把这一题记成
-「放弃（拦截 / 空回复）」，不拖停整批。
+明确拒答一次即终止整批并回报用户，禁止自动续跑。只有普通空回复超过 runner.MAX_FLAGS 次时，整盘模式暂停；
+局面题把这一题记成「放弃（空回复）」，不拖停整批。
 
 引擎只在 judge 里用，永远不进提示。
 """
@@ -64,8 +64,8 @@ import pyffish as sf
 
 from . import chess_ as C
 from . import xiangqi as X
-from . import claude_cli, codex_cli, memory, records, runner
-from .claude_cli import Paused
+from . import chat, claude_cli, codex_cli, memory, records, runner
+from .claude_cli import Paused, Refused, ToolAttempt
 from .cli import commit
 from .engine import Engine
 
@@ -196,7 +196,7 @@ def side_cfg(G, effort, sets=None):
 # reason 档（第三批块 A）：请棋手说明这步为什么这么走。措辞是刻意的，改之前先读这段：
 # - 用户要求把棋手当人看：人每走一步都有依据，由它自己说；不设栏目、不要求列候选着法、不限定写什么。
 # - 不能写成「把你的思考过程写出来」之类：第一批这样写过，像在索取模型内部思考，被安全分类器拦下（memory.py ASK_NOTES
-#   上方同一类教训）。只要回答正文里的理由。以后改措辞，先用几次真实调用核实不被拦。
+#   上方同一类教训）。只要回答正文里的理由。以后改措辞若要实测，遇到拒答立即终止，不能换措辞重问。
 # 两种棋共用这一句，所以挂在这里（system_of）而不是各棋种的 system_prompt 里；off 时系统提示和以前逐字相同。
 REASON_ASK = ('下棋的人每走一步都有自己的依据，可能是一个长远的计划，也可能是想走出某种局面。请在回答里用你自己的话说明这步'
               '为什么这么走，写什么、怎么写由你决定；最后一行照常只写「着法: 」加着法。')
@@ -211,6 +211,8 @@ def system_of(G, side, sc):
 
 
 def quiz_cfg(G, game, side, effort, model, cwd, sets=None, timeout=None):
+    if model.split(':', 1)[0] in chat.AGY_KINDS or model.startswith(('agy/', 'gemini-')):
+        raise SystemExit('Gemini / agy 棋手只支持 real 整盘，局面题不支持；不能改走 claude -p')
     sc = side_cfg(G, effort, sets)
     player = codex_cli.spec_of(model)            # opus → claude:opus；sol / deepseek / codex:… / deepseek:… 走 codex exec
     kind, name = player.split(':', 1)
@@ -349,7 +351,7 @@ def summarize_attempts(recs, ply):
 
 
 def answer_one(pos, effort, rep, out, model, cwd, batch_meta, sets=None, arm=None, timeout=None):
-    """答一题。返回 result；撞额度（非拦截原因的 Paused）照样抛出去。sets / arm：分档的覆盖值和档名。"""
+    """答一题。返回 result；普通暂停抛 Paused，明确拒答抛 Refused。sets / arm：分档的覆盖值和档名。"""
     path = answer_path(out, pos['id'], effort, rep)
     done = result_of(path)
     if done:
@@ -364,6 +366,10 @@ def answer_one(pos, effort, rep, out, model, cwd, batch_meta, sets=None, arm=Non
     ctx['tags'] = {'pos': pos['id'], 'effort': effort, 'rep': rep, 'arm': arm}
     if os.path.exists(path):
         recs = records.read(path)
+        if runner.refusal_record(recs):
+            raise Refused('这题已有拒答拦截记录，禁止自动续跑，请向用户回报')
+        if runner.tool_record(recs):
+            raise ToolAttempt(runner.TOOL_MESSAGE)
         ctx['pending'] = runner.pending_ply(recs, ply)
         runner.log(ctx, {'type': 'resume', 'ply': ply})
     else:
@@ -375,13 +381,16 @@ def answer_one(pos, effort, rep, out, model, cwd, batch_meta, sets=None, arm=Non
     try:
         mv, stat, _ = runner.model_turn(ctx, side, moves, ban)
     except Paused as e:
+        if ctx.get('tool_call'):
+            runner.log(ctx, {'type': 'pause', 'ply': ply, 'why': str(e)})
+            raise
         recs = records.read(path)
         n_flags = sum(1 for r in recs if r['type'] == 'attempt' and r.get('ply') == ply
                       and (r.get('flagged') or r.get('empty')))
         runner.log(ctx, {'type': 'pause', 'ply': ply, 'why': str(e)})
         if n_flags <= runner.MAX_FLAGS:
             raise                                    # 撞额度 / 连续调不通：整批停
-        mv, stat, gave_up = None, None, 'flags'     # 拦截 / 空回复太多：这一题记成放弃，不拖停整批
+        mv, stat, gave_up = None, None, 'flags'     # 空回复太多：这一题记成放弃；字段值沿用历史格式
     recs = records.read(path)
     res = {'type': 'result', 'pos': pos['id'], 'game': pos['game'], 'effort': effort, 'rep': rep, 'arm': arm,
            'show': show_of(sets), 'side': side, 'move': mv, 'forfeit': mv is None and gave_up is None, 'gave_up': gave_up}
@@ -530,6 +539,8 @@ def cmd_run(a):
     print('%s：共 %d 题，已答 %d，这次要答 %d（%d 路并发）' % (label, len(tasks), len(tasks) - len(todo), len(todo), a.jobs),
           flush=True)
     stop = threading.Event()
+    refused = threading.Event()
+    tool_attempt = threading.Event()
     why = []
 
     def work(t):
@@ -542,6 +553,20 @@ def cmd_run(a):
         print('→ %s %s r%d 开始' % (p['id'], e, r), flush=True)
         try:
             res = answer_one(p, e, r, out, a.model, meta['claude_cwd'], batch_meta, sets, a.arm, a.timeout)
+        except Refused as ex:
+            refused.set()
+            stop.set()
+            claude_cli.STOP.set()
+            why.append(str(ex))
+            print('！%s %s r%d 拒答，整批终止：%s' % (p['id'], e, r, ex), flush=True)
+            return None
+        except ToolAttempt as ex:
+            tool_attempt.set()
+            stop.set()
+            claude_cli.STOP.set()
+            why.append(str(ex))
+            print('！%s %s r%d 工具尝试，整批暂停分析：%s' % (p['id'], e, r, ex), flush=True)
+            return None
         except Paused as ex:
             stop.set()
             why.append(str(ex))
@@ -564,6 +589,12 @@ def cmd_run(a):
     finally:
         restore()
     left = sum(1 for t in tasks if not result_of(answer_path(out, t[0]['id'], t[1], t[2])))
+    if refused.is_set():
+        print('已因拒答终止，禁止自动续跑；还剩 %d 题，请向用户回报。' % left)
+        return 3
+    if tool_attempt.is_set():
+        print('已因工具尝试暂停，先分析原因，禁止自动续跑；还剩 %d 题。' % left)
+        return 3
     if stop.is_set():
         print('停下了（%s）。还剩 %d 题，接着跑同一条命令即可。' % (why[0][:300], left))
         return 3
@@ -1066,7 +1097,7 @@ def threat_rows(game, rows):
 
 REPORT_NOTES = [
     '样本：已答完的作答数（局面 × 遍）。首答非法：第一次既没被拦也不是空回复的回答里给了非法着 / 没写出着法的比例。',
-    '判负/放弃：重试 3 次仍非法 / 拦截或空回复超过上限；这两类不进后面的比例（分母是有着法的作答）。',
+    '判负/放弃：重试 3 次仍非法 / 空回复超过上限（旧记录还含拦截超限）；这两类不进后面的比例。明确拒答现行规则为终止，不记结果。',
     '平均亏损：厘兵，负数按 0 计。与引擎最佳一致：走的正是引擎首选。解中：国际象棋走的是谜题正解首着或直接将死。',
     '白送子 / 漏吃 / 漏杀 / 送杀：静态子力判定（口径见 quiz.py「规则判定」注释）；谁能吃到谁类昏招 = (白送子 或 漏吃) 且引擎判失误以上。',
     '思考 tok：一次作答所有尝试合计；首答思考：第一次有效回答的思考 token。耗时：一次作答所有尝试合计。',

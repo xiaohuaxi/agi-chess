@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from llmchess import chess_ as C, claude_cli, cli, quiz, records, runner
+from llmchess import chess_ as C, claude_cli, cli, codex_cli, quiz, records, runner
 from llmchess import xiangqi as X
 from llmchess.claude_cli import Paused
 
@@ -27,6 +27,43 @@ class WholeGameOffline(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def test_legacy_direct_refusal_stops_without_forfeit(self):
+        blocked = {'result': '[reasoning_extraction]', 'stop_reason': 'refusal', 'is_error': True}
+        with mock.patch.object(claude_cli, 'call', return_value=(blocked, 0.1)) as call:
+            rc = run_quiet(['play', '--game', 'chess', '--tag', 'ref', '--out', self.tmp,
+                            '--protocol', 'legacy', '--black', 'random', '--max-plies', '1'])
+        self.assertEqual(rc, 3)
+        call.assert_called_once()
+        recs = records.read(os.path.join(self.tmp, 'ref', 'game.jsonl'))
+        self.assertEqual(recs[-1]['type'], 'refusal')
+        self.assertFalse(any(r['type'] in ('move', 'forfeit', 'end') for r in recs))
+        with mock.patch.object(claude_cli, 'call') as call:
+            self.assertEqual(run_quiet(['resume', os.path.join(self.tmp, 'ref')]), 3)
+        call.assert_not_called()
+
+    def test_old_flag_record_locks_resume(self):
+        for record in ({'type': 'flag', 'source': 'transcript'},
+                       {'type': 'attempt', 'flagged': True}):
+            self.assertIs(runner.refusal_record([record]), record)
+        self.assertIsNone(runner.refusal_record([{'type': 'attempt', 'empty': True}]))
+
+    def test_direct_tool_attempt_stops_and_locks_resume(self):
+        for n, outcome in enumerate(({'result': '着法: e2e4', 'permission_denials': [{'tool_name': 'Read'}]},
+                                      codex_cli.ToolUsed('事件流里出现 command_execution'))):
+            options = {'side_effect': outcome} if isinstance(outcome, Exception) else {'return_value': (outcome, 0.1)}
+            with mock.patch.object(claude_cli, 'call', **options) as call:
+                rc = run_quiet(['play', '--game', 'chess', '--tag', 'direct-tool%d' % n, '--out', self.tmp,
+                                '--protocol', 'legacy', '--black', 'random', '--max-plies', '1'])
+            self.assertEqual(rc, 3)
+            call.assert_called_once()
+            path = os.path.join(self.tmp, 'direct-tool%d' % n)
+            recs = records.read(os.path.join(path, 'game.jsonl'))
+            self.assertIsNotNone(runner.tool_record(recs))
+            self.assertFalse(any(r['type'] in ('move', 'forfeit', 'end', 'refusal') for r in recs))
+            with mock.patch.object(claude_cli, 'call') as call:
+                self.assertEqual(run_quiet(['resume', path]), 3)
+            call.assert_not_called()
 
     def test_xiangqi_random_vs_engine(self):
         out = os.path.join(self.tmp, 'runs')

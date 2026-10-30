@@ -223,6 +223,9 @@ def parse(out):
             d['thread_id'] = e.get('thread_id')
         elif t in ('item.started', 'item.updated', 'item.completed'):
             it = e.get('item') or {}
+            if it.get('type') == 'refusal':
+                return dict(d, stop_reason='refusal', is_error=True,
+                            result=it.get('refusal') or it.get('text') or '', refusal_evidence={'stdout': out})
             if it.get('type') not in TEXT_ITEMS:
                 raise ToolUsed('事件流里出现了 %s：%s' % (it.get('type'), json.dumps(it, ensure_ascii=False)[:500]))
             if t == 'item.completed':

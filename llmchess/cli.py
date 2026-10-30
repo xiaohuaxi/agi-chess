@@ -13,7 +13,8 @@
   非法着法只告诉它不合法、让它重选（每步最多 retries+1 次，用完判负；real 默认 3 次）；模型调用走 llm-chat（chat.py）。legacy 是改协议之前的提示和调用（claude -p 直调，memory 默认 stateless），
   用来续跑、复现旧实验；旧记录的 config 里没有 protocol，resume 自动按旧的走。
 棋手：claude:<模型>（默认 claude:opus）/ codex:<GPT 模型，如 sol 或 gpt-6-sol> / deepseek:<模型，默认 deepseek-v4-pro>
-  （后两种只在 real 下）/ engine:<引擎>[:参数] / random。
+  / gemini:<agy models 中的完整 gemini-* slug> / agy:<agy models 中的完整 slug>（后四种只在 real 下）/ engine:<引擎>[:参数] / random。
+  Gemini / agy 经 agy 的 Google 订阅调用，思考档位包含在模型 slug 中，--effort 仍显式传给 llm-chat。
   国际象棋引擎 maia-1100 … maia-1900（lc0，go nodes 1）、stockfish[:elo=N|nodes=N|depth=N|movetime=毫秒]；
   中国象棋引擎 fsf[:nodes=N|depth=N|movetime=毫秒]（Fairy-Stockfish，默认 nodes=1000）。
 模型相关变量（公共值用 --变量，一方单设用 --w / --b 变量=值，w 是先走的红方 / 白方）：
@@ -123,6 +124,9 @@ def check_player(G, spec, protocol='legacy'):
         return
     if kind in ('codex', 'deepseek') and protocol == 'real':
         return
+    if kind in chat.AGY_KINDS and protocol == 'real' and ':' in spec:
+        chat.model_id(kind, spec.split(':', 1)[1])
+        return
     if kind == 'random' and spec == 'random':
         return
     if kind == 'engine' and ':' in spec:
@@ -131,7 +135,8 @@ def check_player(G, spec, protocol='legacy'):
         except ValueError as e:
             raise SystemExit(str(e))
         return
-    raise SystemExit('棋手写成 claude:<模型> / codex:<模型> / deepseek[:<模型>]（后两种只在 real 协议下）/ '
+    raise SystemExit('棋手写成 claude:<模型> / codex:<模型> / deepseek[:<模型>] / gemini:<完整 gemini-* slug> / agy:<完整 slug>'
+                     '（后四种只在 real 协议下）/ '
                      'engine:<引擎>[:参数] / random，收到 %r' % spec)
 
 
@@ -295,6 +300,19 @@ def cmd_resume(a):
     ctx = runner.load(G, str(run_dir))
     if ctx['end']:
         raise SystemExit('这盘已经结束：%s' % json.dumps(ctx['end'], ensure_ascii=False))
+    if ctx.get('refusal'):
+        print('这盘已有拒答拦截记录，已终止；禁止自动续跑，请向用户回报。')
+        return 3
+    if ctx.get('tool_call'):
+        print(runner.TOOL_MESSAGE)
+        return 3
+    if ctx.get('uncertain'):
+        if not a.retry_idle_timeout or not runner.authorize_idle_retry(ctx):
+            print(runner.UNCERTAIN_MESSAGE)
+            return 3
+    elif a.retry_idle_timeout:
+        print('没有可明确关联的 agy stream idle timeout 失败，不能授权重试。')
+        return 3
     rec = {'type': 'resume', 'ply': len(ctx['st']['moves']), 'commit': commit()}
     if a.timeout is not None:                    # 只管这次续跑；下次不给就又沿用 config 里的值
         ctx['cfg']['timeout'] = rec['timeout'] = a.timeout
@@ -369,6 +387,8 @@ def main(argv=None):
     r.add_argument('--stop-file', dest='stop_file', help=stop_help)
     r.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait', help=LIMIT_HELP)
     r.add_argument('--timeout', type=int, help='这次续跑改用的 claude -p 超时秒数（记进 resume 记录），默认沿用 config')
+    r.add_argument('--retry-idle-timeout', action='store_true',
+                   help='显式授权重发唯一未完成的 agy stream idle timeout 调用；原始失败保留，其他锁不解除')
     e = sub.add_parser('export', help='已结束的盘按记录重新导出棋谱（record.txt / game.pgn，带每步元信息）')
     e.add_argument('dir')
     a = ap.parse_args(argv)

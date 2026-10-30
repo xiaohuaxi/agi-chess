@@ -10,10 +10,11 @@ import os
 import shutil
 import sys
 import tempfile
+import subprocess
 import unittest
 from unittest import mock
 
-from llmchess import chat, chess_ as C, cli, memory, records, runner
+from llmchess import batch, chat, chess_ as C, cli, memory, records, runner
 from llmchess import xiangqi as X
 
 FAKE = r'''
@@ -34,6 +35,7 @@ if 'text' in step:
             'cost_usd': step.get('cost', 0.01), 'input_tokens': 10, 'output_tokens': 20, 'reasoning_tokens': 15}
     if 'dropped' in step:
         meta['thinking_dropped'] = step['dropped']
+    meta.update(step.get('extra_meta', {}))
     sys.stderr.write('some noise\nLLM_CHAT_META ' + json.dumps(meta) + '\n')
     sys.exit(0)
 if step.get('refuse'):
@@ -94,6 +96,7 @@ class FakeChat(unittest.TestCase):
         self.assertEqual(chat.usage(d, 'claude')['in'], 100)          # Claude 的 input_tokens 本来就不含缓存
         self.assertEqual(chat.usage(d, 'codex')['in'], 40)            # codex / DeepSeek 含缓存命中，要减掉
         self.assertEqual(chat.usage(d, 'deepseek')['text_out'], 10)
+        self.assertEqual(chat.usage(d, 'gemini')['in'], 40)
 
     def test_model_id(self):
         slugs = ['gpt-6-astra', 'gpt-6-sol', 'gpt-5.6-sol', 'gpt-5.5']
@@ -101,10 +104,184 @@ class FakeChat(unittest.TestCase):
         self.assertEqual(chat.model_id('codex', 'gpt-5.6-sol', slugs), 'gpt-5.6-sol')
         self.assertEqual(chat.model_id('deepseek', 'deepseek'), chat.DEEPSEEK_DEFAULT)
         self.assertEqual(chat.model_id('claude', 'opus'), 'opus')
+        self.assertEqual(chat.model_id('agy', 'claude-opus-5-5-high'), 'agy/claude-opus-5-5-high')
+        self.assertEqual(chat.model_id('agy', 'gemini-4-argon-high'), 'agy/gemini-4-argon-high')
+        for name in ('', 'agy/claude-opus-5-5-high', '../opus', 'opus:high', ' opus'):
+            with self.assertRaises(SystemExit):
+                chat.model_id('agy', name)
+        self.assertEqual(chat.model_id('gemini', 'gemini-3.8-flash-high'), 'gemini-3.8-flash-high')
+        for name in ('', 'flash', 'google/gemini-3.8-flash-high'):
+            with self.assertRaises(SystemExit):
+                chat.model_id('gemini', name)
         with self.assertRaises(SystemExit):
             chat.model_id('codex', 'nova', slugs)
 
     # ------------------------------------------------------------------ 整盘
+    def test_agy_chess_sessions_and_batch_entry(self):
+        self.plan([{'text': '着法: e2e4'}, {'text': '着法: e7e5'},
+                   {'text': '着法: g1f3'}, {'text': '着法: b8c6'}])
+        white, black = 'gemini:gemini-4-argon-high', 'agy:claude-opus-5-5-high'
+        self.assertEqual(batch.full_spec(black), black)
+        self.assertEqual(self.play(['--game', 'chess', '--tag', 'agy-chess', '--white', white,
+                                    '--black', black, '--effort', 'high', '--max-plies', '4']), 0)
+        recs, calls = self.recs('agy-chess'), self.calls()
+        self.assertEqual(recs[0]['cfg']['models'], {'w': 'gemini-4-argon-high', 'b': 'agy/claude-opus-5-5-high'})
+        starts = [r for r in recs if r['type'] == 'call_started']
+        atts = [r for r in recs if r['type'] == 'attempt']
+        self.assertEqual(len(starts), 4)
+        self.assertEqual([r['call_id'] for r in starts], [r['call_id'] for r in atts])
+        for n, call in enumerate(calls):
+            argv = call['argv']
+            self.assertEqual(argv[argv.index('-m') + 1], recs[0]['cfg']['models']['wb'[n % 2]])
+            self.assertEqual(argv[argv.index('--effort') + 1], 'high')
+            if n >= 2:
+                self.assertEqual(argv[argv.index('--session') + 1], atts[n - 2]['session'])
+        self.assertNotEqual(atts[0]['session'], atts[1]['session'])
+
+    def test_agy_rejected_before_start(self):
+        for extra in (['--protocol', 'legacy'], ['--w', 'drop_thinking=on']):
+            with self.assertRaises(SystemExit):
+                self.play(['--game', 'chess', '--tag', 'bad-agy',
+                           '--white', 'agy:claude-opus-5-5-high', '--black', 'random'] + extra)
+        self.assertFalse(os.path.exists(os.path.join(self.tmp, 'calls.jsonl')))
+
+    def test_agy_failure_blocks_retry_and_resume(self):
+        for n, failure in enumerate(({'error': '503 No capacity available'},
+                                     {'error': 'rate limit exceeded'}, {'empty': True}, {'text': ''})):
+            with self.subTest(failure=failure):
+                self.plan([failure] * (n + 1))
+                tag = 'agy-uncertain%d' % n
+                with mock.patch.object(runner.claude_cli, '_wait') as wait:
+                    self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white',
+                                               'agy:claude-opus-5-5-high', '--black', 'random',
+                                               '--max-plies', '1']), 3)
+                wait.assert_not_called()
+                recs = self.recs(tag)
+                self.assertEqual(sum(r['type'] == 'call_started' for r in recs), 1)
+                fail = next(r for r in recs if r['type'] == 'call_fail')
+                self.assertEqual(fail['outcome'], 'uncertain')
+                self.assertIsNone(fail['next_wait'])
+                self.assertFalse(any(r['type'] in ('move', 'end', 'forfeit') for r in recs))
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(cli.main(['resume', os.path.join(self.tmp, tag)]), 3)
+                    self.assertIsNone(runner.play(runner.load(C, os.path.join(self.tmp, tag))))
+                self.assertEqual(len(self.calls()), n + 1)
+
+    def test_agy_pending_call_locks_before_dispatch(self):
+        self.plan([{'text': '着法: e2e4'}, {'text': '着法: g1f3'}])
+        tag = 'agy-pending'
+        self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white', 'agy:claude-opus-5-5-high',
+                                    '--black', 'random', '--max-plies', '3', '--stop-after', '1']), 3)
+        path = os.path.join(self.tmp, tag, 'game.jsonl')
+        start = {'type': 'call_started', 'side': 'w', 'ply': 3, 'call_id': 'pending'}
+        records.write(path, start)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.main(['resume', os.path.join(self.tmp, tag)]), 3)
+            self.assertEqual(cli.main(['resume', os.path.join(self.tmp, tag), '--retry-idle-timeout']), 3)
+            ctx = runner.load(C, os.path.join(self.tmp, tag))
+            self.assertEqual({k: ctx['uncertain'][k] for k in start}, start)
+            self.assertIsNone(runner.play(ctx))
+        self.assertEqual(len(self.calls()), 1)
+
+    def test_idle_timeout_explicit_resume_and_new_failure_lock(self):
+        idle = {'error': 'agy: stream idle timeout (5m0s):context deadline exceeded'}
+        self.plan([idle, idle, {'text': '着法: e2e4'}])
+        tag = 'idle-retry'
+        path = os.path.join(self.tmp, tag)
+        self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white',
+                                    'agy:gemini-4-argon-high', '--black', 'random',
+                                    '--max-plies', '1']), 3)
+        before = self.recs(tag)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.main(['resume', path]), 3)
+            self.assertEqual(len(self.calls()), 1)
+            self.assertEqual(cli.main(['resume', path, '--retry-idle-timeout']), 3)
+            self.assertEqual(cli.main(['resume', path]), 3)
+            self.assertEqual(len(self.calls()), 2)
+            self.assertEqual(cli.main(['resume', path, '--retry-idle-timeout']), 0)
+        after = self.recs(tag)
+        self.assertEqual(after[:len(before)], before)
+        retries = [r for r in after if r['type'] == 'retry_idle_timeout']
+        self.assertEqual(len(retries), 2)
+        for r in retries:
+            self.assertEqual(after[r['failed_record']]['type'], 'call_fail')
+            self.assertEqual(after[r['started_record']]['call_id'], r['call_id'])
+            self.assertEqual(after[r['failed_record']]['call_id'], r['call_id'])
+        self.assertNotEqual(retries[0]['call_id'], retries[1]['call_id'])
+        self.assertIsNone(runner.load(C, path)['uncertain'])
+        self.assertEqual(len(self.calls()), 3)
+
+    def test_idle_retry_legacy_failure_and_exact_audit_scope(self):
+        cfg = {'players': {'w': 'agy:gemini-4-argon-high'}}
+        start = {'type': 'call_started', 'side': 'w', 'ply': 1, 'call_id': 'first'}
+        fail = {'type': 'call_fail', 'side': 'w', 'ply': 1,
+                'stderr': 'stream idle timeout (5m0s):context deadline exceeded'}
+        recs = [start, fail]
+        event = runner.idle_retry_event(runner.uncertain_records(recs, cfg))
+        self.assertIsNotNone(event)  # 旧 call_fail 没有 call_id 仍可由唯一未完成调用关联。
+        self.assertIsNone(runner.uncertain_record(recs + [event], cfg))
+        for wrong in (dict(event, call_id='other'), dict(event, failed_record=3),
+                      dict(event, side='b'), dict(event, ply=2)):
+            self.assertIsNotNone(runner.uncertain_record(recs + [wrong], cfg))
+        self.assertIsNotNone(runner.uncertain_record([event] + recs, cfg))
+        newer = dict(start, call_id='second')
+        self.assertIsNotNone(runner.uncertain_record(recs + [event, newer, fail, event], cfg))
+        for invalid in ([start], [fail], [start, dict(start, call_id='another'), fail],
+                        [start, dict(fail, side='b')], [start, dict(fail, call_id='other')],
+                        [start, dict(fail, stderr='503 No capacity')],
+                        [start, dict(fail, stderr=fail['stderr'] + ' [reasoning_extraction]')],
+                        [start, dict(fail, stderr=fail['stderr'] +
+                                     ' the model opened files that were not attached: /etc/hosts')]):
+            self.assertIsNone(runner.idle_retry_event(runner.uncertain_records(invalid, cfg)))
+        self.assertIsNone(runner.idle_retry_event(runner.uncertain_records(
+            recs, {'players': {'w': 'claude:opus'}})))
+
+    def test_idle_retry_cli_cannot_bypass_nonidle_tools_or_refusal(self):
+        for n, failure in enumerate(({'error': '503 No capacity'},
+                                     {'error': 'stream idle timeout (5m0s):context deadline exceeded; '
+                                               'the model opened files that were not attached: /etc/hosts'},
+                                     {'refuse': True})):
+            self.plan([failure] * (n + 1))
+            tag = 'idle-deny%d' % n
+            self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white',
+                                        'agy:gemini-4-argon-high', '--black', 'random',
+                                        '--max-plies', '1']), 3)
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(cli.main(['resume', os.path.join(self.tmp, tag),
+                                           '--retry-idle-timeout']), 3)
+            self.assertEqual(len(self.calls()), n + 1)
+            self.assertFalse(any(r['type'] == 'retry_idle_timeout' for r in self.recs(tag)))
+
+    def test_gemini_xiangqi_selfplay_sessions(self):
+        self.plan([{'text': '着法: h2e2'}, {'text': '着法: h7e7'},
+                   {'text': '着法: i0i1'}, {'text': '着法: i9i8'}])
+        spec = 'gemini:gemini-3.8-flash-high'
+        self.assertEqual(self.play(['--game', 'xiangqi', '--tag', 'gemini', '--red', spec, '--black', spec,
+                                    '--effort', 'high', '--max-plies', '4']), 0)
+        recs, calls = self.recs('gemini'), self.calls()
+        cfg = recs[0]['cfg']
+        self.assertEqual(cfg['models'], dict.fromkeys('wb', 'gemini-3.8-flash-high'))
+        self.assertEqual((cfg['protocol'], cfg['backend']), ('real', 'llm-chat'))
+        atts = [r for r in recs if r['type'] == 'attempt']
+        self.assertEqual(len(atts), 4)
+        self.assertTrue(all(a['legal'] for a in atts))
+        self.assertNotEqual(atts[0]['session'], atts[1]['session'])
+        for n, call in enumerate(calls):
+            argv = call['argv']
+            self.assertEqual(argv[argv.index('-m') + 1], 'gemini-3.8-flash-high')
+            self.assertEqual(argv[argv.index('--effort') + 1], 'high')
+            if n < 2:
+                self.assertIn('--system', argv)
+            else:
+                self.assertEqual(argv[argv.index('--session') + 1], atts[n - 2]['session'])
+
+    def test_gemini_rejected_before_start(self):
+        for extra in (['--protocol', 'legacy'], ['--w', 'drop_thinking=on']):
+            with self.assertRaises(SystemExit):
+                self.play(['--game', 'xiangqi', '--tag', 'bad-gemini',
+                           '--red', 'gemini:gemini-3.8-flash-high', '--black', 'random'] + extra)
+        self.assertFalse(os.path.exists(os.path.join(self.tmp, 'calls.jsonl')))
+
     def test_xiangqi_session_illegal_retry_and_loose_parse(self):
         # 红方模型对随机：第 1 步先走非法（车 a0 越过 a3 的兵），再只写一行着法；第 3 步用英文「Move:」
         self.plan([{'text': '我走车。\n着法: a0a9', 'cost': 0.01}, {'text': 'h2e2', 'cost': 0.02},
@@ -185,17 +362,20 @@ class FakeChat(unittest.TestCase):
         self.assertIn('还可重选 3 次', c[0]['stdin'])
         self.assertIn('连续 4 次', [r for r in self.recs('o') if r['type'] == 'forfeit'][0]['end']['reason'])
 
-    def test_refusal_on_first_turn_resends_full_prompt(self):
-        # 第一轮被拦时 llm-chat 不存会话：重问要带系统提示和完整局面，不能只发「请重新回答」
-        self.plan([{'refuse': True}, {'text': '着法: e2e4'}, {'text': '着法: d2d4'}])
-        rc = self.play(['--game', 'chess', '--tag', 'r', '--black', 'random', '--max-plies', '3', '--seed', '1'])
-        self.assertEqual(rc, 0)
-        calls = self.calls()
-        self.assertIn('--system', calls[1]['argv'])
-        self.assertIn('FEN', calls[1]['stdin'])
-        flags = [r for r in self.recs('r') if r['type'] == 'flag']
-        self.assertEqual(len(flags), 1)
-        self.assertIn('--session', calls[2]['argv'])
+    def test_refusal_on_first_turn_stops_and_locks_resume(self):
+        self.plan([{'refuse': True}, {'text': '着法: e2e4'}])
+        rc = self.play(['--game', 'chess', '--tag', 'r', '--black', 'random', '--max-plies', '3'])
+        self.assertEqual(rc, 3)
+        self.assertEqual(len(self.calls()), 1)
+        recs = self.recs('r')
+        refusal = next(r for r in recs if r['type'] == 'refusal')
+        self.assertEqual((refusal['provider'], refusal['ply']), ('claude', 1))
+        self.assertIn('safeguards flagged', refusal['evidence']['response']['result'])
+        self.assertFalse(any(r['type'] in ('move', 'end', 'forfeit') for r in recs))
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.main(['resume', os.path.join(self.tmp, 'r')]), 3)
+        self.assertEqual(len(self.calls()), 1)
+        self.assertEqual(self.recs('r'), recs)
 
     def test_chess_last_move_is_uci_only(self):
         self.plan([{'text': '着法: e7e5'}])
@@ -221,65 +401,199 @@ class FakeChat(unittest.TestCase):
         self.assertIn('还可重选 2 次', c[0]['stdin'])            # 暂停前用掉的一次照记录接上
         self.assertIn('还可重选 1 次', c[1]['stdin'])
 
-    # ------------------------------------------------------------------ 被拦兜底「简短」（用户 2026-10-02 定）
-    BRIEF = '先用你自己的话简短写出这步的理由'
+    def test_provider_refusals_stop_without_call_retry(self):
+        cases = [('agy:claude-opus-5-5-high', {'text': '[reasoning_extraction]'}),
+                 ('gemini:gemini-3.8-flash-high', {'error': "Gemini’s safety filter blocked the answer"}),
+                 ('codex:gpt-6-sol', {'text': "I cannot provide my private chain-of-thought."}),
+                 ('deepseek:deepseek-v4-pro', {'text': '我无法提供内部思考过程。'}),
+                 ('claude:opus', {'text': '[reasoning_extraction]'}),
+                 ('codex:gpt-6-sol', {'error': "codex reported an error: unexpected codex item 'refusal'; plain chat allows no tools"})]
+        for i, (player, reply) in enumerate(cases):
+            with self.subTest(player=player):
+                self.plan([reply] * (i + 1))
+                with mock.patch.object(runner.claude_cli, '_wait') as wait:
+                    rc = self.play(['--game', 'chess', '--tag', 'ref%d' % i, '--white', player,
+                                    '--black', 'random', '--effort', 'high', '--max-plies', '1'])
+                self.assertEqual(rc, 3)
+                wait.assert_not_called()
+                self.assertEqual(len(self.calls()), i + 1)
+                rs = self.recs('ref%d' % i)
+                self.assertEqual(rs[-1]['type'], 'refusal')
+                self.assertFalse(any(r['type'] == 'call_fail' for r in rs))
 
-    def test_refusal_twice_then_brief_only_this_ply(self):
-        # 第 3 个半回合：被拦 → 照旧重问（不修饰）→ 又被拦 → 第三问附「简短」；下一手回到默认
-        self.plan([{'text': '着法: e2e4'}, {'refuse': True}, {'refuse': True}, {'text': '着法: d2d4'},
-                   {'text': '着法: g1f3'}])
-        rc = self.play(['--game', 'chess', '--tag', 'bf', '--black', 'random', '--max-plies', '5', '--seed', '1'])
-        self.assertEqual(rc, 0)
-        calls = self.calls()
-        self.assertEqual(len(calls), 5)
-        self.assertEqual(calls[2]['stdin'], '请重新回答这一步。' + memory.ASK_REAL)       # 第一次重问一字不变
-        self.assertTrue(calls[3]['stdin'].startswith('请重新回答这一步。' + memory.ASK_REAL + '\n\n回答格式：'))
-        self.assertIn(self.BRIEF, calls[3]['stdin'])
-        self.assertNotIn(memory.ANSWER_LEAD['plain'], calls[3]['stdin'])
-        self.assertIn('--session', calls[3]['argv'])
-        self.assertNotIn('--system', calls[3]['argv'])                # 系统提示不动
-        for c in (calls[0], calls[1], calls[2], calls[4]):
-            self.assertNotIn('简短', c['stdin'])
-        atts = [r for r in self.recs('bf') if r['type'] == 'attempt' and r['side'] == 'w']
-        self.assertEqual([a.get('reason_fallback') for a in atts], [None, None, None, 'brief', None])
-        self.assertEqual([bool(a.get('flagged')) for a in atts], [False, True, True, False, False])
-
-    def test_refusal_then_empty_no_brief(self):
-        # 「简短」只由被拦触发：被拦一次、再空回复一次，第三问照旧
-        self.plan([{'text': '着法: e2e4'}, {'refuse': True}, {'empty': True}, {'text': '着法: d2d4'}])
-        rc = self.play(['--game', 'chess', '--tag', 'be', '--black', 'random', '--max-plies', '3', '--seed', '1'])
-        self.assertEqual(rc, 0)
-        calls = self.calls()
-        self.assertEqual(calls[3]['stdin'], '请重新回答这一步。' + memory.ASK_REAL)
-        self.assertFalse(any(r.get('reason_fallback') for r in self.recs('be') if r['type'] == 'attempt'))
-
-    def test_refusal_twice_under_brief_changes_nothing(self):
-        # 本来就是「简短」：兜底不改变什么，第三问照旧、记录不标
-        self.plan([{'text': '着法: e2e4'}, {'refuse': True}, {'refuse': True}, {'text': '着法: d2d4'}])
-        rc = self.play(['--game', 'chess', '--tag', 'bb', '--black', 'random', '--max-plies', '3', '--seed', '1',
-                        '--reason', 'brief'])
-        self.assertEqual(rc, 0)
-        self.assertEqual(self.calls()[3]['stdin'], '请重新回答这一步。' + memory.ASK_REAL)
-        self.assertFalse(any(r.get('reason_fallback') for r in self.recs('bb') if r['type'] == 'attempt'))
-
-    def test_brief_fallback_survives_resume(self):
-        # 连拦两次后调不通暂停：续跑从记录数出被拦次数，第一问就附「简短」，记录里标出来
-        self.plan([{'text': '着法: e2e4'}, {'refuse': True}, {'refuse': True}])
-        with mock.patch.object(runner.claude_cli, '_wait', lambda s: True):
-            rc = self.play(['--game', 'chess', '--tag', 'br', '--black', 'random', '--max-plies', '3', '--seed', '1'])
+    def test_text_metadata_refusal_is_not_an_empty_reply(self):
+        self.plan([{'error': 'empty answer (finish_reason=content_filter); no text returned'},
+                   {'text': '着法: e2e4'}])
+        with mock.patch.object(runner.claude_cli, '_wait') as wait:
+            rc = self.play(['--game', 'chess', '--tag', 'filter', '--white', 'deepseek:deepseek-v4-pro',
+                            '--black', 'random', '--effort', 'high', '--max-plies', '1'])
         self.assertEqual(rc, 3)
-        ctx = runner.load(C, os.path.join(self.tmp, 'br'))
-        self.assertEqual((ctx['pending']['blocks'], ctx['pending']['redo']), (2, True))
-        self.plan([{'text': '着法: d2d4'}])
-        os.remove(os.path.join(self.tmp, 'calls.jsonl'))
-        with contextlib.redirect_stdout(io.StringIO()):
-            rc = cli.main(['resume', os.path.join(self.tmp, 'br')])
+        self.assertEqual(len(self.calls()), 1)
+        wait.assert_not_called()
+        self.assertIn('finish_reason=content_filter', self.recs('filter')[-1]['evidence']['response']['result'])
+
+    def test_transcript_refusal_stops_even_with_valid_move(self):
+        self.plan([{'text': '着法: e2e4'}])
+        evidence = 'Your last response was flagged by our safeguards system.'
+        with mock.patch.object(runner.claude_cli, 'transcript_flags_at', return_value=[evidence]):
+            rc = self.play(['--game', 'chess', '--tag', 'tr', '--black', 'random', '--max-plies', '1'])
+        self.assertEqual(rc, 3)
+        self.assertEqual(len(self.calls()), 1)
+        self.assertEqual(self.recs('tr')[-1]['evidence']['transcript'], [evidence])
+        self.assertFalse(any(r['type'] == 'move' for r in self.recs('tr')))
+
+    def test_empty_reply_still_retries_without_changing_reason(self):
+        self.plan([{'empty': True}, {'text': '思考后决定占中心，理由如下。\n着法: e2e4'}])
+        rc = self.play(['--game', 'chess', '--tag', 'em', '--black', 'random', '--max-plies', '1'])
         self.assertEqual(rc, 0)
-        c = self.calls()
-        self.assertTrue(c[0]['stdin'].startswith('请重新回答这一步。' + memory.ASK_REAL + '\n\n回答格式：'))
-        self.assertIn(self.BRIEF, c[0]['stdin'])
-        att = [r for r in self.recs('br') if r['type'] == 'attempt' and r['side'] == 'w'][-1]
-        self.assertEqual((att['move'], att.get('reason_fallback')), ('d2d4', 'brief'))
+        self.assertEqual(len(self.calls()), 2)
+        self.assertNotIn('简短', self.calls()[1]['stdin'])
+        self.assertFalse(any(r['type'] == 'refusal' for r in self.recs('em')))
+
+    def test_capacity_error_still_retries(self):
+        self.plan([{'error': '503 No capacity available'}, {'text': '着法: e2e4'}])
+        with mock.patch.object(runner.claude_cli, '_wait', return_value=False) as wait:
+            rc = self.play(['--game', 'chess', '--tag', 'cap', '--black', 'random', '--max-plies', '1'])
+        self.assertEqual(rc, 0)
+        wait.assert_called_once_with(30)
+        self.assertEqual(len(self.calls()), 2)
+        self.assertEqual(sum(r['type'] == 'call_fail' for r in self.recs('cap')), 1)
+
+    def test_gemini_failure_blocks_retry_and_resume(self):
+        for n, failure in enumerate(({'error': '503 No capacity available'},
+                                     {'error': 'rate limit exceeded'},
+                                     {'error': 'unexpected tool view_file'}, {'empty': True})):
+            with self.subTest(failure=failure):
+                self.plan([failure] * (n + 1))
+                before = n
+                tag = 'uncertain%d' % n
+                with mock.patch.object(runner.claude_cli, '_wait') as wait:
+                    rc = self.play(['--game', 'chess', '--tag', tag, '--white',
+                                    'gemini:gemini-3.8-flash-high', '--black', 'random', '--max-plies', '1'])
+                self.assertEqual(rc, 3)
+                wait.assert_not_called()
+                self.assertEqual(len(self.calls()), before + 1)
+                recs = self.recs(tag)
+                self.assertFalse(any(r['type'] in ('move', 'forfeit', 'end') for r in recs))
+                fail = next(r for r in recs if r['type'] == 'call_fail')
+                self.assertEqual(fail['outcome'], 'uncertain')
+                self.assertIsNone(fail['next_wait'])
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(cli.main(['resume', os.path.join(self.tmp, tag)]), 3)
+                    ctx = runner.load(C, os.path.join(self.tmp, tag))
+                    self.assertIsNone(runner.play(ctx))
+                self.assertEqual(len(self.calls()), before + 1)
+
+    def test_gemini_timeout_and_malformed_metadata_do_not_retry(self):
+        for model in ('gemini-3.8-flash-high', 'agy/claude-opus-5-5-high'):
+            cmd = chat.command(model, 'high', system='sys')
+            cases = [ValueError('wrapper parse failure'), OSError('wrapper failed'),
+                     subprocess.TimeoutExpired(cmd, 1, output=b'partial reply', stderr=b'partial error'),
+                     subprocess.CompletedProcess(cmd, 0, 'reply', 'LLM_CHAT_META {broken'),
+                     subprocess.CompletedProcess(cmd, 0, 'reply', 'LLM_CHAT_META []'),
+                     subprocess.CompletedProcess(cmd, 0, 'reply', ''),
+                     subprocess.CompletedProcess(cmd, 0, '', 'LLM_CHAT_META {"session":"s"}')]
+            for result in cases:
+                with self.subTest(result=result):
+                    fails = []
+                    options = {'side_effect': result} if isinstance(result, Exception) else {'return_value': result}
+                    with mock.patch.object(chat.subprocess, 'run', **options) as run, \
+                            mock.patch.object(runner.claude_cli, '_wait') as wait:
+                        with self.assertRaises(runner.Paused):
+                            chat.call(cmd, 'prompt', on_fail=fails.append)
+                    self.assertEqual(run.call_count, 1)
+                    wait.assert_not_called()
+                    self.assertEqual(fails[0]['outcome'], 'uncertain')
+
+
+    def test_gemini_pending_and_old_fail_records_lock(self):
+        for player in ('gemini:gemini-3.8-flash-high', 'agy:claude-opus-5-5-high'):
+            cfg = {'players': {'w': player, 'b': 'random'}}
+            start = {'type': 'call_started', 'side': 'w', 'ply': 1, 'call_id': 'unique'}
+            attempt = {'type': 'attempt', 'side': 'w', 'ply': 1, 'call_id': 'unique', 'legal': True}
+            move = {'type': 'move', 'side': 'w', 'ply': 1}
+            self.assertEqual(runner.uncertain_record([start], cfg), start)
+            self.assertEqual(runner.uncertain_record([start, attempt], cfg), start)
+            self.assertIsNone(runner.uncertain_record([start, attempt, move], cfg))
+            self.assertIsNone(runner.uncertain_record([start, dict(attempt, legal=False)], cfg))
+            old = {'type': 'call_fail', 'side': 'w', 'ply': 1}
+            self.assertEqual(runner.uncertain_record([old, move], cfg), old)
+
+
+    def test_gemini_completed_turn_can_resume(self):
+        self.plan([{'text': '着法: e2e4'}, {'text': '着法: d2d4'}])
+        self.assertEqual(self.play(['--game', 'chess', '--tag', 'safe-resume', '--white',
+                                    'gemini:gemini-3.8-flash-high', '--black', 'random',
+                                    '--max-plies', '3', '--stop-after', '1']), 3)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.main(['resume', os.path.join(self.tmp, 'safe-resume')]), 0)
+        self.assertEqual(len(self.calls()), 2)
+
+    def test_gemini_stop_before_dispatch_does_not_lock(self):
+        cmd = chat.command('gemini-3.8-flash-high', 'high', system='sys')
+        start = mock.Mock()
+        runner.claude_cli.STOP.set()
+        try:
+            with mock.patch.object(chat.subprocess, 'run') as run:
+                with self.assertRaises(runner.Paused):
+                    chat.call(cmd, 'prompt', on_start=start)
+            start.assert_not_called()
+            run.assert_not_called()
+        finally:
+            runner.claude_cli.STOP.clear()
+
+    def test_tool_errors_stop_all_providers_and_lock_resume(self):
+        cases = [('agy:claude-opus-5-5-high', 'the model opened files that were not attached: /tmp/test'),
+                 ('gemini:gemini-3.8-flash-high', 'agy soft-denied a tool and ended the turn (headless mode cannot ask): attempted: view_file /etc/hosts'),
+                 ('gemini:gemini-3.8-flash-high', 'the model opened files that were not attached: /tmp/test'),
+                 ('claude:opus', 'the model used server-side tools (web_search: 1); plain chat allows none'),
+                 ('codex:gpt-6-sol', "unexpected codex item 'command_execution'; plain chat allows no tools"),
+                 ('deepseek:deepseek-v4-pro', 'the model called a tool; plain chat allows none')]
+        for i, (player, error) in enumerate(cases):
+            with self.subTest(player=player, error=error):
+                self.plan([{'error': error}] * (i + 1))
+                tag = 'tool%d' % i
+                with mock.patch.object(runner.claude_cli, '_wait') as wait:
+                    rc = self.play(['--game', 'chess', '--tag', tag, '--white', player,
+                                    '--black', 'random', '--effort', 'high', '--max-plies', '1'])
+                self.assertEqual(rc, 3)
+                wait.assert_not_called()
+                self.assertEqual(len(self.calls()), i + 1)
+                recs = self.recs(tag)
+                self.assertFalse(any(r['type'] in ('refusal', 'call_fail', 'move', 'end', 'forfeit') for r in recs))
+                flag = next(r for r in recs if r['type'] == 'flag')
+                self.assertEqual(flag['source'], 'tool_call')
+                self.assertIn(error, flag['evidence']['stderr'])
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(cli.main(['resume', os.path.join(self.tmp, tag)]), 3)
+                    self.assertIsNone(runner.play(runner.load(C, os.path.join(self.tmp, tag))))
+                self.assertEqual(len(self.calls()), i + 1)
+
+    def test_structured_tool_denial_overrides_successful_answer(self):
+        self.plan([{'text': '着法: e2e4', 'extra_meta': {'denied_actions': ['read']}}])
+        self.assertEqual(self.play(['--game', 'chess', '--tag', 'denied', '--black', 'random',
+                                    '--max-plies', '1']), 3)
+        recs = self.recs('denied')
+        self.assertIsNotNone(runner.tool_record(recs))
+        self.assertFalse(any(r['type'] in ('refusal', 'move', 'forfeit', 'end') for r in recs))
+
+    def test_gemini_stop_after_success_can_resume_next_side(self):
+        self.plan([{'text': '着法: e2e4'}, {'text': '着法: e7e5'}])
+        original = chat.run
+        def stopping_run(*args, **kwargs):
+            result = original(*args, **kwargs)
+            runner.claude_cli.STOP.set()
+            return result
+        spec = 'gemini:gemini-3.8-flash-high'
+        with mock.patch.object(chat, 'run', side_effect=stopping_run):
+            self.assertEqual(self.play(['--game', 'chess', '--tag', 'stop-safe', '--white', spec,
+                                        '--black', spec, '--max-plies', '2']), 3)
+        ctx = runner.load(C, os.path.join(self.tmp, 'stop-safe'))
+        self.assertIsNone(ctx.get('uncertain'))
+        self.assertEqual(sum(r['type'] == 'call_started' for r in self.recs('stop-safe')), 1)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.main(['resume', os.path.join(self.tmp, 'stop-safe')]), 0)
+        self.assertEqual(len(self.calls()), 2)
 
     def test_brief_format_by_stored_system(self):
         # 按存下的系统提示判：不修饰 / 详细换成简短、其余一字不差；本来简短、off、旧协议都不兜底

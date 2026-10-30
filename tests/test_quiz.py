@@ -26,6 +26,14 @@ def quiet(fn, *a):
 
 
 class Positions(unittest.TestCase):
+    def test_agy_quiz_is_rejected_before_calling_claude(self):
+        for model in ('agy:claude-opus-5-5-high', 'agy/claude-opus-5-5-high',
+                      'gemini:gemini-4-argon-high', 'gemini-4-argon-high'):
+            with self.subTest(model=model), mock.patch.object(claude_cli, 'command') as command:
+                with self.assertRaises(SystemExit):
+                    Q.quiz_cfg(Q.game_module('chess'), 'chess', 'w', 'high', model, '/tmp/unused')
+                command.assert_not_called()
+
     def test_both_sets_load_and_rebuild(self):
         for game in Q.GAMES:
             ps = positions(game)
@@ -143,14 +151,61 @@ class Answering(unittest.TestCase):
         self.assertEqual(res['attempts'], 2)                 # 续跑接上了暂停前那次非法尝试
         self.assertFalse(res['first_legal'])
 
-    def test_too_many_flags_gives_up_this_one_only(self):
+    def test_refusal_stops_and_cannot_resume(self):
         p = positions('chess')[1]
         blocked = dict(fake_reply('Opus safeguards flagged this message'), stop_reason='refusal')
-        with mock.patch.object(claude_cli, 'call', lambda *a, **k: (blocked, 1.0)):
-            res = self.run_one(p)
-        self.assertEqual(res['gave_up'], 'flags')
-        self.assertIsNone(res['move'])
-        self.assertEqual(res['stat']['flags'], runner.MAX_FLAGS + 1)
+        with mock.patch.object(claude_cli, 'call', return_value=(blocked, 1.0)) as call:
+            with self.assertRaises(claude_cli.Refused):
+                self.run_one(p)
+            with self.assertRaises(claude_cli.Refused):
+                self.run_one(p)
+        call.assert_called_once()
+        path = Q.answer_path(self.tmp, p['id'], 'medium', 1)
+        self.assertIsNone(Q.result_of(path))
+        self.assertEqual(records.read(path)[-1]['type'], 'refusal')
+
+    def test_refusal_batch_message_never_suggests_resume(self):
+        out = os.path.join(self.tmp, 'refused-batch')
+        argv = ['run', '--game', 'chess', '--ids', 'c01,c02', '--efforts', 'medium', '--reps', '1',
+                '--jobs', '1', '--out', out]
+        blocked = dict(fake_reply('[reasoning_extraction]'), stop_reason='refusal')
+        buf = io.StringIO()
+        self.addCleanup(claude_cli.STOP.clear)
+        with mock.patch.object(claude_cli, 'call', return_value=(blocked, 0.1)) as call, \
+                mock.patch.object(claude_cli, 'version', return_value='test'), contextlib.redirect_stdout(buf):
+            self.assertEqual(Q.main(argv), 3)
+        call.assert_called_once()
+        self.assertIn('已因拒答终止', buf.getvalue())
+        self.assertNotIn('接着跑同一条命令', buf.getvalue())
+        meta = Q.read_meta(os.path.join(out, 'chess'))
+        self.addCleanup(shutil.rmtree, meta['claude_cwd'], ignore_errors=True)
+
+    def test_tool_attempt_stops_quiz_and_locks_repeat(self):
+        p = positions('chess')[1]
+        blocked = dict(fake_reply('着法: e2e4'), permission_denials=[{'tool_name': 'Read'}])
+        with mock.patch.object(claude_cli, 'call', return_value=(blocked, 0.1)) as call:
+            for _ in range(2):
+                with self.assertRaises(claude_cli.ToolAttempt):
+                    self.run_one(p)
+        call.assert_called_once()
+        self.assertIsNone(Q.result_of(Q.answer_path(self.tmp, p['id'], 'medium', 1)))
+
+    def test_tool_batch_stops_other_calls_and_never_suggests_resume(self):
+        out = os.path.join(self.tmp, 'tool-batch')
+        argv = ['run', '--game', 'chess', '--ids', 'c01,c02', '--efforts', 'medium', '--reps', '1',
+                '--jobs', '1', '--out', out]
+        blocked = dict(fake_reply('着法: e2e4'), permission_denials=[{'tool_name': 'Read'}])
+        buf = io.StringIO()
+        self.addCleanup(claude_cli.STOP.clear)
+        with mock.patch.object(claude_cli, 'call', return_value=(blocked, 0.1)) as call, \
+                mock.patch.object(claude_cli, 'version', return_value='test'), contextlib.redirect_stdout(buf):
+            self.assertEqual(Q.main(argv), 3)
+        call.assert_called_once()
+        self.assertTrue(claude_cli.STOP.is_set())
+        self.assertIn('已因工具尝试暂停', buf.getvalue())
+        self.assertNotIn('接着跑同一条命令', buf.getvalue())
+        meta = Q.read_meta(os.path.join(out, 'chess'))
+        self.addCleanup(shutil.rmtree, meta['claude_cwd'], ignore_errors=True)
 
     def test_run_command_parallel_and_skip(self):
         out = os.path.join(self.tmp, 'batch')

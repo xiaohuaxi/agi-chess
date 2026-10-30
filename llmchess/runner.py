@@ -4,17 +4,16 @@
 棋种模块 G 提供的函数见 design.md 第二节：start / turn / legal / banned / parse / push / ending / in_check /
 render / last_move_text / system_prompt / recite_score / exports / engine_spec / to_engine / from_engine，常量 SIDES。
 """
-import os, random, time, uuid
+import os, random, re, time, uuid
 
 from . import chat, claude_cli, codex_cli, memory, opening, records
-from .claude_cli import Paused
+from .claude_cli import Paused, Refused, ToolAttempt
 from .engine import Engine, EngineError
 
 FORFEIT_NOTE = ('重试用完仍非法判负：替它随便走一步会把随机或引擎的着法混进它的棋里，判负最干净；'
                 '实际很少触发，触发了也在记录里单列')
-MAX_FLAGS = 2          # 一个半回合里回复被安全分类器拦掉或正文为空的次数上限，超过就暂停，交给人看
+MAX_FLAGS = 2          # 一个半回合里正文为空的次数上限；明确拒答一次即终止
 CAP_MARGIN = 300       # 有引擎一方的对局满半回合上限时，一方领先这么多厘兵判胜，否则判和（用户 2026-10-04 定，cli.cap_margin）
-BRIEF_AFTER = 2        # 同一个半回合里被拦到第几次起，之后的重问改附「简短」写理由要求（用户 2026-10-02 定，见 model_turn）
 
 
 def other(side):
@@ -25,7 +24,7 @@ def player_kind(spec):
     return spec.split(':', 1)[0]
 
 
-MODEL_KINDS = ('claude',) + codex_cli.KINDS     # 模型棋手：claude / codex（GPT）/ deepseek
+MODEL_KINDS = chat.KINDS                     # 模型棋手：claude / codex（GPT）/ deepseek / gemini / agy
 # 调用走哪条路看 config 的 backend：'llm-chat'（新开的整盘，chat.py）；缺省是旧路（claude -p 直调、codex exec 只支持无状态），
 # 旧记录续跑和局面题都走旧路，逐字复现。
 
@@ -67,8 +66,102 @@ def load(G, run_dir):
         elif t == 'end':
             ctx['end'] = r['end']
     ctx['cost_total'] = records.attempt_costs(recs)[1]     # 各会话上一次调用的累计花费，续跑接着做差
+    ctx['refusal'] = refusal_record(recs)
+    ctx['tool_call'] = tool_record(recs)
+    ctx['uncertain'] = uncertain_record(recs, cfg)
     ctx['pending'] = pending_ply(recs, len(st['moves']) + 1)
     return ctx
+
+
+def uncertain_record(recs, cfg):
+    blockers = uncertain_records(recs, cfg)
+    return next((r for r in blockers.values() if r['type'] == 'call_fail'),
+                next(iter(blockers.values()), None))
+
+
+def idle_retry_event(blockers):
+    """只授权一个有明确 idle timeout 失败的调用；索引是解析后的记录序号（从 0 起）。"""
+    starts = [(i, r) for i, r in blockers.items() if r['type'] == 'call_started']
+    fails = [(i, r) for i, r in blockers.items() if r['type'] == 'call_fail']
+    if len(starts) != 1 or len(fails) != 1:
+        return None
+    si, start = starts[0]
+    fi, fail = fails[0]
+    if (si >= fi or not start.get('call_id')
+            or (start.get('side'), start.get('ply')) != (fail.get('side'), fail.get('ply'))
+            or fail.get('call_id', start['call_id']) != start['call_id']):
+        return None
+    evidence = '\n'.join(str(fail.get(k) or '') for k in ('stdout', 'stderr'))
+    if (not re.search(r'stream idle timeout \([0-9hms.]+\):\s*context deadline exceeded', evidence)
+            or claude_cli.tool_error_text(evidence) or claude_cli.refusal_text(evidence)):
+        return None
+    return {'type': 'retry_idle_timeout', 'failed_record': fi, 'started_record': si,
+            'call_id': start['call_id'], 'side': start['side'], 'ply': start['ply']}
+
+
+def uncertain_records(recs, cfg):
+    """保留每个未完成调用与失败；显式授权只能解除精确匹配的旧 idle failure。"""
+    pending = {}
+    failures = {}
+    for i, r in enumerate(recs):
+        side = r.get('side')
+        agy = player_kind(cfg.get('players', {}).get(side, '')) in chat.AGY_KINDS
+        if r['type'] == 'call_fail' and agy:
+            failures[i] = r
+        if r['type'] == 'call_started' and agy:
+            pending[i] = r
+        if r['type'] == 'attempt' and r.get('call_id'):
+            # 合法答案直到 move 落盘才完成；否则崩溃后会把同一步再发一次。
+            if not r.get('legal'):
+                pending = {key: value for key, value in pending.items()
+                           if value['call_id'] != r['call_id']}
+        if r['type'] == 'move':
+            pending = {key: value for key, value in pending.items()
+                       if (value['ply'], value['side']) != (r['ply'], side)}
+        if r['type'] == 'retry_idle_timeout':
+            expected = idle_retry_event({**pending, **failures})
+            if expected and all(r.get(k) == v for k, v in expected.items()):
+                pending.pop(expected['started_record'])
+                failures.pop(expected['failed_record'])
+    return {**pending, **failures}
+
+
+def authorize_idle_retry(ctx):
+    recs = records.read(ctx['log'])
+    if refusal_record(recs) or tool_record(recs):
+        return False
+    event = idle_retry_event(uncertain_records(recs, ctx['cfg']))
+    if not event or event['ply'] != len(ctx['st']['moves']) + 1 or event['side'] != ctx['G'].turn(ctx['st']):
+        return False
+    # 用户显式接受这次超时可能已在后端执行的风险；不是成功回执，也不修改会话历史。
+    log(ctx, event)
+    ctx['uncertain'] = None
+    return True
+
+
+UNCERTAIN_MESSAGE = '会话调用结果待核验，禁止自动重发或续跑；保留原始记录，不能视为棋手输。'
+TOOL_MESSAGE = '棋手出现工具调用或尝试，已暂停；先分析原因，禁止自动重试或续跑。'
+
+
+def tool_record(recs):
+    return next((r for r in recs if (r['type'] == 'flag' and r.get('source') == 'tool_call')
+                 or (r['type'] == 'call_fail' and any(claude_cli.tool_error_text(r.get(key))
+                                                    for key in ('stdout', 'stderr')))), None)
+
+
+def stop_tools(ctx, side, ply, session, evidence):
+    rec = {'type': 'flag', 'source': 'tool_call', 'ply': ply, 'side': side,
+           'session': session, 'evidence': evidence, **ctx.get('tags', {})}
+    ctx['tool_call'] = rec
+    log(ctx, rec)
+    raise ToolAttempt(TOOL_MESSAGE)
+
+
+def refusal_record(recs):
+    """旧记录的 flag / flagged 也锁住续跑；历史已结束的盘仍可读取、导出。"""
+    return next((r for r in recs if r['type'] == 'refusal'
+                 or (r['type'] == 'flag' and r.get('source') in ('result', 'transcript'))
+                 or (r['type'] == 'attempt' and r.get('flagged'))), None)
 
 
 def pending_ply(recs, ply):
@@ -84,7 +177,7 @@ def pending_ply(recs, ply):
         if r.get('flagged') or r.get('empty'):
             p['flags'] += 1
             p['stat']['flags' if r.get('flagged') else 'empty'] += 1
-            p['blocks'] += bool(r.get('flagged'))      # 「简短」兜底只看被拦的次数，旧记录照样数得出
+            p['blocks'] += bool(r.get('flagged'))      # 保留旧记录的计数；拒答记录已在续跑入口锁住
             p['redo'] = True
             continue
         p['redo'] = False
@@ -104,6 +197,10 @@ def log(ctx, rec):
 def model_turn(ctx, side, moves, ban):
     """问模型走一步，返回 (着法或 None, 本步统计)。None 表示重试用完仍非法。"""
     G, cfg, st = ctx['G'], ctx['cfg'], ctx['st']
+    if ctx.get('tool_call'):
+        raise ToolAttempt(TOOL_MESSAGE)
+    if ctx.get('uncertain'):
+        raise Paused(UNCERTAIN_MESSAGE)
     sc = cfg['sides'][side]
     kind, model = cfg['players'][side].split(':', 1)
     system = cfg['system'][side]
@@ -132,14 +229,8 @@ def model_turn(ctx, side, moves, ban):
     p = ctx.pop('pending', None)
     if p and p['ply'] == ply:                  # 续跑：接上暂停前这一步已经用掉的尝试
         bad, flags, blocks, k, redo, stat = p['bad'], p['flags'], p.get('blocks', 0), p['k'], p['redo'], p['stat']
-    # 被拦兜底（用户 2026-10-02 定，避免误拦反复）：同一手里被拦后第一次重问照旧；重问又被拦（这一手累计被拦
-    # BRIEF_AFTER 次）起，这一手之后因被拦 / 空回复的重问在提示末尾附「简短」那段写理由要求（memory.brief_format，
-    # 现成措辞，系统提示不动——会话里系统提示只在首轮给，换了会带到整盘）。只限这一手，下一手回到默认；只由被拦触发，
-    # 空回复本身不算；非法着的重选照旧。系统提示本来就是简短或不要理由时 brief 为 None，什么都不变、也不记兜底。
-    brief = memory.brief_format(system) if real else None
     while k < cfg['retries'] + 1:
-        fallback = bool(redo and brief and blocks >= BRIEF_AFTER)
-        if redo and mem == 'session' and ctx['sessions'].get(side):   # 上一条回复被拦或为空，前文已在会话里
+        if redo and mem == 'session' and ctx['sessions'].get(side):   # 上一条回复为空，前文已在会话里
             prompt = '请重新回答这一步。' + memory.ask(sc)
         elif bad and real:
             prompt = memory.retry_prompt_real(sc, base, [(t, memory.FEEDBACK[fb]) for t, _, fb in bad],
@@ -148,8 +239,6 @@ def model_turn(ctx, side, moves, ban):
             prompt = memory.retry_prompt(sc, base, [(t, why) for t, why, _ in bad], cfg['retries'] + 1 - k)
         else:
             prompt = base
-        if fallback:
-            prompt += '\n\n' + brief
         if via_chat:
             new = False
             sid = ctx['sessions'].get(side) if mem == 'session' else None
@@ -175,16 +264,36 @@ def model_turn(ctx, side, moves, ban):
                 return claude_cli.command(model, sc['effort'], system, sid, new_session=not made)
         def on_fail(info, k=k):
             # 超时 / 调不通落进这盘（这题）自己的记录；ctx['tags'] 是局面题的题号 / 档 / 遍
-            log(ctx, dict({'type': 'call_fail', 'ply': ply, 'side': side, 'attempt': k + 1}, **ctx.get('tags', {}),
+            log(ctx, dict({'type': 'call_fail', 'ply': ply, 'side': side, 'attempt': k + 1}, **extra, **ctx.get('tags', {}),
                           **info))
         def on_wait(info, k=k):
             # 撞额度在程序里等解除：开始、结束各一条，同样落进这盘（这题）自己的记录
             log(ctx, dict({'type': 'limit_wait', 'ply': ply, 'side': side, 'attempt': k + 1}, **ctx.get('tags', {}),
                           **info))
-        extra = {'reason_fallback': 'brief'} if fallback else {}     # 记录里看得出这一问用了「简短」兜底
+        def refusal_check(d):
+            if kind != 'claude':
+                return []
+            checked_sid = (((d or {}).get('meta') or {}).get('session') or sid) if via_chat else sid
+            hits = (claude_cli.transcript_flags_at(chat.claude_transcript(checked_sid)) if via_chat
+                    else claude_cli.transcript_flags(ctx['cwd'], checked_sid)) if checked_sid else []
+            return (hits or [])[ctx['seen_flags'].get(checked_sid, 0):]
+        extra = {}
+        call_options = {}
+        if via_chat and kind in chat.AGY_KINDS:
+            extra['call_id'] = str(uuid.uuid4())
+            started = {'type': 'call_started', 'ply': ply, 'side': side, 'session': sid,
+                       'call_id': extra['call_id'], 'provider': kind, 'outcome': 'uncertain'}
+            def on_start():
+                # 停止检查通过后先落盘再发送；写盘失败不得提交请求。
+                log(ctx, started)
+                ctx['uncertain'] = started
+            call_options['on_start'] = on_start
         if via_chat:
             resumed = bool(sid)
-            d, dt = chat.call(cmd, prompt, on_fail=on_fail, on_wait=on_wait)
+            d, dt = chat.call(cmd, prompt, on_fail=on_fail, on_wait=on_wait, refusal_check=refusal_check,
+                              **call_options)
+            if claude_cli.tool_used(d):
+                stop_tools(ctx, side, ply, sid, d.get('tool_evidence') or d)
             u = chat.usage(d, kind)
             if drop and d.get('meta') is not None:
                 extra['thinking_dropped'] = d['meta'].get('thinking_dropped')
@@ -197,19 +306,21 @@ def model_turn(ctx, side, moves, ban):
                 # llm-chat 给的是这一轮自己的花费；照旧记一个会话累计值（records.attempt_costs 按会话做差还原）
                 u['cost_total'] = ctx['cost_total'][sid] = (ctx['cost_total'].get(sid) or 0) + u['cost']
         else:
-            d, dt = claude_cli.call(cmd, prompt, ctx['cwd'], rebuild=rebuild,
-                                    timeout=cfg.get('timeout') or claude_cli.TIMEOUT, on_fail=on_fail, on_wait=on_wait,
-                                    parse=codex_cli.parse if codex else None)
+            try:
+                d, dt = claude_cli.call(cmd, prompt, ctx['cwd'], rebuild=rebuild,
+                                        timeout=cfg.get('timeout') or claude_cli.TIMEOUT, on_fail=on_fail, on_wait=on_wait,
+                                        parse=codex_cli.parse if codex else None, refusal_check=refusal_check)
+            except codex_cli.ToolUsed as e:
+                stop_tools(ctx, side, ply, sid, {'error': str(e)})
+            if claude_cli.tool_used(d):
+                stop_tools(ctx, side, ply, sid, d.get('tool_evidence') or d)
             if mem == 'session':
                 sid = ctx['sessions'][side] = d.get('session_id') or sid
             u = codex_cli.usage(d, model) if codex else claude_cli.usage(d)
         if via_chat and kind == 'codex' and d.get('meta'):
             used = chat.codex_tool_calls(d['meta'].get('session'))
             if used:
-                log(ctx, {'type': 'flag', 'ply': ply, 'side': side, 'source': 'tool_call', 'session': sid,
-                          'count': used, 'text': (d.get('result') or '')[:500]})
-                raise Paused('第 %d 个半回合%s的 GPT 会话里出现 %d 次工具调用（隔离失效，交给人看）' % (
-                    ply, G.SIDES[side], used))
+                stop_tools(ctx, side, ply, sid, {'count': used, 'text': d.get('result') or ''})
         reply = d.get('result') or ''
         if mem == 'session' and not via_chat:
             # --resume 返回的花费是整段会话的累计值：本次花费 = 累计值 − 同一会话上一次调用的累计值（被拦、空回复也算一次），
@@ -218,36 +329,40 @@ def model_turn(ctx, side, moves, ban):
             u['cost'] = records.cost_delta(total, ctx['cost_total'].get(sid))
             u['cost_total'] = ctx['cost_total'][sid] = total
         records.add_usage(stat, u, dt)
-        # 安全分类器：回复正文被拦（这次不算非法，另算次数）；session 下再看会话记录里 claude 自动插的那条消息
+        # 收到明确拒答就停止；transcript 可能表明 CLI 在本次调用内部已自动重试过。
         blocked = claude_cli.flagged(d)
         transcript = None
-        if mem == 'session' and via_chat:
-            # GPT / DeepSeek 没有「被拦后自动插一条消息」这回事
-            hits = claude_cli.transcript_flags_at(chat.claude_transcript(sid)) if kind == 'claude' else []
-        elif mem == 'session':
-            hits = claude_cli.transcript_flags(ctx['cwd'], sid)
+        hits = []
+        if kind == 'claude':
+            if via_chat:
+                hits = claude_cli.transcript_flags_at(chat.claude_transcript(sid))
+            elif sid:
+                hits = claude_cli.transcript_flags(ctx['cwd'], sid)
             transcript = 'missing' if hits is None else len(hits)
-            if hits and len(hits) > ctx['seen_flags'].get(sid, 0):
-                ctx['seen_flags'][sid] = len(hits)
-                stat['flags'] += 1
-                log(ctx, {'type': 'flag', 'ply': ply, 'side': side, 'source': 'transcript', 'session': sid,
-                          'count': len(hits), 'text': hits[-1]})
-                print('  ！%s 会话里出现安全分类器拦截（这盘要标出来）' % G.SIDES[side], flush=True)
-        # 回复被拦、或者正文是空的（冒烟里见过：end_turn、有思考、正文空）：都不是它下的棋，不扣重试次数，另记
+        new_hits = (hits or [])[ctx['seen_flags'].get(sid, 0):]
+        if new_hits:
+            ctx['seen_flags'][sid] = len(hits)
+            blocked = True
         empty = not blocked and not reply.strip()
         if blocked or empty:
             flags += 1
-            blocks += blocked
             stat['flags' if blocked else 'empty'] += 1
-            if blocked:
-                log(ctx, {'type': 'flag', 'ply': ply, 'side': side, 'source': 'result', 'session': sid, 'text': reply[:500]})
             log(ctx, {'type': 'attempt', 'ply': ply, 'side': side, 'try': k + 1, 'player': cfg['players'][side],
                       'session': sid, 'prompt': prompt, 'reply': reply, 'flagged': blocked, 'empty': empty,
                       'usage': u, 'elapsed': round(dt, 1), 'claude': d, **extra})
-            print('  ！%s 回复%s（本步第 %d 次，不扣重试次数）' % (
-                G.SIDES[side], '被安全分类器拦下' if blocked else '正文为空', flags), flush=True)
+            if blocked:
+                evidence = {'response': d, 'transcript': new_hits}
+                rec = {'type': 'refusal', 'ply': ply, 'side': side, 'provider': kind,
+                       'player': cfg['players'][side], 'session': sid, 'evidence': evidence}
+                ctx['refusal'] = rec
+                log(ctx, {'type': 'flag', 'ply': ply, 'side': side, 'source': 'transcript' if new_hits else 'result',
+                          'session': sid, 'count': len(hits or []), 'text': new_hits[-1] if new_hits else reply})
+                log(ctx, rec)
+                raise Refused('第 %d 个半回合%s（%s）明确拒答或被安全防护拦截；已保存原始证据，禁止自动续跑' % (
+                    ply, G.SIDES[side], kind))
+            print('  ！%s 回复正文为空（本步第 %d 次，不扣重试次数）' % (G.SIDES[side], flags), flush=True)
             if flags > MAX_FLAGS:
-                raise Paused('第 %d 个半回合%s的回复 %d 次被拦或为空' % (ply, G.SIDES[side], flags))
+                raise Paused('第 %d 个半回合%s的回复 %d 次为空' % (ply, G.SIDES[side], flags))
             redo = True
             continue
         redo = False
@@ -264,6 +379,8 @@ def model_turn(ctx, side, moves, ban):
                   'session': sid, 'prompt': prompt, 'reply': reply, 'move_text': text, 'move': mv,
                   'legal': why is None, 'reason': why, 'feedback': fb, 'note': note, 'recite': rs, 'transcript_flags': transcript,
                   'usage': u, 'elapsed': round(dt, 1), 'claude': d, **extra})
+        if extra.get('call_id'):
+            ctx.pop('uncertain', None)
         print('  %s 第 %d 次：%s → %s%s（%.0fs，输出 %d tok，思考 %d，$%.3f）' % (
             G.SIDES[side], k + 1, text, mv, '' if why is None else ' 非法：' + why, dt, u['out'], u['think'],
             u['cost']), flush=True)
@@ -328,7 +445,7 @@ def opening_turn(ctx, side, moves, ban):
     return mv, stat, None
 
 
-TURNS = {'claude': model_turn, 'codex': model_turn, 'deepseek': model_turn, 'engine': engine_turn, 'random': random_turn}
+TURNS = {**dict.fromkeys(MODEL_KINDS, model_turn), 'engine': engine_turn, 'random': random_turn}
 
 
 # ---------------------------------------------------------------- 一盘
@@ -336,6 +453,15 @@ def play(ctx, stop_after=None, stop_file=None):
     """下到终局或暂停。返回终局 dict；暂停返回 None（已写 pause）。stop_after：本次最多再走几个半回合（冒烟测续跑用）；
     stop_file：每步走之前看一眼这个文件，在了就暂停（批量驱动用它让在跑的盘停在两步之间）。"""
     G, cfg, st = ctx['G'], ctx['cfg'], ctx['st']
+    if ctx.get('refusal'):
+        print('这盘已有拒答拦截记录，已终止；禁止自动续跑，请向用户回报。', flush=True)
+        return None
+    if ctx.get('tool_call'):
+        print(TOOL_MESSAGE, flush=True)
+        return None
+    if ctx.get('uncertain'):
+        print(UNCERTAIN_MESSAGE, flush=True)
+        return None
     n_open = len(opening.moves_of(cfg))
     os.makedirs(ctx['cwd'], exist_ok=True)
     end, moved = ctx['end'], 0
@@ -383,9 +509,14 @@ def play(ctx, stop_after=None, stop_file=None):
             log(ctx, rec)
             print('第 %d 步 %s %s（%s）%s' % (len(st['moves']), G.SIDES[side], st['record'][-1], mv,
                                            '　【随机开局】' if in_open else ''), flush=True)
+    except Refused as e:
+        print('对弈已终止：%s。请向用户回报。' % e, flush=True)
+        return None
     except Paused as e:
         log(ctx, {'type': 'pause', 'ply': len(st['moves']), 'why': str(e)})
-        print('停在第 %d 个半回合之后：%s\n接着下：python3 -m llmchess resume %s' % (len(st['moves']), e, ctx['dir']))
+        hint = (TOOL_MESSAGE if ctx.get('tool_call') else UNCERTAIN_MESSAGE if ctx.get('uncertain')
+                else '接着下：python3 -m llmchess resume %s' % ctx['dir'])
+        print('停在第 %d 个半回合之后：%s\n%s' % (len(st['moves']), e, hint))
         return None
     finally:
         for eng in ctx['engines'].values():

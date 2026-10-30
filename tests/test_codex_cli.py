@@ -70,6 +70,12 @@ class Parse(unittest.TestCase):
         self.assertEqual(d['result'], '着法: d2d4')
         self.assertEqual(d['items'], ['reasoning', 'agent_message', 'agent_message'])
 
+    def test_refusal_item_is_not_a_tool_call(self):
+        raw = events(extra=[{'type': 'item.completed', 'item': {'type': 'refusal', 'refusal': 'Declined'}}])
+        d = X.parse(raw)
+        self.assertTrue(claude_cli.flagged(d))
+        self.assertEqual(d['refusal_evidence']['stdout'], raw)
+
     def test_tool_item_raises(self):
         for t in ('command_execution', 'file_change', 'mcp_tool_call', 'web_search', 'collab_tool_call'):
             for phase in ('item.started', 'item.completed'):
