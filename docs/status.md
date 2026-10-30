@@ -4,6 +4,7 @@
 
 - 汇总提交本轮agy／Gemini接入、拒答与工具停盘、显式空闲超时恢复，以及实验复盘、评级与思考token报告、视频准备记录。补充忽略 `.DS_Store`、Python缓存和字节码；`runs/` 原始数据与视频继续留在本地，不入库。此前已有的 `CLAUDE.md` 软链删除独立提交。
 - 提交前验证：Python314项通过；阅读器70项通过、2项跳过、零失败；独立只读核验与diff空白检查通过。既有测试有未关闭文件ResourceWarning，未发生测试失败或flaky。日志在工作区外 `/tmp/llmchess-precommit-20261031-{python,viewer}.log`。
+- 创建 GitHub 私有远端仓库并推送 `main` 与 `x-viewer-en` 分支；`AGENTS.md` 同步由「仓库只在本地」更新为远端保持私有。
 
 ## 社交post四局视频准备（2026-10-30，已完成）
 
