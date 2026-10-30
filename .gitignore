@@ -4,3 +4,7 @@
 .agents/scheduled_tasks.lock
 runs/
 node_modules/
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
