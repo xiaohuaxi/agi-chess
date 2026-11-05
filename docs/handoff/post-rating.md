@@ -2,6 +2,8 @@
 
 > 给写 post 的人：这份材料自包含，不需要了解 llm-chess 项目。所有数字、日期、结论都出自文末「出处」里的文件；不在这里的事实别补。前两篇已发：「巅峰对决」（opus max 对 astra max 的对局本身）、「基础设施」（对弈环境怎么试出来、定下来）。这篇讲的是 10 月初那次棋力评测：让 opus max 对固定强度的引擎下了 67 盘，再折算到人类刻度上。前两篇讲过的内容一句话带过就行。
 
+> 历史底稿：本文记录 2026 年 10 月初的实验与当时约定，不作为现行操作规范。自 2026-10-15 起，防思维链泄露类拒答须立即终止并回报用户，不重问、不改措辞、不自动续跑；现行约束见 [AGENTS.md](../../AGENTS.md)，协议见 [设计文档](../design.md)第九节，当前状态见 [status.md](../status.md)。下列早期重问处置仅解释历史数据。
+
 ## 背景（大白话）
 
 **项目在研究什么**：Claude、GPT 这类通用大模型没专门练过下棋，下中国象棋、国际象棋都挺臭。项目想弄清楚臭在哪，以及让模型下棋的环境该怎么搭才算对。
@@ -229,7 +231,7 @@
 
 ## 出处
 
-当前提交 `09b3f45`（仓库 `/Users/xhx/repos/llm-chess`，只在本地）。
+底稿取材时提交为 `09b3f45`（当时仓库只在本地）。表内提交用于追溯历史；已退出工作树的 memory 可在仓库根运行 `git show <提交>:<路径>` 查看，不代表现行规范。
 
 | 文件 | 用来写什么 | 最后改动提交 |
 |---|---|---|
@@ -243,7 +245,7 @@
 | `/Users/xhx/repos/llm-chess/analysis/rating/stats.py`、`games-opus.csv`、`games-engines.csv` | 花费、思考量统计口径（各盘中位再取中位）；战绩表 | `994a524` |
 | `/Users/xhx/repos/llm-chess/llmchess/analyze.py`、`llmchess/batch.py` | 大失误只数未分胜负的步、亏损截到 ±1000、杀棋判法 | — |
 | `/Users/xhx/repos/llm-chess/docs/results/game-opus-max-vs-astra-max-1.md` | 巅峰对决（起因，只引一句） | `399bdfc` |
-| `/Users/xhx/repos/llm-chess/.agents/memory/quota-pacing.md` | 额度节奏的起因与规则 | `6afe681` |
+| `git show 6afe681:.agents/memory/quota-pacing.md` | 额度节奏的历史来源；当时执行记录见 [评级方案](../plan-opus-max-rating.md)及[结果](../results/opus-max-rating.md)，旧上限、重置时间与授权不沿用 | `6afe681` |
 | `/Users/xhx/repos/llm-chess/docs/handoff/post-peak-match.md` | 第一篇的口径、巅峰对决花费 | `96ff2fb` |
 | `/Users/xhx/repos/llm-chess/docs/handoff/post-infra.md` | 第二篇的口径、协议细节（本篇一句话带过） | `77d5c6f` |
 | `/Users/xhx/repos/post-studio/posts/018-ai-peak-match/copy-chess.md`、`copy-xiangqi.md` | 已发成稿的模型名写法、「象棋」叫法 | post-studio `c2ca8d0` |

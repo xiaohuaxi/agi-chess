@@ -1,7 +1,6 @@
 # llm-chess 项目规范
 
-> 本文件是本仓库的项目级 agent 规范（真身 `AGENTS.md`，Claude Code 经软链读作 `CLAUDE.md`）。
-> 只放硬约束与指针；背景、机制、推导下沉到 `docs/` 或项目级 skill，用引用指过去。
+> 本仓库规范以 `AGENTS.md` 为准；这里只放硬约束与指针，设计与证据见 `docs/`。
 
 <!-- BEGIN rules:coding (synced; do not edit here) -->
 ## 通用开发规范
@@ -34,32 +33,27 @@
 - **第三方依赖的许可要过一遍**——下面是本项目的政策，不是法律解释；别自己下法律断言，边界不清就问项目维护者。**明确不能用**：GPL / AGPL / SSPL / OSL / EUPL / RPL / CPAL 这一族强 / 网络 copyleft（含各版本变体）。**弱 copyleft**（LGPL / MPL / EPL / CDDL）不禁，但用法受限：要么不进出货产物，要么以合规形式随产物出（如做成用户可自行替换的动态库）。**许可不明的**（UNLICENSED / SEE LICENSE IN、或干脆查不到）按红线处理。宽松许可（MIT / BSD / Apache-2.0 / ISC 这类）放心用，出货前把署名与第三方声明整理齐。开发期工具链（linter、测试框架这类）只在代码与生成物都不进出货产物时才不吃这条。别拿本项目自己发布用的 license 去推依赖能不能用，两件事。
 <!-- END rules:coding -->
 
-## 这个仓库做什么
+## 范围与入口
 
-研究通用大模型（Claude Opus、GPT astra 等未做棋类专训的模型）下中国象棋和国际象棋为什么下得臭，以及基础设施该怎么搭才算对。程序无界面，模型对模型，或模型对固定强度引擎。研究性质、尽力而为：做不下去就停，别滚成大工程。
+研究未经棋类专训的通用大模型为何下不好中国象棋、国际象棋，以及对弈基础设施。程序无界面，模型对模型或固定强度引擎。尽力而为，做不下去就停，别滚成大工程。
 
-## 先读
+- 开工先读 `docs/status.md`，收工前更新；研究报告索引见 `docs/research.md`。
+- 设计、规则来源和上游研究见 `docs/design.md`；跨轮思考的证据与限制见 `docs/thinking-carryover.md`。
+- 运行见 `docs/setup.md`；看棋谱、录视频用 `.agents/skills/replay-video/SKILL.md`，实现见 `docs/viewer.md`。
 
-- `docs/status.md`：现在做到哪、下一步、还等用户拍板的事。**开工先读它，收工前更新它。**
-- `docs/design.md`：程序设计、变量、记录格式、第一批实验，以及前提核实（含 `claude -p` 的思考深度、token 字段）。
-- 录棋局视频、用阅读器看棋谱：项目 skill `.agents/skills/replay-video/SKILL.md`（怎么用）；实现与方案在 `docs/viewer.md`。
-- `docs/thinking-carryover.md`：各家模型跨轮是否保留思考（文档加实测）。「同一会话连续下」这档靠它成立。
-- 上游研究，在另一个仓库：`~/repos/ai-research/topics/llm-board-games-survey.md`（别人怎么让模型下棋，有出处）、`~/repos/ai-research/topics/llm-xiangqi-play.md`（第一轮 Opus 对 Opus：读盘全对，昏招集中在「谁能吃到谁」）。
+## 验证
 
-## 跑与验证
-
-- 程序在 `llmchess/`，用法看 `python3 -m llmchess --help`；对局记录落在 `runs/<tag>/`（被 git 忽略）。
-- 验证命令：`python3 -m unittest discover -s tests -t .`（离线，不调 `claude`；会起本机引擎）。
-- 棋谱阅读器（`viewer/`）的 JS 测试：`node --test 'viewer/test/*.test.js'`（不引依赖；读本机 `runs/` 的回归没有数据时跳过，往返测试要调 `python3`；播放测试要 `viewer/` 下装好开发依赖 playwright-core（`npm ci`），没装时跳过）。
-- 冒烟和实验会调 `claude -p` 吃订阅额度：冒烟只用 medium，半回合数压到个位数。
+- Python：`python3 -m unittest discover -s tests -t .`（离线，不调模型；会起本机引擎）。
+- 阅读器：`node --test 'viewer/test/*.test.js'`。本机 `runs/` 回归无数据时跳过；往返测试需 Python，播放测试需在 `viewer/` 下 `npm ci` 安装开发依赖，否则跳过。
+- 冒烟会消耗模型额度：只用 medium，半回合数压到个位数。
 
 ## 硬约束
 
-- **棋手不准用引擎或规则库帮忙**：引擎只能当对手，或事后当裁判判昏招。Codex 当棋手前，先证明它的工具关掉了、调不到本机引擎。
-- 棋手一旦调用或尝试工具（含执行失败、权限拦截），立即暂停并分析原因，不自动重试或续跑；没有报出工具事件不等于证明从未调用。
-- **整盘棋手走 llm-chat**（用户级 skill，只用不改，见 `llmchess/chat.py`）：Claude、GPT 走本机 CLI 的订阅额度，DeepSeek 走它的 HTTP 直连（只作辅助参考）；Claude 不走 API 直连。局面题和旧记录续跑仍是 `claude -p` / `codex exec` 直调。思考深度每次显式传。
-- **整盘协议是「模型就是真实棋手」**（`docs/design.md` 第九节）：不替棋手看棋（不报将军、吃子、威胁，不给合法着法），非法只说不合法；改提示先看那一节的逐句去留。
-- **防思维链泄露类拒答一出现就终止对弈并回报用户**（2026-10-15）：所有服务商、real / legacy / 旧记录都适用；不重问、不改措辞、不自动续跑，不当棋手输。仅被动监测正常对弈，禁止向真实模型主动诱发或探测拒答；检测验证只用本地假响应 / mock。棋手写可见理由不是索取加密思考；空回复或 503 无明确拒答证据时不算。
-- 远端保持私有仓库，未经用户确认不改为公开。
-- **规则判定照搬旧实现，不自己改棋规**：中国象棋规则在 `~/repos/jev-study/games/xiangqi/boards.py`（pyffish），国际象棋用 python-chess。第一轮的对弈脚本在 jev-study 本地分支 `archive/duel-web` 的 `games/xiangqi/llm_duel.py`，只读参考，别切那个分支。
-- 对局原始记录放被 git 忽略的目录，结论写进 `docs/`。结论必须写明盘数和条件，盘数少就说只能看方向。
+- 棋手不准用引擎或规则库帮忙；引擎只能当对手或事后裁判。Codex 当棋手前，先证明工具关掉、调不到本机引擎。
+- 棋手一旦调用或尝试工具（含失败、权限拦截），立即暂停分析，不自动重试或续跑；没有工具事件不等于证明从未调用。
+- 整盘棋手走用户级 `llm-chat` skill，只用不改。Claude、GPT 默认走本机 CLI 订阅，DeepSeek 走 HTTP、只作辅助参考；Claude 不走 API 直连。各后端及 agy 路由见 `docs/design.md` 第九节。局面题和旧记录续跑仍按原路径直调；思考深度每次显式传。
+- 整盘协议是「模型就是真实棋手」：不报将军、吃子、威胁，不给合法着法，非法只说不合法。改提示先读 `docs/design.md` 第九节逐句去留；模型对模型双方思考延续方式须一致。
+- 防思维链泄露类拒答一出现就终止并回报用户：所有服务商、real / legacy / 旧记录均适用；不重问、不改措辞、不自动续跑，不当棋手输。仅被动监测正常对弈，禁止向真实模型主动诱发或探测拒答，检测验证只用本地假响应 / mock。可见理由不是加密思考；空回复或 503 无明确拒答证据时不算。
+- 规则判定沿用旧实现，不自行改棋规：中国象棋用 pyffish，国际象棋用 python-chess；上游来源见 `docs/design.md`，只读参考，不切上游归档分支。
+- 对局原始记录放被忽略的 `runs/`，结论写入 `docs/`，写明盘数与条件；小样本只看方向。每批对局汇报附累计总览表，按对阵组合、棋种及可比条件列有效盘数、先后手比分和关键指标；有当次目标时列剩余盘数，不混算旧协议或不同条件。
+- 远端保持私有，未经用户确认不改为公开。

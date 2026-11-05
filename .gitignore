@@ -1,4 +1,5 @@
 .agents/worktrees/
+.agents/memory/
 .agents/tmp-*
 .agents/settings.local.json
 .agents/scheduled_tasks.lock
