@@ -90,8 +90,9 @@ export const TEXT = {
 export const T = (lang) => TEXT[lang] || TEXT.zh;
 
 // 结束原因（PGN 的 Termination）。导出端写的是中文（llmchess/chess_.py 的 TERMINATION 与 outcome、xiangqi.py 的终局判定、
-// runner.py 的半回合上限与连续非法判负），英文界面按这张表换；新增结束原因时这里同步加一条。
+// runner.py 的半回合上限与连续非法判负、analyze.py 的上限评分裁决），英文界面按这张表换；新增结束原因时这里同步加一条。
 // 表里没有的：不含中文的（别人的英文棋谱）照原样，含中文的不显示（横幅只留「Red wins」这类结果），免得英文画面上冒出中文。
+const SIDE_EN = { 红方: 'Red', 白方: 'White', 黑方: 'Black' };
 const REASONS_EN = [
   [/^将死$/, 'Checkmate'],
   [/^困毙$/, 'Stalemate'],                                  // 象棋无着可走判负
@@ -105,6 +106,12 @@ const REASONS_EN = [
   [/^长将，判负$/, 'Perpetual check'],
   [/^长捉，判负$/, 'Perpetual chase'],
   [/^满 (\d+) 个半回合（研究设的上限），判和$/, (n) => `Move limit (${n} plies)`],
+  [/^满 (\d+) 个半回合（研究设的上限），到上限按引擎评分判：(红方|白方|黑方)已有杀棋（(\d+) 步杀），判\2胜$/,
+    (n, side, mate) => `Engine adjudication at ${n} plies: ${SIDE_EN[side]} wins (mate in ${mate})`],
+  [/^满 (\d+) 个半回合（研究设的上限），到上限按引擎评分判：(红方|白方|黑方)领先 (\d+) 厘兵（≥(\d+)），判\2胜$/,
+    (n, side, cp, margin) => `Engine adjudication at ${n} plies: ${SIDE_EN[side]} wins (+${cp} cp ≥ ${margin})`],
+  [/^满 (\d+) 个半回合（研究设的上限），到上限按引擎评分判：(红方|白方) ([+-]\d+) 厘兵，差距不到 (\d+)，判和$/,
+    (n, side, cp, margin) => `Engine adjudication at ${n} plies: draw (${SIDE_EN[side]} ${cp} cp; gap < ${margin})`],
   [/^(?:红方|白方|黑方)连续 (\d+) 次给出非法着法，判负$/, (n) => `${n} illegal moves in a row`],
 ];
 

@@ -2,7 +2,7 @@
 
 阅读器直接读取 PGN：国际象棋用标准 PGN，中国象棋用 xqbase PGN。可以浏览仓内样例和自己的棋谱，不需要模型账号，也不需要作者本机的原始实验记录。
 
-本指南对应 `main` 中的中文界面。安装总览见[安装与运行](setup.md)，实现与完整参数说明见[阅读器设计](viewer.md)，素材与工具许可见[依赖说明](dependencies.md)。
+阅读器默认中文，网址加 `lang=en` 可切换英文。安装总览见[安装与运行](setup.md)，实现与完整参数说明见[阅读器设计](viewer.md)，素材与工具许可见[依赖说明](dependencies.md)。
 
 ## 打开仓内样例
 
@@ -45,6 +45,8 @@ python3 -m http.server --bind 127.0.0.1 8000
 | `summary=1` | 多盘的总比分画面 |
 | `layout=wide` / `layout=compact` | 强制宽版 / 窄版 |
 | `sound=1&vol=0.5` | 打开音效并调轻；打开后先点页面或按键以允许浏览器发声 |
+| `lang=en` | 英文界面；评注原文与象棋汉字棋子保留 |
+| `names=opus=Claude Opus,astra=GPT astra` | 覆盖显示名，比分仍按棋谱中的原名归属 |
 | `title=1` | 每盘前加标题画面；默认不开 |
 
 `game`、`ply`、`summary` 的静态定位不要和 `autoplay=1` 同用。网页默认静音；普通 PGN 的变着分支会跳过，仅播放主线。中国象棋棋谱须使用阅读器支持的 xqbase 记谱格式，不是任意文本棋谱。
@@ -98,3 +100,5 @@ ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,profile,pix
 默认应为 H.264 High、yuv420p、1080×1440、30/1。再实际打开视频，检查开头、几步走子、中文和终局横幅；中国象棋使用系统字体，不同机器的中文字形可能不同。
 
 若录自己的模型对局，先确认对局已结束，再用 `python -m llmchess export runs/<tag>` 重导棋谱；该操作会重写导出文件，应只针对自己要处理的已结束记录。`game.jsonl` 最后一条为 `type=end` 才算结束，正在运行的目录不要处理。新克隆没有作者本机的 `runs/`，直接用上面的仓内样例即可。
+
+英文录制在原命令后加 `--set lang=en --set "names=opus=Claude Opus,astra=GPT astra"`，也可同时用 `--openhold 0.5`。象棋英文着法为 WXF 显示，输入棋谱仍用 xqbase 格式。
