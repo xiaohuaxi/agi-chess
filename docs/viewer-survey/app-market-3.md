@@ -143,7 +143,7 @@ iTunes 搜索接口返回的排序（`market3/ios_search_rank.txt`，数据是�
 | 捐赠（开源工具） | En Croissant（1916 星）：README 里有捐赠页，用的是 Buy Me a Coffee，金额不公开（页面靠 JS 渲染，没取到）。elephantchess.io：免费、无广告，「只靠用户支持付服务器费」，用 Ko-fi，金额不公开（页面 403）。GitHub Sponsors：python-chess 作者 niklasf 只有 2 名赞助者；lichess、En Croissant、皮卡鱼的作者都没开 Sponsors | `market3/gh_sponsors.tsv`、`gh_repos.tsv`（接口）；elephantchess [FAQ](https://elephantchess.io/about/faq)（转述） | 有公开数字的棋类开源工具，捐赠都在「象征性」级别。按 1916 星的量级，我们拿不到可观捐赠 |
 | 广告 | AdMob 美国横幅广告每千次展示：iOS 约 0.45 美元，安卓约 0.68 美元；插页广告约 14 美元 | [revenuelab](https://www.revenuelab.fyi/blog/admob-ecpm-benchmarks-2026)、[playwire](https://www.playwire.com/blog/admob-ecpm-benchmarks-what-publishers-should-expect)（转述） | 按 §1 的量粗算：纯看谱 app 就算做到 Chess PGN Master 那样，每年 2 万多次安装，日活大概几百，横幅广告一年几十到几百美元。中国象棋用户最反感的就是广告（第二轮评论），加广告等于丢掉唯一的好评点 |
 | 会员或内购 | 中国象棋这类 app 普遍走会员（象棋公社终身 48 元，象棋助手终身 199 元）；纯看谱的解锁版卖不动（第二轮） | 第二轮 | 看谱本身不是付费点 |
-| 导流（视频、研究、个人品牌） | 同类频道 JC BuenaVentura 靠「模型对模型下棋」系列，单条 1 千到 10.9 万次播放（§5） | `market3/yt_search_JC_BuenaVentura_chess.json` | **这是我们唯一现实的回报**：网页给视频和研究报告当「点开就能逐步看理由」的配套，回报是视频的完播和信任感，以及研究的可信度 |
+| 导流（视频、研究、个人品牌） | 同类频道 JC BuenaVentura 靠「模型对模型下棋」系列，单条 1 千到 10.9 万次播放（§5） | `market3/yt_search_JC_BuenaVentura_chess.json` | 可考虑的间接收益：网页为视频和研究报告提供逐步查看理由的配套，可能帮助内容理解和研究复核；未证明存在独立工具需求 |
 
 ---
 
@@ -217,7 +217,7 @@ iTunes 搜索接口返回的排序（`market3/ios_search_rank.txt`，数据是�
 
 **有条件立项的条件**
 1. 研究视频会公开发布，而且有观众基础：参照同类频道，单条视频稳定在几千次以上播放；
-2. 仓库或导出的页面可以公开托管（仓库现在只在本地，需要用户拍板）；
+2. 仓库或导出的页面已获准公开托管（当时尚未决定；本条是历史前提，不代表当前授权）；
 3. 投入控制在 2 到 5 天，只做网页，不上架商店；
 4. 定位写清楚：「看这盘模型对局，每步都有理由」，而不是「通用打谱器」。
 

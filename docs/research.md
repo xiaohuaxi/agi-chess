@@ -78,13 +78,13 @@
 
 - [Opus Max 棋力定位](results/opus-max-rating.md)（10-01—03对局，10-04补新规回看；两种棋）。`claude-opus-5-5`、max、llm-chat、连续会话带思考、plain 理由、real；随机代走国际象棋 8 / 中国象棋 6 半回合。国际象棋对 Maia-1900 和 Stockfish 19 限强三档，共 30 盘；中国象棋对 Fairy-Stockfish 14.0.1 节点阶梯，共 37 盘，另有引擎互下标定。国际象棋旧到上限计和版约 lichess Blitz 1910 / Rapid 2020，新规事后回看约 1800 / 1920；这是两种口径的点估计，不是一个置信区间，且原盘没有按新提示重下。中国象棋只给引擎相对位置，不给人类段位。评级刻度可用入库CSV离线复算；逐步用量仍需本机原始记录。
 
-## Argon 与后续离线比较（2026-10-19—10-25）
+## Argon 与后续离线比较（2026-10-19—10-31）
 
 - [Argon High 中国象棋自弈](results/argon-high-xiangqi-20261019.md)（10-19）。双方 `gemini:gemini-4-argon-high`、high、agy、独立连续会话、real、plain、子力清单；1 盘，158 半回合、黑胜。复现送车与漏吃，所有着法合法不代表攻防可靠；自弈一盘不能评级或排模型强弱。
 
 - [Argon High 国际象棋自弈](results/argon-high-chess-20261019.md)（10-19）。双方 `gemini:gemini-4-argon-high`、high、agy、独立连续会话、real、plain、FEN＋棋盘；1 盘，85 半回合、白胜。开局和部分攻王有质量，仍有基础占格错误与自信的错误理由；一盘无法区分背谱与计算，也不能从 ACPL 换 Elo。
 
-- [Argon High 与历史模型的暂定定位](results/argon-high-chess-rating-20261019.md)（10-19离线比较，国际象棋）。`gemini-4-argon-high` high，自弈 1 盘，对比旧 `claude-opus-5-5` 与 `gpt-6-astra` 的 14 盘及 Opus Max 评级 30 盘；原表合计 45 盘、60 个棋手侧记录。另补对 agy Opus High 1 盘，不混入原表。Blitz 1600—2000 / Rapid 1750—2100 只是选对手的主观范围，不是实测评级、上下界或置信区间。
+- [Argon High 与历史模型的暂定定位](results/argon-high-chess-rating-20261019.md)（10-19离线比较，国际象棋）。`gemini-4-argon-high` high，自弈 1 盘，对比旧 `claude-opus-5-5` 与 `gpt-6-astra` 的 14 盘及 Opus Max 评级 30 盘；原表合计 45 盘、60 个棋手侧记录。另补对 agy Opus High 1 盘，不混入原表；10-25及10-31补充保留四盘后的主观中心（Blitz约1700／Rapid约1800）与1600类比的边界，没有新增实验。Blitz 1600—2000 / Rapid 1750—2100 只是选对手的主观范围，不是实测评级、上下界或置信区间。
 
 - [Argon 对 agy Opus High 单盘](results/argon-vs-agy-opus-high-20261019.md)（10-19，国际象棋）。`gemini:gemini-4-argon-high` 对 `agy:claude-opus-5-5-high`，双方 llm-chat→agy、Google额度、high、独立 session、real、plain、标准开局；1 盘，Argon 执白胜。支持有竞争力，不能将未经标定的 agy High 当作旧 CLI Max 评级锚；Opus 上报思考0不能解释成无内部思考。
 
@@ -104,3 +104,5 @@
 评级复算在仓库根运行 `python3 analysis/rating/rate.py report`，无需 `runs/`，不调用模型或引擎；它复算已有战绩和历史人类锚，不获取最新在线评级。原始对局、作答、绝大多数逐步引擎分析、诊断脚本与视频都在被忽略的 `runs/` 或当时临时目录，不随仓库分发。Argon比较与token报告所列派生JSON和复算脚本也仅在本机；不要把它们的本地路径当成仓库可下载附件。
 
 使用程序见[安装与运行](setup.md)，看棋谱和出视频见[阅读器指南](viewer-guide.md)；当前工作状态与后续待办见[项目状态](status.md)。本索引只导航已有材料，没有追加模型调用、引擎分析或棋力重估。
+
+阅读器技术与历史需求调研见[调研索引](viewer-survey/README.md)；[历史本机录屏经验](viewer-survey/post-studio-recording.md)保留实现取舍，私人原片和外部工具不随仓库提供。内部发帖交接材料已移出工作树，不作为研究或现行操作规范。

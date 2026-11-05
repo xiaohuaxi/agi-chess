@@ -143,3 +143,15 @@ Argon 本盘实际走子整体优于对手，去掉前 15 手和已分胜负局�
 - 本机原始证据：上述文档列出的 14 个 runs，`runs/zc/*` 的 30 盘，以及 `runs/argon-high-chess-self-20261019/`。
 - 新增一盘原始证据：`runs/argon-vs-agy-opus-high-20261019/`，独立于下述历史派生汇总；见[新盘复盘](argon-vs-agy-opus-high-20261019.md)。
 - 历史比较派生汇总：`runs/argon-high-chess-self-20261019/compare-history.json`，60 个棋手侧记录（14×2＋30＋2），含 run、型号、effort、全部／未分胜负／去前15手／近均势各统计与阶段桶。只读原始记录生成；没有修改原始 game 或 analysis。
+
+## 既有四盘后的主观估分（2026-10-25补充）
+
+自弈之后，对 agy Opus High 的交手累计为4盘，Argon 3胜1负；[四盘合看](argon-vs-agy-opus-high-20261020.md)的累计 ACPL 为44.7／53.3，去前15手及已分胜负后为65.6／76.1。开局重复且质量差距小于比分印象，不能将3:1直接换算 Elo。结合这些材料，暂取 Argon High 约 lichess Blitz 1700／Rapid 1800、略看好旧 Opus Max（约100分）的主观工作假设；保留原1600–2000／1750–2100选对手范围，不能排除范围外实力。没有新增对弈或重跑引擎。
+
+另一个方向性依据是旧 `claude-opus-5-5` 国际象棋30题各两遍的[思考深度对照](batch1-depth.md)：High→Max 解中率65%→88%、平均损失372→122，原始240份作答型号已核对。但旧 CLI stateless High 与 agy 连续会话 High 的预算未核实相同，局面题收益不能直接转成整盘 Elo；Argon 与旧 Max 尚无直接对阵，约100分仅表示略偏向 Max，不能称为测得的分差。[token对照](thinking-tokens-argon-opus-20261025.md)也未验证这个分差。
+
+## 「能否达到1600」的证据边界（2026-10-31补充）
+
+仅据既有自弈、对 agy Opus High 四盘、旧 Opus Max 30盘评级及局面题，认为 **lichess 1600 是合理但未验证的走子水平类比**；Blitz约1700／Rapid约1800仍只是主观中心，可能偏差数百分。正面证据是中盘攻王、得子和部分胜势兑现，反面是误算送车、丢优与兵残局失败。不能把1600说成已验证的下限，也不能为这个类比给统计置信区间。
+
+对手 agy Opus High 未标定，不能把旧 CLI Opus Max 约1795／1918的锚传递给它；四盘开局重复，ACPL不能直接换 Elo。比赛没有真人 Blitz／Rapid 棋钟，因此上述分数不能表述成已实测达到 lichess 1600，也不能直接沿用到 Chess.com 或 FIDE 1600。本次只重读旧材料并独立复核，没有新增模型棋手或引擎调用。

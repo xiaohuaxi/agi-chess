@@ -44,8 +44,8 @@
 
 ## 录屏方式
 
-见 `recording.md`：Playwright 自带录像（recordVideo）只到 CSS 像素、VP8 25fps 低码率、按实时录；timesnap / timecut 2022 年后没发布；puppeteer-screen-recorder 底层同样是实时截屏。
+见[录制技术调研](recording.md)及[历史本机录屏经验](post-studio-recording.md)：Playwright 自带录像（recordVideo）只到 CSS 像素、VP8 25fps 低码率、按实时录；timesnap / timecut 2022 年后没发布；puppeteer-screen-recorder 底层同样是实时截屏。
 
 ## 要不要做成对外的 app（2026-10-02，不立项）
 
-用户问各平台是否缺免费易得的看谱软件、值不值得做免费或 1–3 美元的 app。三轮调研：`app-market-1.md`（各平台 × 棋种现有选项）、`app-market-2.md`（iOS 为主的数量、价格、销量代理、评论）、`app-market-3.md`（免费 app 的用量与回报）。结论：两种棋各平台基本都有免费、能直接打开棋谱文件的选项；纯看谱需求本身小且多年不涨，收费的卖不动，免费的也拿不到量。用户定**不立项**。阅读器只作本项目自用（看对局、出视频）。
+研究问题是各平台是否缺免费易得的看谱软件，以及免费或1–3美元的app是否值得开发。三轮调研：`app-market-1.md`（各平台 × 棋种现有选项）、`app-market-2.md`（iOS 为主的数量、价格、销量代理、评论）、`app-market-3.md`（免费 app 的用量与回报）。结论：两种棋各平台基本都有免费、能直接打开棋谱文件的选项；纯看谱需求本身小且多年不涨，收费的卖不动，免费的也拿不到量。最终**不立项**。阅读器用于本项目的对局展示与视频制作。
