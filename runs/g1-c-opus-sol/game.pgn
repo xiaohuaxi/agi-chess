@@ -1,0 +1,137 @@
+[Event "llm-chess g1-c-opus-sol"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "claude:opus"]
+[Black "codex:sol"]
+[Result "1-0"]
+[Termination "将死"]
+[WhiteEffort "xhigh"]
+[BlackEffort "xhigh"]
+
+1. e4 { [%emt 0:00:04] [%think 0] [%out 9] [%in 2] [%cacheread 0]
+[%cachewrite 1021] } 1... c5 { [%emt 0:00:11] [%think 34] [%out 47] [%in 2313]
+[%cacheread 0] [%cachewrite 0] } 2. Nf3 { [%emt 0:00:04] [%think 0] [%out 9]
+[%in 2] [%cacheread 0] [%cachewrite 1330] } 2... d6 { [%emt 0:00:08]
+[%think 23] [%out 36] [%in 422] [%cacheread 2176] [%cachewrite 0] } 3. d4 {
+[%emt 0:00:04] [%think 0] [%out 9] [%in 2] [%cacheread 0] [%cachewrite 1642] }
+3... cxd4 { [%emt 0:00:08] [%think 0] [%out 11] [%in 2872] [%cacheread 0]
+[%cachewrite 0] } 4. Nxd4 { [%emt 0:00:04] [%think 0] [%out 9] [%in 2]
+[%cacheread 0] [%cachewrite 1952] } 4... Nf6 { [%emt 0:00:09] [%think 12]
+[%out 25] [%in 429] [%cacheread 2688] [%cachewrite 0] } 5. Nc3 { [%emt 0:00:04]
+[%think 0] [%out 9] [%in 2] [%cacheread 0] [%cachewrite 2262] } 5... a6 {
+[%emt 0:00:08] [%think 16] [%out 29] [%in 3380] [%cacheread 0] [%cachewrite 0]
+} 6. Be2 { [%emt 0:00:06] [%think 88] [%out 97] [%in 2] [%cacheread 0]
+[%cachewrite 2575] } 6... e5 { [%emt 0:00:09] [%think 47] [%out 60] [%in 449]
+[%cacheread 3200] [%cachewrite 0] } 7. Nb3 { [%emt 0:00:04] [%think 0] [%out 9]
+[%in 2] [%cacheread 2575] [%cachewrite 404] } 7... Be7 { [%emt 0:00:09]
+[%think 11] [%out 24] [%in 1519] [%cacheread 2432] [%cachewrite 0] } 8. O-O {
+[%emt 0:00:04] [%think 0] [%out 9] [%in 2] [%cacheread 2979] [%cachewrite 315]
+} 8... O-O { [%emt 0:00:10] [%think 15] [%out 28] [%in 759] [%cacheread 3456]
+[%cachewrite 0] } 9. Be3 { [%emt 0:00:04] [%think 0] [%out 9] [%in 2]
+[%cacheread 3294] [%cachewrite 316] } 9... Be6 { [%emt 0:00:11] [%think 61]
+[%out 74] [%in 771] [%cacheread 3712] [%cachewrite 0] } 10. Qd2 {
+[%emt 0:00:05] [%think 31] [%out 40] [%in 2] [%cacheread 3610]
+[%cachewrite 317] } 10... Nbd7 { [%emt 0:00:10] [%think 86] [%out 99] [%in 698]
+[%cacheread 4096] [%cachewrite 0] } 11. a4 { [%emt 0:00:05] [%think 25]
+[%out 34] [%in 2] [%cacheread 3927] [%cachewrite 345] } 11... Qc7 {
+[%emt 0:00:11] [%think 42] [%out 55] [%in 778] [%cacheread 4352]
+[%cachewrite 0] } 12. a5 { [%emt 0:00:05] [%think 81] [%out 90] [%in 2]
+[%cacheread 4272] [%cachewrite 338] } 12... Rac8 { [%emt 0:00:14] [%think 163]
+[%out 176] [%in 811] [%cacheread 4608] [%cachewrite 0] } 13. Rfd1 {
+[%emt 0:00:07] [%think 241] [%out 250] [%in 2] [%cacheread 4610]
+[%cachewrite 395] } 13... Rfd8 { [%emt 0:00:16] [%think 366] [%out 379]
+[%in 840] [%cacheread 4992] [%cachewrite 0] } 14. f3 { [%emt 0:00:06]
+[%think 195] [%out 204] [%in 2] [%cacheread 5005] [%cachewrite 556] } 14... b5
+{ [%emt 0:00:26] [%think 862] [%out 875] [%in 3505] [%cacheread 2944]
+[%cachewrite 0] } 15. axb6 { [%emt 0:00:09] [%think 511] [%out 520] [%in 2]
+[%cacheread 5561] [%cachewrite 513] } 15... Nxb6 { [%emt 0:00:08] [%think 10]
+[%out 23] [%in 1291] [%cacheread 6272] [%cachewrite 0] } 16. Rxa6 {
+[%emt 0:00:17] [%think 1271] [%out 1280] [%in 2] [%cacheread 6074]
+[%cachewrite 826] } 16... Nc4 { [%emt 0:00:41] [%think 1322] [%out 1335]
+[%in 2194] [%cacheread 5632] [%cachewrite 0] } 17. Bxc4 { [%emt 0:00:06]
+[%think 196] [%out 205] [%in 2] [%cacheread 6900] [%cachewrite 1586] } 17...
+Bxc4 { [%emt 0:00:11] [%think 83] [%out 96] [%in 1722] [%cacheread 7680]
+[%cachewrite 0] } 18. Ra4 { [%emt 0:00:16] [%think 1128] [%out 1137] [%in 2]
+[%cacheread 8486] [%cachewrite 511] } 18... Bxb3 { [%emt 0:00:32] [%think 1255]
+[%out 1268] [%in 524] [%cacheread 9216] [%cachewrite 0] } 19. cxb3 {
+[%emt 0:00:06] [%think 143] [%out 152] [%in 2] [%cacheread 8997]
+[%cachewrite 1441] } 19... Qxc3 { [%emt 0:00:10] [%think 86] [%out 99]
+[%in 3825] [%cacheread 7424] [%cachewrite 0] } 20. bxc3 { [%emt 0:00:06]
+[%think 162] [%out 171] [%in 2] [%cacheread 10438] [%cachewrite 455] } 20... d5
+{ [%emt 0:00:24] [%think 727] [%out 740] [%in 577] [%cacheread 11008]
+[%cachewrite 0] } 21. exd5 { [%emt 0:00:09] [%think 472] [%out 481] [%in 2]
+[%cacheread 10893] [%cachewrite 470] } 21... Nxd5 { [%emt 0:00:09] [%think 37]
+[%out 50] [%in 1167] [%cacheread 11392] [%cachewrite 0] } 22. Qxd5 {
+[%emt 0:00:34] [%think 2739] [%out 2748] [%in 2] [%cacheread 11363]
+[%cachewrite 775] } 22... Rxd5 { [%emt 0:00:22] [%think 580] [%out 593]
+[%in 423] [%cacheread 12416] [%cachewrite 0] } 23. Rxd5 { [%emt 0:00:05]
+[%think 0] [%out 9] [%in 2] [%cacheread 12138] [%cachewrite 3038] } 23... Rxc3
+{ [%emt 0:00:21] [%think 563] [%out 576] [%in 987] [%cacheread 12672]
+[%cachewrite 0] } 24. Ra8+ { [%emt 0:00:33] [%think 2585] [%out 2594] [%in 2]
+[%cacheread 15176] [%cachewrite 297] } 24... Bf8 { [%emt 0:00:21] [%think 553]
+[%out 566] [%in 1021] [%cacheread 13440] [%cachewrite 0] } 25. Rdd8 {
+[%emt 0:00:06] [%think 156] [%out 165] [%in 2] [%cacheread 15473]
+[%cachewrite 2883] } 25... g6 { [%emt 0:00:49] [%think 1945] [%out 1958]
+[%in 5654] [%cacheread 9600] [%cachewrite 0] } 26. Rxf8+ { [%emt 0:00:08]
+[%think 475] [%out 484] [%in 2] [%cacheread 18356] [%cachewrite 456] } 26...
+Kg7 { [%emt 0:00:12] [%think 112] [%out 125] [%in 2337] [%cacheread 15104]
+[%cachewrite 0] } 27. Kf2 { [%emt 0:00:11] [%think 646] [%out 655] [%in 2]
+[%cacheread 18812] [%cachewrite 772] } 27... Rxb3 { [%emt 0:00:16] [%think 329]
+[%out 342] [%in 512] [%cacheread 17280] [%cachewrite 0] } 28. Rab8 {
+[%emt 0:00:11] [%think 598] [%out 607] [%in 2] [%cacheread 19584]
+[%cachewrite 940] } 28... Rb2+ { [%emt 0:00:17] [%think 344] [%out 357]
+[%in 697] [%cacheread 17664] [%cachewrite 0] } 29. Rxb2 { [%emt 0:00:06]
+[%think 143] [%out 152] [%in 2] [%cacheread 20524] [%cachewrite 893] } 29...
+Kxf8 { [%emt 0:00:21] [%think 527] [%out 540] [%in 767] [%cacheread 18176]
+[%cachewrite 0] } 30. Bh6+ { [%emt 0:00:10] [%think 362] [%out 371] [%in 2]
+[%cacheread 21417] [%cachewrite 436] } 30... Ke7 { [%emt 0:00:18] [%think 338]
+[%out 351] [%in 894] [%cacheread 18816] [%cachewrite 0] } 31. Rb7+ {
+[%emt 0:00:07] [%think 290] [%out 299] [%in 2] [%cacheread 21853]
+[%cachewrite 653] } 31... Ke6 { [%emt 0:00:20] [%think 481] [%out 494]
+[%in 702] [%cacheread 19584] [%cachewrite 0] } 32. Ke3 { [%emt 0:00:08]
+[%think 300] [%out 309] [%in 2] [%cacheread 22506] [%cachewrite 582] } 32...
+Kd5 { [%emt 0:00:16] [%think 266] [%out 279] [%in 910] [%cacheread 20096]
+[%cachewrite 0] } 33. Rxf7 { [%emt 0:00:05] [%think 51] [%out 60] [%in 2]
+[%cacheread 23088] [%cachewrite 591] } 33... Ke6 { [%emt 0:00:27] [%think 867]
+[%out 880] [%in 643] [%cacheread 20864] [%cachewrite 0] } 34. Rxh7 {
+[%emt 0:00:05] [%think 74] [%out 83] [%in 2] [%cacheread 23679]
+[%cachewrite 341] } 34... Kf5 { [%emt 0:00:16] [%think 281] [%out 294]
+[%in 1233] [%cacheread 21376] [%cachewrite 0] } 35. g4+ { [%emt 0:00:09]
+[%think 399] [%out 408] [%in 2] [%cacheread 24020] [%cachewrite 361] } 35...
+Ke6 { [%emt 0:00:16] [%think 281] [%out 294] [%in 8789] [%cacheread 14336]
+[%cachewrite 0] } 36. Rg7 { [%emt 0:00:06] [%think 109] [%out 118] [%in 2]
+[%cacheread 24381] [%cachewrite 688] } 36... Kf6 { [%emt 0:00:20] [%think 563]
+[%out 576] [%in 1243] [%cacheread 22400] [%cachewrite 0] } 37. Ke4 {
+[%emt 0:00:09] [%think 468] [%out 477] [%in 2] [%cacheread 25069]
+[%cachewrite 398] } 37... Ke6 { [%emt 0:00:44] [%think 1513] [%out 1526]
+[%in 1019] [%cacheread 23424] [%cachewrite 0] } 38. Rxg6+ { [%emt 0:00:06]
+[%think 81] [%out 90] [%in 2] [%cacheread 25467] [%cachewrite 759] } 38... Kf7
+{ [%emt 0:00:21] [%think 637] [%out 650] [%in 1872] [%cacheread 24320]
+[%cachewrite 0] } 39. Rg5 { [%emt 0:00:07] [%think 196] [%out 205] [%in 2]
+[%cacheread 26226] [%cachewrite 370] } 39... Ke6 { [%emt 0:00:19] [%think 423]
+[%out 436] [%in 1083] [%cacheread 25984] [%cachewrite 0] } 40. Rxe5+ {
+[%emt 0:00:06] [%think 141] [%out 150] [%in 2] [%cacheread 26596]
+[%cachewrite 486] } 40... Kd6 { [%emt 0:00:15] [%think 275] [%out 288]
+[%in 4814] [%cacheread 22912] [%cachewrite 0] } 41. g5 { [%emt 0:00:07]
+[%think 291] [%out 300] [%in 2] [%cacheread 27082] [%cachewrite 429] } 41...
+Kc6 { [%emt 0:00:18] [%think 371] [%out 384] [%in 717] [%cacheread 27520]
+[%cachewrite 0] } 42. g6 { [%emt 0:00:05] [%think 0] [%out 9] [%in 2]
+[%cacheread 27511] [%cachewrite 579] } 42... Kd6 { [%emt 0:00:14] [%think 227]
+[%out 240] [%in 810] [%cacheread 28032] [%cachewrite 0] } 43. g7 {
+[%emt 0:00:05] [%think 0] [%out 9] [%in 2] [%cacheread 28090] [%cachewrite 287]
+} 43... Kc7 { [%emt 0:00:17] [%think 303] [%out 316] [%in 633]
+[%cacheread 28672] [%cachewrite 0] } 44. g8=Q { [%emt 0:00:06] [%think 115]
+[%out 125] [%in 2] [%cacheread 28377] [%cachewrite 288] } 44... Kd7 {
+[%emt 0:00:17] [%think 313] [%out 326] [%in 661] [%cacheread 29184]
+[%cachewrite 0] } 45. Qd5+ { [%emt 0:00:36] [%think 2892] [%out 2901] [%in 2]
+[%cacheread 28665] [%cachewrite 406] } 45... Kc7 { [%emt 0:00:16] [%think 306]
+[%out 319] [%in 696] [%cacheread 29696] [%cachewrite 0] } 46. Re7+ {
+[%emt 0:00:05] [%think 53] [%out 62] [%in 2] [%cacheread 29071]
+[%cachewrite 3180] } 46... Kb6 { [%emt 0:00:21] [%think 544] [%out 557]
+[%in 4054] [%cacheread 26880] [%cachewrite 0] } 47. Bd2 { [%emt 0:00:38]
+[%think 3122] [%out 3131] [%in 2] [%cacheread 32251] [%cachewrite 343] } 47...
+Ka6 { [%emt 0:00:24] [%think 331] [%out 344] [%in 994] [%cacheread 30720]
+[%cachewrite 0] } 48. Qc6# { [%emt 0:00:05] [%think 0] [%out 9] [%in 2]
+[%cacheread 32594] [%cachewrite 3412] } 1-0
+

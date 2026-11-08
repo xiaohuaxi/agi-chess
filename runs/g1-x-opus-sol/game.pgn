@@ -1,0 +1,129 @@
+[Game "Chinese Chess"]
+[Event "llm-chess g1-x-opus-sol"]
+[Red "claude:opus"]
+[Black "codex:sol"]
+[RedEffort "xhigh"]
+[BlackEffort "xhigh"]
+[Result "1-0"]
+[Termination "将死"]
+
+1. 炮二平五 { [%emt 0:00:05] [%think 20] [%out 29] [%in 2] [%cacheread 0]
+[%cachewrite 947] } 马８进７ { [%emt 0:00:15] [%think 204] [%out 217]
+[%in 2250] [%cacheread 0] [%cachewrite 0] } 2. 马二进三 { [%emt 0:00:05]
+[%think 0] [%out 24] [%in 2] [%cacheread 947] [%cachewrite 259] Horse h0g2
+(马二进三). } 马２进３ { [%emt 0:00:14] [%think 194] [%out 207] [%in 2626]
+[%cacheread 0] [%cachewrite 0] } 3. 车一平二 { [%emt 0:00:04] [%think 15]
+[%out 24] [%in 2] [%cacheread 1206] [%cachewrite 254] } 车９平８ {
+[%emt 0:00:09] [%think 23] [%out 36] [%in 2992] [%cacheread 0] [%cachewrite 0]
+} 4. 马八进七 { [%emt 0:00:05] [%think 41] [%out 50] [%in 2] [%cacheread 1460]
+[%cachewrite 254] } 卒７进１ { [%emt 0:00:22] [%think 579] [%out 592] [%in 755]
+[%cacheread 2432] [%cachewrite 0] } 5. 车九平八 { [%emt 0:00:07] [%think 373]
+[%out 382] [%in 2] [%cacheread 1714] [%cachewrite 281] } 炮２进２ {
+[%emt 0:00:21] [%think 583] [%out 596] [%in 1122] [%cacheread 2816]
+[%cachewrite 0] } 6. 炮八平九 { [%emt 0:00:19] [%think 1423] [%out 1432]
+[%in 2] [%cacheread 1995] [%cachewrite 613] } 炮２平３ { [%emt 0:00:40]
+[%think 1552] [%out 1565] [%in 981] [%cacheread 3712] [%cachewrite 0] } 7.
+车八进二 { [%emt 0:00:41] [%think 3331] [%out 3340] [%in 2] [%cacheread 2608]
+[%cachewrite 1663] } 象３进５ { [%emt 0:00:21] [%think 633] [%out 646]
+[%in 1937] [%cacheread 4480] [%cachewrite 0] } 8. 兵七进一 { [%emt 0:00:13]
+[%think 919] [%out 928] [%in 2] [%cacheread 4271] [%cachewrite 3570] } 炮３平４
+{ [%emt 0:00:55] [%think 2163] [%out 2176] [%in 950] [%cacheread 6272]
+[%cachewrite 0] } 9. 车八进四 { [%emt 0:00:24] [%think 1938] [%out 1947]
+[%in 2] [%cacheread 7841] [%cachewrite 1159] } 卒３进１ { [%emt 0:01:47]
+[%think 5059] [%out 5072] [%in 2517] [%cacheread 7040] [%cachewrite 0] } 10.
+车八平七 { [%emt 0:00:33] [%think 2575] [%out 2584] [%in 2] [%cacheread 9000]
+[%cachewrite 2178] } 马３退５ { [%emt 0:01:16] [%think 3519] [%out 3532]
+[%in 5444] [%cacheread 9344] [%cachewrite 0] } 11. 兵七进一 { [%emt 0:00:13]
+[%think 887] [%out 896] [%in 2] [%cacheread 11178] [%cachewrite 2814] }
+炮４平６ { [%emt 0:01:52] [%think 5378] [%out 5391] [%in 3885]
+[%cacheread 14592] [%cachewrite 0] } 12. 马七进六 { [%emt 0:00:36]
+[%think 3337] [%out 3346] [%in 2] [%cacheread 13992] [%cachewrite 1124] }
+炮６退１ { [%emt 0:01:22] [%think 3994] [%out 4007] [%in 5721]
+[%cacheread 18304] [%cachewrite 0] } 13. 车七进二 { [%emt 0:00:50]
+[%think 4510] [%out 4519] [%in 2] [%cacheread 15116] [%cachewrite 3574] }
+马５退３ { [%emt 0:00:28] [%think 916] [%out 929] [%in 4381] [%cacheread 23808]
+[%cachewrite 0] } 14. 炮五进四 { [%emt 0:00:56] [%think 5053] [%out 5062]
+[%in 2] [%cacheread 18690] [%cachewrite 4746] } 士４进５ { [%emt 0:01:33]
+[%think 4547] [%out 4560] [%in 1241] [%cacheread 28032] [%cachewrite 0] } 15.
+车二进六 { [%emt 0:00:47] [%think 4329] [%out 4338] [%in 2] [%cacheread 23436]
+[%cachewrite 5286] } 炮６进１ { [%emt 0:01:06] [%think 3024] [%out 3037]
+[%in 4932] [%cacheread 29056] [%cachewrite 0] } 16. 车二平三 { [%emt 0:01:55]
+[%think 10958] [%out 10967] [%in 2] [%cacheread 28722] [%cachewrite 4563] }
+马７进５ { [%emt 0:00:51] [%think 2130] [%out 2143] [%in 3388]
+[%cacheread 33792] [%cachewrite 0] } 17. 车三平五 { [%emt 0:00:18]
+[%think 1457] [%out 1466] [%in 2] [%cacheread 33285] [%cachewrite 11188] }
+炮８平９ { [%emt 0:02:41] [%think 7902] [%out 7915] [%in 2482]
+[%cacheread 36992] [%cachewrite 0] } 18. 马六进四 { [%emt 0:00:18]
+[%think 1367] [%out 1376] [%in 2] [%cacheread 44473] [%cachewrite 1685] }
+车８进２ { [%emt 0:01:15] [%think 3504] [%out 3517] [%in 8242]
+[%cacheread 39296] [%cachewrite 0] } 19. 马四进六 { [%emt 0:02:05]
+[%think 11867] [%out 11876] [%in 2] [%cacheread 46158] [%cachewrite 1591] }
+士５进６ { [%emt 0:01:31] [%think 4205] [%out 4218] [%in 3844]
+[%cacheread 47360] [%cachewrite 0] } 20. 车五平四 { [%emt 0:01:20]
+[%think 7613] [%out 7622] [%in 2] [%cacheread 47749] [%cachewrite 12091] }
+卒１进１ { [%emt 0:01:13] [%think 3292] [%out 3305] [%in 4499]
+[%cacheread 51072] [%cachewrite 0] } 21. 马六进四 { [%emt 0:00:38]
+[%think 3445] [%out 3454] [%in 2] [%cacheread 59840] [%cachewrite 7838] }
+炮９平６ { [%emt 0:00:21] [%think 620] [%out 633] [%in 3599] [%cacheread 55424]
+[%cachewrite 0] } 22. 车四平五 { [%emt 0:02:00] [%think 11424] [%out 11433]
+[%in 2] [%cacheread 67678] [%cachewrite 3664] } 卒１进１ { [%emt 0:00:35]
+[%think 1284] [%out 1297] [%in 921] [%cacheread 58880] [%cachewrite 0] } 23.
+车七平四 { [%emt 0:00:24] [%think 2044] [%out 2053] [%in 2] [%cacheread 71342]
+[%cachewrite 11643] } 卒１进１ { [%emt 0:00:36] [%think 1370] [%out 1383]
+[%in 1595] [%cacheread 59648] [%cachewrite 0] } 24. 车五进一 { [%emt 0:00:52]
+[%think 4890] [%out 4899] [%in 2] [%cacheread 82985] [%cachewrite 2260] }
+士６进５ { [%emt 0:01:02] [%think 2649] [%out 2662] [%in 1711]
+[%cacheread 61056] [%cachewrite 0] } 25. 炮九平七 { [%emt 0:00:44]
+[%think 4076] [%out 4085] [%in 2] [%cacheread 85245] [%cachewrite 5142] }
+炮６进１ { [%emt 0:02:56] [%think 8455] [%out 8468] [%in 2978]
+[%cacheread 62592] [%cachewrite 0] } 26. 车五平二 { [%emt 0:00:12] [%think 851]
+[%out 860] [%in 2] [%cacheread 90387] [%cachewrite 4289] } 卒１平２ {
+[%emt 0:01:46] [%think 4862] [%out 4875] [%in 8769] [%cacheread 65408]
+[%cachewrite 0] } 27. 车四退二 { [%emt 0:01:42] [%think 9423] [%out 9432]
+[%in 2] [%cacheread 94676] [%cachewrite 1061] } 卒２进１ { [%emt 0:01:02]
+[%think 2657] [%out 2670] [%in 5203] [%cacheread 73984] [%cachewrite 0] } 28.
+炮七进七 { [%emt 0:02:11] [%think 12306] [%out 12315] [%in 2]
+[%cacheread 95737] [%cachewrite 9627] } 车１平３ { [%emt 0:00:15] [%think 48]
+[%out 61] [%in 3012] [%cacheread 78976] [%cachewrite 0] } 29. 车四进二 {
+[%emt 0:00:56] [%think 5175] [%out 5184] [%in 2] [%cacheread 105364]
+[%cachewrite 12498] } 车３进４ { [%emt 0:00:44] [%think 1886] [%out 1899]
+[%in 384] [%cacheread 81792] [%cachewrite 0] } 30. 车二平五 { [%emt 0:00:29]
+[%think 2427] [%out 2436] [%in 2] [%cacheread 117862] [%cachewrite 5364] }
+车３退３ { [%emt 0:00:38] [%think 1573] [%out 1586] [%in 2152]
+[%cacheread 82048] [%cachewrite 0] } 31. 车四平三 { [%emt 0:03:00]
+[%think 16807] [%out 16816] [%in 2] [%cacheread 123226] [%cachewrite 2616] }
+象７进５ { [%emt 0:00:45] [%think 1839] [%out 1852] [%in 1943]
+[%cacheread 83968] [%cachewrite 0] } 32. 马三退五 { [%emt 0:00:20]
+[%think 1543] [%out 1552] [%in 2] [%cacheread 125842] [%cachewrite 16993] }
+车３进５ { [%emt 0:00:52] [%think 2148] [%out 2161] [%in 2126]
+[%cacheread 85760] [%cachewrite 0] } 33. 兵五进一 { [%emt 0:00:15]
+[%think 1131] [%out 1140] [%in 2] [%cacheread 142835] [%cachewrite 1729] }
+车３平５ { [%emt 0:00:44] [%think 1887] [%out 1900] [%in 2490]
+[%cacheread 87680] [%cachewrite 0] } 34. 车三退一 { [%emt 0:01:13]
+[%think 6704] [%out 6713] [%in 2] [%cacheread 144564] [%cachewrite 1317] }
+车５退１ { [%emt 0:00:18] [%think 319] [%out 332] [%in 2209] [%cacheread 89984]
+[%cachewrite 0] } 35. 相七进五 { [%emt 0:00:31] [%think 2726] [%out 2735]
+[%in 2] [%cacheread 145881] [%cachewrite 6887] } 卒２进１ { [%emt 0:00:54]
+[%think 2360] [%out 2373] [%in 614] [%cacheread 92032] [%cachewrite 0] } 36.
+车三退一 { [%emt 0:00:28] [%think 2386] [%out 2395] [%in 2] [%cacheread 152768]
+[%cachewrite 2910] } 卒２平３ { [%emt 0:00:34] [%think 1027] [%out 1040]
+[%in 2724] [%cacheread 92416] [%cachewrite 0] } 37. 车三平一 { [%emt 0:00:09]
+[%think 527] [%out 536] [%in 2] [%cacheread 155678] [%cachewrite 2570] }
+卒３平４ { [%emt 0:00:39] [%think 1617] [%out 1630] [%in 1323]
+[%cacheread 94976] [%cachewrite 0] } 38. 马五进三 { [%emt 0:00:13] [%think 924]
+[%out 933] [%in 2] [%cacheread 158248] [%cachewrite 708] } 车５平４ {
+[%emt 0:00:33] [%think 1135] [%out 1148] [%in 1920] [%cacheread 96128]
+[%cachewrite 0] } 39. 仕六进五 { [%emt 0:01:14] [%think 6797] [%out 6806]
+[%in 2] [%cacheread 158956] [%cachewrite 1104] } 卒４进１ { [%emt 0:00:30]
+[%think 1004] [%out 1017] [%in 1395] [%cacheread 97920] [%cachewrite 0] } 40.
+仕五退六 { [%emt 0:00:07] [%think 157] [%out 166] [%in 2] [%cacheread 160060]
+[%cachewrite 6978] } 卒７进１ { [%emt 0:01:10] [%think 3260] [%out 3273]
+[%in 1249] [%cacheread 99200] [%cachewrite 0] } 41. 兵三进一 { [%emt 0:00:09]
+[%think 552] [%out 561] [%in 2] [%cacheread 167038] [%cachewrite 335] }
+车４平７ { [%emt 0:00:23] [%think 724] [%out 737] [%in 3611]
+[%cacheread 100224] [%cachewrite 0] } 42. 相五进三 { [%emt 0:00:06] [%think 69]
+[%out 78] [%in 2] [%cacheread 167373] [%cachewrite 720] } 象５进３ {
+[%emt 0:00:43] [%think 1826] [%out 1839] [%in 999] [%cacheread 103680]
+[%cachewrite 0] } 43. 车一进三 { [%emt 0:00:12] [%think 722] [%out 731] [%in 2]
+[%cacheread 168093] [%cachewrite 232] } 1-0
+

@@ -3,7 +3,8 @@
 runs/b2），出一份中文 markdown——按对手的战绩、每盘明细（花费、思考 token、耗时、非法、被拦、等额度、墙钟）、合计、
 同开局新旧协议对照。刻度与人类刻度不在这里，见同目录 rate.py（只读入库的 csv，不要 runs/）。
 
-只依赖盘上数据（runs/ 不入库，只有原机器上有）；没下完 / 没分析的盘稳妥跳过并注明。大失误、ACPL 要先跑过事后分析
+只依赖本地原始对局记录 game.jsonl（公开仓库仅入库脱敏后的 game.pgn / analysis.jsonl / summary.*，不含 game.jsonl）；
+没下完 / 没分析的盘稳妥跳过并注明。大失误、ACPL 要先跑过事后分析
 （python3 -m llmchess.batch summary runs/zc --analyze）。
 
     python3 analysis/rating/stats.py [--out 路径]     # 默认打到标准输出
@@ -228,10 +229,11 @@ def main(argv=None):
     ap.add_argument('--out', help='写到这个文件（原子替换）；不给就打到标准输出')
     a = ap.parse_args(argv)
     missing = [os.path.relpath(d, ROOT) for d in (os.path.join(RUNS, 'zc'), os.path.join(RUNS, 'zx'))
-               if not os.path.isdir(d)]
+               if not list_game_dirs(d)]
     if missing:
-        raise SystemExit('未找到本地原始对局目录（%s）。本脚本依赖本地 runs/ 原始对局目录；'
-                         '若仅使用公开导出数据，可运行 `python3 analysis/rating/rate.py report` '
+        raise SystemExit('未找到本地原始对局记录 game.jsonl（%s）。本脚本统计花费、墙钟与限流等待等原始调用明细，'
+                         '依赖未入库的 game.jsonl；公开克隆环境可直接查看入库的 runs/zc/summary.md、runs/zx/summary.md '
+                         '与各盘 game.pgn / analysis.jsonl，或运行 `python3 analysis/rating/rate.py report` '
                          '查看基于 analysis/rating/games-*.csv 的等级分结果。' % '、'.join(missing))
     t_start = datetime.datetime.now()
     parts = ['# opus max 棋力评测汇总', '', '生成时间：%s（仅依赖当前盘上数据）' % t_start.isoformat(timespec='seconds'), '']

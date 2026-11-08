@@ -1,0 +1,209 @@
+[Game "Chinese Chess"]
+[Event "llm-chess b1-xq-stateless-2"]
+[Red "claude:opus"]
+[Black "engine:fsf:nodes=100"]
+[RedEffort "high"]
+[Result "0-1"]
+[Termination "将死"]
+
+1. 炮二平五 { [%emt 0:00:05] [%think 16] [%out 51] [%in 2] [%cacheread 0]
+[%cachewrite 1670] 开局走中炮，直接瞄准黑方中卒，布局积极。 } 马２进３ 2.
+马二进三 { [%emt 0:00:05] [%think 18] [%out 74] [%in 2] [%cacheread 0]
+[%cachewrite 1722] 这是中炮对屏风马的开局，常规走法是跳正马。
+马二进三可以保护中兵，也能加快右翼出子。 } 士４进５ 3. 车一平二 {
+[%emt 0:00:06] [%think 83] [%out 133] [%in 2] [%cacheread 0] [%cachewrite 1757]
+开局阶段，把右车出到二路，正对黑方的８路炮和未出动的马，是正常的出子着法。 }
+炮８平５ 4. 马八进七 { [%emt 0:00:17] [%think 758] [%out 905] [%in 2]
+[%cacheread 0] [%cachewrite 1783] 这是中炮对后补中炮的开局。 - **中路安全**：
+黑炮e7隔着e6卒瞄向e3兵，但e3兵有g2马保护，现在没有危险。 - **不急于吃马**：
+黑方h9马虽然暴露在h线上，但有i9车保护，车吃马会亏子。 - **本步选择**：
+先出左马，巩固中路，同时准备出车。 } 马８进７ 5. 车九平八 { [%emt 0:00:09]
+[%think 369] [%out 460] [%in 2] [%cacheread 0] [%cachewrite 1813] 局面分析：
+双方都走成中炮对中炮，黑方已补士，两匹马也都跳出。红方的左车还没出动。
+出车九平八可以尽快开出左车，和八路炮形成配合，同时保持阵形稳固。 } 炮２进７ 6.
+马七退八 { [%emt 0:00:10] [%think 496] [%out 632] [%in 2] [%cacheread 0]
+[%cachewrite 1838] 黑方的炮在 b0 吃掉了我的车，必须马上吃回来。 - 车 h0 走不到
+b0，横线上 g0 的相挡住了。 - 炮 b2 下面没有炮架，吃不到 b0。 - 马 c2 可以走
+b0，马腿 c1 是空的。 所以用马七退八吃掉黑炮。 } 车１平２ 7. 马八进七 {
+[%emt 0:00:47] [%think 3686] [%out 3895] [%in 2] [%cacheread 0]
+[%cachewrite 1859] The black rook on b9 attacks my cannon on b2, and nothing
+protects that cannon. I can't just move the cannon away: once it leaves the
+b-file, the rook can go straight down and take my horse on b0. I'll advance
+that horse to c2 instead (马八进七). This protects the cannon, because my
+central cannon on e2 can then fire along row 2 using the horse on c2 as a
+screen. If the black rook takes on b2, I recapture with the e2 cannon and trade
+a cannon for a rook, which favours me. The cannon on b2 also still blocks the
+b-file, so the rook can't come down to b0. } 车２进６ 8. 炮八平九 {
+[%emt 0:00:40] [%think 3061] [%out 3225] [%in 2] [%cacheread 0]
+[%cachewrite 1882] 黑车进到 b3，同时攻击我 b2 的炮和 c3 的兵。b2 炮没有子保护，
+必须先转移。 我选炮八平九（b2a2）： - 炮退到 a2 后不再受攻击。 - 炮借 a3
+兵作炮架，可以瞄着 a6 卒。 - 如果黑车吃 c3 兵，我的七路马可以从 c2 退到 e1，
+保持子力完整。 } 车２平３ 9. 马三退五 { [%emt 0:00:54] [%think 3799]
+[%out 3935] [%in 2] [%cacheread 0] [%cachewrite 1907] 黑车在 c3 捉住我 c2
+的马，而这匹马目前没有子保护。马也不能随便走开：它一离开，c0 的相就会被黑车沿 c
+线吃掉。 所以走马三退五（g2 到 e1），马腿 f2 是空的。这样 e1 的马护住 c2 的马，
+局面稳住，以后再图反击。 } 炮５进４ 10. 马七进五 { [%emt 0:00:34] [%think 2586]
+[%out 2857] [%in 2] [%cacheread 0] [%cachewrite 1929] The black cannon on e3
+has just advanced and is a real threat. It can use my cannon on e2 as a screen
+to hit the knight on e1. That knight is holding things together: - It blocks
+the file in front of my king, so my e2 cannon can't leave the file. - It is the
+only piece protecting my knight on c2. My knight on c2 can capture the cannon
+on e3: its leg point d2 is empty, so the move is legal. If the black rook on c3
+recaptures, it is an even trade of knight for cannon. After that the rook would
+sit on e3, right in front of my e2 cannon. The e2 cannon is covered by both
+bishops, so there is no danger. If black instead grabs the c0 bishop with the
+rook, I come out ahead in material. Removing this cannon first also frees my e2
+cannon. } 车３平５ 11. 炮五平七 { [%emt 0:00:43] [%think 3497] [%out 3680]
+[%in 2] [%cacheread 0] [%cachewrite 1941] 把中炮从 e 线平到 c 线，
+同时解决被捉和反击两件事。 1. **五路炮被捉**：黑车在 e3，直接捉 e2 的炮，
+而这门炮没有任何子保护。 2. **炮五平七（e2c2）的作用**： - 炮离开车的攻击线。 -
+到 c2 后由 e1 的马保护。 - 在 c 线上以 c6 卒为炮架，打 c7 的黑马，
+而这匹马没有保护。 } 车５平３ 12. 车二进七 { [%emt 0:00:43] [%think 3118]
+[%out 3386] [%in 2] [%cacheread 0] [%cachewrite 1967] **思路：** - 黑车在 c3
+深入我方阵地，威胁吃 a3 和 g3 的兵。我方 c2 炮有 e1 马保护，暂时安全。 -
+我走车二进七（h0h7），红车到 h7 后横向可同时攻击黑方两匹马： - g7 马就在旁边，
+没有子力保护。 - 如果 g7 马走开，c7 马在第 7 横线上也会暴露，同样没有保护（c
+线被 c6 卒挡住，黑车护不到）。 - h7 这个点黑方目前没有子力能吃。 - 如果黑车 i9
+平到 i7 反击，我可以用车吃 i7，黑象回吃，结果是兑车，局面不亏。 } 车９进２ 13.
+车二退一 { [%emt 0:00:53] [%think 4095] [%out 4350] [%in 2] [%cacheread 0]
+[%cachewrite 1991] 黑车i7正在捉我h7的车，而且h7车没有保护。 **不选的着法：** -
+吃马（车二平三，h7g7）：黑车i7可以回吃，等于用车换马，吃亏。 - 兑车（h7i7）：
+黑象g9能回吃。我现在子力落后，兑子对我不利。 - 车二进二（h7h9）：
+会被黑马g7吃掉（马腿g8是空的）。 **选择车二退一（h7h6）：** - h6不受黑马g7、
+黑车i7攻击，是安全的。 - 下一步可以吃没有保护的g6卒。 -
+黑车如果平到h7来捉，h7没有保护，我可以直接吃掉。 } 卒７进１ 14. 车二退三 {
+[%emt 0:00:57] [%think 4495] [%out 4841] [%in 2] [%cacheread 0]
+[%cachewrite 2021] 我选择车二退三（h6h3），先稳住右翼。 - **局面判断：**
+子力上我方是车马双炮，对方是双车双马，我方明显吃亏。当务之急是先稳住，
+不能再丢子。 - **对方威胁：** 黑车 c3 横线上可以吃 a3 兵，也可以吃 g3 兵。吃掉
+g3 兵后，还会顺着 g 线攻击 g0 相。 - **七路炮不能动：** c2 炮一离开，黑车就能沿
+c 线直下吃 c0 相。 - **不急于进攻：** h6 车若去吃 e6 卒，会被黑马吃掉；若进到
+h5，也会被 g7 马吃掉。 - **h3 车的作用：** 车退到 h3 可以同时保护 g3 兵和 i3
+兵，避免 g3 失守后连带丢相。这里不受黑方攻击，也便于日后回防。a3 兵暂时顾不上。
+} 卒７进１ 15. 兵九进一 { [%emt 0:02:23] [%think 11356] [%out 11552] [%in 2]
+[%cacheread 0] [%cachewrite 2044] 黑车 c3 同时威胁两处。一是吃 a3 兵，
+吃完还顺带捉 a2 炮。二是卒7进1 吃 g3 兵，吃完卒捉 h3 车；这时我不能用车吃回，
+因为吃回后车在 g3 会被 c3 车吃掉。 这两处我不能同时守住，所以先挺 a 兵。这样 a3
+不再挂着，a2 炮也不会被连带攻击。黑方如果去吃 g3，我只丢一个兵，
+再把车移开就行。 } 马７进６ 16. 炮七平五 { [%emt 0:01:45] [%think 9159]
+[%out 9424] [%in 2] [%cacheread 0] [%cachewrite 2069] The rook on c3 is blocked
+only by my cannon on c2. The bishop on c0 behind it is guarded by the knight on
+e1, because the leg square d1 is empty. So if the cannon leaves, Rook takes c0
+costs Black the rook for a bishop, which is not a worry. Moving the cannon to
+the centre also takes it out of a threat: Black could play Knight f5 to e3 and
+then pile onto c2 with knight and rook. After Cannon c2 to e2 (炮七平五), the
+cannon uses the pawn on e6 as a screen and threatens to take the advisor on e8.
+The bishops protect e2, so if the rook comes to c2 to attack it, Black gives up
+a rook for a cannon. The rook on h3 still guards the pawn on g3. } 马６进７ 17.
+炮五平七 { [%emt 0:01:41] [%think 8401] [%out 8745] [%in 2] [%cacheread 0]
+[%cachewrite 2090] The immediate danger is black's knight on g3. It can take my
+undefended cannon on e2 with 马7进5. After that, knight checks from g1 or c1
+are hard to meet, because my king is boxed in by the knight on e1 and both
+advisors. Playing 炮五平七 (e2c2) solves several problems at once: 1. **The
+cannon gets out of danger.** On c2 it is protected by my knight on e1, since
+the knight's leg square d1 is empty. 2. **It blocks the black rook.** The rook
+on c3 can no longer hit my elephant on c0 along the c-file. If the rook takes
+the cannon, my knight recaptures and I win a rook for a cannon. 3. **It shuts
+the knight out of e2.** If black's knight goes to e2, my a2 cannon captures it
+by jumping over the c2 cannon, because d2 is empty. 4. **It frees my knight.**
+With e2 empty, the e1 knight can later go to d3 or f3, which also opens e1 as
+an escape square for my king. } 车３平５ 18. 炮七进五 { [%emt 0:01:01]
+[%think 4926] [%out 5176] [%in 2] [%cacheread 0] [%cachewrite 2116] You are
+behind on material, so I'd rather trade than leave the cannon passive. - **Why
+the knight is loose:** the red cannon on c2 jumps over the black pawn on c6 and
+hits the black knight on c7. Only the rook on i7 guards that knight. - **Why
+other moves are worse:** - Taking the pawn on a6 with the other cannon fails,
+because the knight on c7 would capture it. - Rook takes the knight on g3 loses
+the exchange, since the pawn on g4 and the rook on e3 both guard it. - **My
+choice:** take the knight on c7 for the cannon. If black recaptures, it is an
+even cannon-for-knight trade. It also removes one of the pieces black is
+attacking with. } 车９平３ 19. 炮九平七 { [%emt 0:00:42] [%think 3154]
+[%out 3417] [%in 2] [%cacheread 0] [%cachewrite 2133] 黑车在 c7，前面隔着黑卒
+c6，身后没有子保护。红炮平到七路（c2）后，可以借 c6 卒作炮架直接打这个车。 c2
+这个点目前也比较安全： - 黑车 c7 被自己的 c6 卒挡住，打不到 c2。 - 黑车 e3 在第
+3 横线上，打不到第 2 横线上的 c2。 - 黑马 g3 跳不到 c2。 其他几步都不如这步： -
+车吃马（h3xg3）不行，g3 马有 g4 卒和 e3 车保护，红车会白白换掉。 - 车进到 h7
+捉车也不行，黑车 c7 可以反过来吃掉红车。 } 车３平４ 20. 炮七进七 {
+[%emt 0:01:01] [%think 4618] [%out 4907] [%in 2] [%cacheread 0]
+[%cachewrite 2161] **思路：** 红方子力落后，需要找战术上的收获。 1.
+**黑马动不了。** 黑马g3被我车h3牵住：它一离开，我车就能沿横线吃掉e3黑车。 2.
+**我马也动不了。** 红马e1同样被黑车e3牵制：它一离开，黑车就直接将军。 3.
+**炮可以吃象。** 我炮c2沿纵线向上，以c6卒为炮架，可以打掉底线的c9象。 4.
+**吃象后的好处。** 黑方少一象，防守变薄。以后可以配合车找攻势，
+比如借c9的炮或以象为架的横向炮将。 5. **暂无大危险。**
+黑方目前的威胁（如车进d1）还能应付：万一黑车吃e1马，d0仕可以吃回。 } 象７进５
+21. 车二进三 { [%emt 0:02:04] [%think 10382] [%out 10653] [%in 2]
+[%cacheread 0] [%cachewrite 2184] **思路：** 红方子力明显落后，
+所以要设法多得兵，同时防住黑方的反击。 - **能否吃马：**
+我方车h3吃g3马不行。g3马有黑车e3和g4卒两重保护，吃了要丢车。 - **黑方的威胁：**
+- 若黑马走e2，我方两个相都能吃掉它。 - 我方车离开h3后，黑马可以经i2跳到g1将军，
+这是最危险的线路。到时回车h1就能封住g1，来得及应对。 - **车h3进h6的作用：**
+车到六路后，同时攻击e6卒和i6卒（e6卒无保护）。黑车d7要照看e7象，
+两个卒难以兼顾，红方至少可以得一个兵。 } 象５退３ 22. 车二退四 { [%emt 0:00:48]
+[%think 3462] [%out 3549] [%in 2] [%cacheread 0] [%cachewrite 2206]
+黑方在威胁马7退8，再马进6到f2将军。那时红帅无路可走，被将死。所以红车要回防。
+车二退四到h2，能同时控制f2、e2、i2等要点，也继续守住h线。 } 象３进５ 23.
+相三进五 { [%emt 0:01:15] [%think 5853] [%out 6244] [%in 2] [%cacheread 0]
+[%cachewrite 2230] **思路：** 1. **黑方的杀棋威胁** - 黑马 g3 下一步可以走到
+e2，再从 e2 跳 c1 或 g1 将军。 - 红帅 e0 周围全被自己的子堵住，没有退路。 -
+红马 e1 被黑车 e3 牵制，动不了。 - 所以马到 c1 或 g1 基本就是杀棋，必须先把 e2
+这个点控制住。 2. **走相三进五（g0e2）的作用** - 相占住 e2，黑马去不了 e2。 -
+相挡在黑车 e3 和红马 e1 之间，红马不再被牵制。 - 黑车 e3 吃 e2 的相，有七路相
+c0 回吃。 - 黑马 g3 吃 e2，红方用相 c0 回吃。之后黑车再吃 e2，红车 h2
+可以沿横线吃掉这个车，黑方反而吃亏。 - 这步相还威胁吃掉 g4 的卒。吃掉以后，黑马
+g3 就少了卒的保护。 } 车５平６ 24. 车二退二 { [%emt 0:00:44] [%think 3215]
+[%out 3419] [%in 2] [%cacheread 0] [%cachewrite 2255] **思路：**
+黑方有杀棋威胁。黑车可以先吃仕将军（车6进3，f3f0），红帅只能吃车。
+接着黑车再吃六路仕将军（车4进7，d7d0）。这时e0被黑车控制，f1被黑马控制，
+红帅无处可走，也无子可垫，就被将死了。 所以这一步必须先防守。车二平三守底线，
+让车保护f0的仕： - 黑车吃仕时，红车可以直接回吃。 - d0的仕有帅保护，
+黑车吃仕也不成立。 } 车６进２ 25. 马五进七 { [%emt 0:01:08] [%think 5397]
+[%out 5672] [%in 2] [%cacheread 0] [%cachewrite 2281] The immediate danger is
+that Black threatens 车4退6 (d7d1): once the rook reaches d1, the rook on f1
+can capture the knight on e1 with the d1 rook protecting it. My king has no
+square to go to and my advisors cannot recapture on e1, so that would be mate.
+So I move the knight from e1 to c2. From c2 it guards e1 (the d2 leg is empty).
+If Black then plays d7d1 and takes on e1, I can recapture with the knight or
+the king in turn. Black would lose two rooks and I would lose only one knight.
+Other moves don't stop the mate: - 车二进一 (h0h1) hangs the rook: the black
+rook on f1 can take it along the first rank. - 相五进三 (e2g4) wins a pawn but
+does nothing against d7d1. } 马７进８ 26. 相五进三 { [%emt 0:00:46]
+[%think 3399] [%out 3617] [%in 2] [%cacheread 0] [%cachewrite 2307] **思路：**
+黑马在 h1 由 f1 车保护。车二进一（h0h1）吃马后，黑车会吃回，
+红方用车换马不划算。 相三进五（e2g4）吃掉 g4 卒，理由如下： - 相走到 g4 以后，
+仍可随时退回 e2，照看中路。 - 红马在 c2，保护着 d0 仕和 e1 点。黑车即使下到
+d1，一时也难以形成杀势。 - 黑马如果去 i3 吃兵，是一兵换一卒；黑车如果到 d4
+捉相，红相可以退回。 } 车４进２ 27. 车二平三 { [%emt 0:00:56] [%think 4271]
+[%out 4541] [%in 2] [%cacheread 0] [%cachewrite 2329]
+黑方现在威胁**车6进1**（f1f0）吃仕将军。f0 仕虽然有帅保护，但黑马 h1 也控制着
+f0，帅不能吃回。 我走**车二平三**（h0g0），让车守住 f0： - 如果黑方仍然 f1f0
+吃仕，我车吃车；黑马 h1 再吃 f0 的车，我帅吃马。结果黑方丢车马，我方丢仕车，
+这笔交换对我有利。 - 同时我车占住 g 线，下一步可以去 g1，同时捉 f1 车和 h1 马。
+- 如果黑车 d5 平到 e5 将军，我可以相三退五（g4e2）垫将，
+这个相有另一只相和帅保护。 } 车６退３ 28. 车三进一 { [%emt 0:00:21]
+[%think 1173] [%out 1377] [%in 2] [%cacheread 0] [%cachewrite 2350] 黑马在 h1
+深入，威胁 f0 的仕，还可以走 f2 将军。红车走 g1 有三个作用： - **攻马**：车在
+g1 与 h1 的马同一横线相邻，直接捉马。 - **别马腿**：g1 是马去 f0 和 f2 的马腿，
+占住后马不能吃仕，也不能走 f2 将军。 - **保相**：车仍在 g 线上，g2、g3 是空点，
+继续保护 g4 的相。 黑马只剩 g3 和吃 i3 兵两条路。 } 马８退９ 29. 相三退五 {
+[%emt 0:00:21] [%think 1455] [%out 1557] [%in 2] [%cacheread 0]
+[%cachewrite 2372] 黑方车在 f4、马在 i3，同时威胁我 g4 的相。只靠 g1
+的车守不住：黑可车吃相，我车吃回后，黑马再吃。 所以先把相退回 e2。
+这样既避开攻击，又能巩固中路。 } 车４进３ 30. 马七进九 { [%emt 0:00:41]
+[%think 2939] [%out 3114] [%in 2] [%cacheread 0] [%cachewrite 2395] 马在 c2
+被黑车 d2 捉，而且没有子保护，必须处理。 - 马进 d4 或 b4，
+都会落在黑车攻击线上。 - 马进 e1、e3 的马腿被 d2 的车堵住，走不了。 -
+车一平九捉马，结果多半是兑马。我子力落后，兑子不利。 所以把马退到 a3。
+这个点不在两辆黑车的攻击线上，车 g1 也能继续留在原位防守。 } 车６平４ 31.
+车三进三 { [%emt 0:00:40] [%think 2929] [%out 3143] [%in 2] [%cacheread 0]
+[%cachewrite 2420] The main danger is black's d-file. The d4 rook covers the
+whole file, so black threatens 車d2xd0+ to win my advisor, and my king could
+not recapture on d0. I'll play 车三进三 (g1g4). The rook goes to g4 and attacks
+the d4 rook along row 4, since e4 and f4 are empty. - **If 車d4xg4:** my 相e2
+recaptures on g4. That also clears the d-file, so the d0 threat is gone. - **If
+車d2xd0+ first:** my king steps to e1, then my rook takes on d4 (g4xd4). That
+trades material back. } 前车进２ 32. 帅五进一 { [%emt 0:00:09] [%think 302]
+[%out 406] [%in 2] [%cacheread 0] [%cachewrite 2441] 黑方车在 d0 贴身将军，且有
+d4 车保护，帅不能吃；两子相邻，也无法垫将。帅上 e1 不受黑方任何子力攻击，e2
+有相挡住，不会与将照面。这是唯一合法的应将着法。 } 后车进３ 0-1
+

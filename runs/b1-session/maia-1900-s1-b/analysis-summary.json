@@ -1,0 +1,122 @@
+{
+ "game": "chess",
+ "sides": {
+  "w": {
+   "player": "engine:maia-1900",
+   "plies": 52,
+   "undecided": 52,
+   "blunders": 7,
+   "mistakes": 9,
+   "events": 5,
+   "acpl": 94.9,
+   "acpl_undecided": 94.9,
+   "blunder_rate": 0.1346,
+   "mistake_rate": 0.1731,
+   "lichess": {
+    "Inaccuracy": 7,
+    "Mistake": 5,
+    "Blunder": 5,
+    "Inaccuracy_rate": 0.1346,
+    "Mistake_rate": 0.0962,
+    "Blunder_rate": 0.0962,
+    "avg_wp_loss": 4.7
+   },
+   "phases": [
+    {
+     "range": "1-15",
+     "plies": 11,
+     "undecided": 11,
+     "blunders": 0,
+     "acpl": 11.6
+    },
+    {
+     "range": "16-30",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 0,
+     "acpl": 100.1
+    },
+    {
+     "range": "31-45",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 3,
+     "acpl": 95.4
+    },
+    {
+     "range": "46-",
+     "plies": 11,
+     "undecided": 11,
+     "blunders": 4,
+     "acpl": 170.5
+    }
+   ]
+  },
+  "b": {
+   "player": "claude:opus",
+   "plies": 52,
+   "undecided": 50,
+   "blunders": 4,
+   "mistakes": 8,
+   "events": 4,
+   "acpl": 76.2,
+   "acpl_undecided": 70.1,
+   "blunder_rate": 0.08,
+   "mistake_rate": 0.16,
+   "lichess": {
+    "Inaccuracy": 5,
+    "Mistake": 4,
+    "Blunder": 4,
+    "Inaccuracy_rate": 0.0962,
+    "Mistake_rate": 0.0769,
+    "Blunder_rate": 0.0769,
+    "avg_wp_loss": 3.8
+   },
+   "phases": [
+    {
+     "range": "1-15",
+     "plies": 11,
+     "undecided": 11,
+     "blunders": 0,
+     "acpl": 3.6
+    },
+    {
+     "range": "16-30",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 1,
+     "acpl": 73.6
+    },
+    {
+     "range": "31-45",
+     "plies": 15,
+     "undecided": 14,
+     "blunders": 1,
+     "acpl": 105.9
+    },
+    {
+     "range": "46-",
+     "plies": 11,
+     "undecided": 10,
+     "blunders": 2,
+     "acpl": 111.9
+    }
+   ]
+  }
+ },
+ "opening_plies": 8,
+ "events_global": 6,
+ "params": {
+  "version": 1,
+  "game": "chess",
+  "engine": "Stockfish 19",
+  "depth": 18,
+  "hash": 64,
+  "threads": 1,
+  "clip": 1000,
+  "big": 250,
+  "mistake": 100,
+  "opening": 8
+ },
+ "plies": 112
+}

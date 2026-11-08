@@ -1,0 +1,122 @@
+{
+ "game": "chess",
+ "sides": {
+  "w": {
+   "player": "codex:astra",
+   "plies": 39,
+   "undecided": 35,
+   "blunders": 4,
+   "mistakes": 5,
+   "events": 4,
+   "acpl": 69.8,
+   "acpl_undecided": 77.8,
+   "blunder_rate": 0.1143,
+   "mistake_rate": 0.1429,
+   "lichess": {
+    "Inaccuracy": 3,
+    "Mistake": 4,
+    "Blunder": 3,
+    "Inaccuracy_rate": 0.0769,
+    "Mistake_rate": 0.1026,
+    "Blunder_rate": 0.0769,
+    "avg_wp_loss": 4.2
+   },
+   "phases": [
+    {
+     "range": "1-15",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 0,
+     "acpl": 8.1
+    },
+    {
+     "range": "16-30",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 3,
+     "acpl": 112.2
+    },
+    {
+     "range": "31-45",
+     "plies": 9,
+     "undecided": 5,
+     "blunders": 1,
+     "acpl": 102.0
+    },
+    {
+     "range": "46-",
+     "plies": 0,
+     "undecided": 0,
+     "blunders": 0,
+     "acpl": null
+    }
+   ]
+  },
+  "b": {
+   "player": "claude:opus",
+   "plies": 39,
+   "undecided": 34,
+   "blunders": 3,
+   "mistakes": 1,
+   "events": 3,
+   "acpl": 41.8,
+   "acpl_undecided": 48.0,
+   "blunder_rate": 0.0882,
+   "mistake_rate": 0.0294,
+   "lichess": {
+    "Inaccuracy": 3,
+    "Mistake": 1,
+    "Blunder": 2,
+    "Inaccuracy_rate": 0.0769,
+    "Mistake_rate": 0.0256,
+    "Blunder_rate": 0.0513,
+    "avg_wp_loss": 2.8
+   },
+   "phases": [
+    {
+     "range": "1-15",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 0,
+     "acpl": 5.3
+    },
+    {
+     "range": "16-30",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 3,
+     "acpl": 101.9
+    },
+    {
+     "range": "31-45",
+     "plies": 9,
+     "undecided": 4,
+     "blunders": 0,
+     "acpl": 2.6
+    },
+    {
+     "range": "46-",
+     "plies": 0,
+     "undecided": 0,
+     "blunders": 0,
+     "acpl": null
+    }
+   ]
+  }
+ },
+ "opening_plies": 0,
+ "events_global": 6,
+ "params": {
+  "version": 1,
+  "game": "chess",
+  "engine": "Stockfish 19",
+  "depth": 18,
+  "hash": 64,
+  "threads": 1,
+  "clip": 1000,
+  "big": 250,
+  "mistake": 100,
+  "opening": 0
+ },
+ "plies": 78
+}

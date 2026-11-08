@@ -1,0 +1,494 @@
+[Event "llm-chess maia-1900-s5-w"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "claude:opus"]
+[Black "engine:maia-1900"]
+[Result "1-0"]
+[Termination "将死"]
+[WhiteEffort "xhigh"]
+
+1. e4 e5 2. Ne2 Bc5 3. c3 d5 4. Ng3 Ne7 5. d4 { [%emt 0:00:15] [%think 906]
+[%out 1124] [%in 2] [%cacheread 0] [%cachewrite 1194] Black's bishop on c5 is
+watching f2, so I'll strike in the centre with d4. This pawn is protected by
+the c3 pawn and the queen, and it also attacks the bishop on c5. - If Black
+plays exd4, I recapture with cxd4 and have a broad centre. If Black then checks
+with Bb4+, I block with Bd2 or Nc3. - If Black plays dxe4 instead, I take the
+bishop with dxc5. After the queen trade Qxd1+ Kxd1, White has won a bishop for
+a pawn. - If the bishop retreats with Bb6, dxe5 gives me the advantage. } 5...
+exd4 6. cxd4 { [%emt 0:00:13] [%think 746] [%out 943] [%in 2] [%cacheread 0]
+[%cachewrite 1212] **思路：** 走 cxd4 吃回中心兵，同时攻击 c5 的黑象，
+白方能掌握 d4、e4 的兵中心。 - **黑方 Bb4+：** 白方可以走 Bd2 或 Nc3 挡将，
+局面都没有问题。 - **黑方 dxe4：** 白方走 dxc5 吃象。黑方即使 Qxd1+，白方 Kxd1
+后仍多一个子。 - **黑方 Bb6：** 白方可以走 e5 扩大空间优势。 } 6... Bb4+ 7. Nc3
+{ [%emt 0:00:11] [%think 629] [%out 749] [%in 2] [%cacheread 0]
+[%cachewrite 1237] Choosing a check escape: pick Nc3 as the most natural one
+here. It blocks the check, develops a piece, and adds pressure on d5. - If
+Black plays Bxc3+ bxc3, White gets the bishop pair and a solid center. - If
+Black plays dxe4, White can take back on e4 with the knight, with good play. }
+7... dxe4 8. Nxe4 { [%emt 0:00:16] [%think 1116] [%out 1235] [%in 2]
+[%cacheread 0] [%cachewrite 1262] Ngxe4 立即把 e4 兵吃回来，子力恢复平衡。c3
+马被 b4 象牵制，不能用它吃，所以用 g3 马吃。 吃完后如果黑方走 Qxd4，白后从 d1
+直接吃回黑后，所以 d4 兵是安全的。 } 8... O-O 9. a3 { [%emt 0:00:22]
+[%think 1366] [%out 1586] [%in 2] [%cacheread 0] [%cachewrite 1282] 思路：黑方
+Bb4 牵制着我 c3 的马，d4 兵也可能被 Nf5 或 Qxd4 盯上。 先排除 Bd3：它会挡住 d
+线，d4 兵只剩后在保护，走了之后黑方可以直接 Qxd4 白吃一兵。 a3 能逼黑象表态： -
+若 Bxc3+，我可以用 e4 的马回吃 Nxc3，兵形保持完整，还得到双象。 - 若黑象退到
+a5，我可以接 b4 继续赶象。 之后再出 Be2 并短易位。 } 9... Ba5 10. b4 {
+[%emt 0:00:29] [%think 2106] [%out 2316] [%in 2] [%cacheread 0]
+[%cachewrite 1305] 这里选 b4。 - 黑象 a5 正牵制着 c3 的马（a5-b4-c3-d2-e1
+这条斜线直通我的王），所以这匹马现在不能动。 - 走 b4 直接驱赶这只象，解除牵制，
+同时在后翼扩张空间。 - 如果黑方走 Bxb4，我用 axb4 吃回，并不吃亏。 - 如果黑方退
+Bb6，这只象会盯住 d4 兵。我可以接着走 Be3 守住 d4，然后出象 d3、短易位，
+完成出子。 } 10... Bb6 11. Be3 { [%emt 0:00:44] [%think 3393] [%out 3765]
+[%in 2] [%cacheread 0] [%cachewrite 1328] **思路：** 黑方的 b6 象和 d8
+后都在攻击 d4 兵，而白方只有 d1 后在保护它，现在 d4 实际上是挂着的：黑方可以走
+Bxd4，白方若 Qxd4 就会被 Qxd4 吃掉后。 我考虑了几个办法： - **Be3**：出子，
+同时加保 d4，攻防变成 2 对 2。黑方如果硬换 Bxd4 Bxd4 Qxd4 Qxd4，黑方丢象和后，
+只换回一兵一象，是黑方吃亏。黑方若再走 Nf5 加攻 d4，白方可以用 Nc5 挡住 b6
+象的斜线，或者用 Qd3 补防。 - **Bg5 攻 e7 马**：不好。黑方有 Bxd4 Bxe7 Bxc3+
+的中间将军，最后黑方净多一兵。 - **Ne2**：也能保 d4，但会堵住 f1
+象。 所以选择最自然的 Be3。 } 11... Nf5 12. Nc5 { [%emt 0:00:55] [%think 4796]
+[%out 5048] [%in 2] [%cacheread 0] [%cachewrite 1354] **思路：** 黑方的 f5
+马、b6 象和 d8 后三路同时攻击 d4 兵，白方只有 e3 象和 d1 后两个保护，d4
+兵有丢失的危险。 走 Ne4-c5 可以解决这个问题： - **切断象线：** 马挡住 b6 象通往
+d4 的斜线，d4 上变成二攻二守。 - **马很安全：** c5 马有 b4、d4 两个兵保护。 -
+**兼顾反击：** 马同时威胁 b7，并控制 d7、e6 两格。 如果黑方走 Nxd4，白方 Bxd4
+Qxd4 Qxd4，黑方白丢一马。 } 12... Nxe3 13. fxe3 { [%emt 0:00:08] [%think 362]
+[%out 443] [%in 2] [%cacheread 0] [%cachewrite 1379] 这里只考虑直接吃回。黑马在
+e3 攻击我的 d1 后，用 f 兵吃回最自然，也能换回一子。吃后 e3 兵还能保护 d4 兵。
+} 13... Re8 14. Qf3 { [%emt 0:00:45] [%think 3576] [%out 3749] [%in 2]
+[%cacheread 0] [%cachewrite 1399] 思路：黑方车 e8 正攻击没有保护的 e3 兵，
+而且吃兵时还会将军。白后走 f3 可以一举几得： - 保护 e3 兵，同时保护 g2 兵。 -
+从 f3 盯住 f7 和 b7，下一步可以接 Bc4，配合后对 f7 施压，然后短易位。 -
+黑方如果走 Bg4 捉后，g4 的象没有保护，白后直接吃掉。 } 14... Nc6 15. Be2 {
+[%emt 0:01:03] [%think 5028] [%out 5432] [%in 2] [%cacheread 0]
+[%cachewrite 1426] **思路：** - **当前的危险**：黑车 e8 沿 e 线牵制了 e3 兵，e3
+兵不能去保护 d4。d4 同时受黑马 c6 和黑后 d8 攻击，黑方马上就有 ...Nxd4 的威胁。
+- **Be2 的作用**：先挡住 e 线牵制，e3 兵就恢复了保护 d4 的作用，同时出子，
+下一步准备短易位。 - **验证黑方反击**： - 若 ...Nxd4 exd4 Qxd4：此时 e3 已空，
+白后 f3 沿第三横线保护 c3；c5 马由 b4 兵保护。黑方只换回两个兵，
+白方净多一个轻子。 - 若 ...Qg5 同时瞄准 e3：可以走 Ne4，既捉后，又挡住 e 线。 -
+**不选其他着法的原因**：Kf2 会被 ...Nxd4 exd4 Qxd4+ 一着同时攻击 c3、c5 两马；
+长易位后，黑方 Qg5 可以沿斜线牵制 e3，白王暴露。 } 15... Nxd4 16. exd4 {
+[%emt 0:01:11] [%think 5919] [%out 6181] [%in 2] [%cacheread 0]
+[%cachewrite 1451] **思路：** 黑马从 d4 同时攻击我的后和 e2 象，而 e3
+兵正好能吃掉这匹马，所以直接 exd4 净得一马。 吃马后 e 线打开，黑方车 e8
+会牵制我的 e2 象。检查黑方的几种反击： - **…Qxd4**：我走 Rd1 捉后。
+黑后走开后我可以短易位，仍然多一个子。 - **…Bxd4**：黑象挡住了 d 线，d1 和 c1
+都不受攻击，我可以长易位解除牵制。 - **…Rxe2+**：我用 Nxe2 吃回，
+局面安全。 结论：这些反击都能化解，吃马后我多一个子。 } 16... Qxd4 17. Rd1 {
+[%emt 0:01:06] [%think 5416] [%out 5763] [%in 2] [%cacheread 0]
+[%cachewrite 1474] **思路：** 白方多一个马，只少两兵，子力占优。
+现在白王还在中心，e2 象被 e8 车牵制。黑后在 d4 同时威胁 c3 和 c5
+的马。 白方现在不能易位。短易位时，黑后经 e3、f2 控制 g1；长易位时，d1
+也在黑后控制之下。 所以走 Rd1，先手捉后，同时出动车： - 如果黑方 Bxc5 bxc5，d4
+的后仍被车攻击，白方可以 Rxd4 吃后。 - 如果黑方 Bg4 反捉后，白方 Rxd4 Bxf3
+gxf3，净得一象。 - 如果黑方 Qxc3+，白方 Qxc3 兑后，进入多一子的残局。 -
+如果黑方 Rxe2+，白方 Nxe2 或 Kxe2 都安全。车已离开 a1，黑后没有 Qxa1+ 的手段。
+} 17... Qh4+ 18. Qf2 { [%emt 0:00:35] [%think 2541] [%out 2799] [%in 2]
+[%cacheread 0] [%cachewrite 1495] 黑后在 h4 沿 h4-g3-f2-e1 斜线将军。
+白方现在多一个子，只少两个兵，所以兑后是最稳的办法。 我选 Qf2 垫将，同时攻击 h4
+的黑后： - **黑方兑后**：Qxf2+ Kxf2 后，如果 Bxc5+，白方 bxc5 吃回。
+进入残局后白方净多一子换两兵，王也在中心，局面很好。 - **黑方不兑后**：
+白方下一步可以短易位，解除 e 线牵制，王也更安全。 - **黑方走 Qf6**：同时攻击 c3
+马和 f2 后。白方直接 Qxf6 兑后即可。 } 18... Qxf2+ 19. Kxf2 { [%emt 0:00:08]
+[%think 417] [%out 501] [%in 2] [%cacheread 0] [%cachewrite 1517] 黑后在 f2
+将军，但它没有保护：b6 象通往 f2 的斜线被我 c5 的马挡住，e8 车也攻击不到 f2。
+所以王直接吃后，白棋得一后。 } 19... a5 20. Kf3 { [%emt 0:00:57] [%think 4562]
+[%out 4869] [%in 2] [%cacheread 0] [%cachewrite 1537] 黑方 ...a5 之后，我的 c5
+马被 b6 象牵制在 f2 王身上（b6-c5-d4-e3-f2 这条斜线）。黑方威胁
+axb4。 几个候选着法的问题： - **bxa5**：黑走 Bxc5+ 白丢马，不行。 - **Na4**：
+黑走 axb4 后局面很乱，白子力优势会大幅缩水。 所以先走 **Kf3** 解除牵制，
+王也更活跃。检查几种应着： - **...Re3+**：Kxe3，e3 没有保护（黑象的斜线被 c5
+马挡住），白白吃车。 - **...Bg4+**：Bxg4 白吃象。 - **...axb4 axb4 Ra3**：
+可以用 Rd3 保护 c3 马。 白方继续保持多一子的优势。 } 20... axb4 21. axb4 {
+[%emt 0:00:15] [%think 980] [%out 1177] [%in 2] [%cacheread 0]
+[%cachewrite 1562] The b4 pawn attacks the knight on c3, and the bishop on b6
+attacks the knight on c5 with nothing defending it, so both knights are
+hanging. **axb4** handles both at once. It wins the pawn and removes the threat
+to c3. The new pawn on b4 also defends the knight on c5, so if Black plays
+Bxc5, White recaptures with bxc5. The bishop on e2 is protected by the knight
+on c3 and the king, so the rook on e8 is no threat. If Black gives check with
+Bg4+, the bishop on e2 simply captures it. } 21... Ra3 22. Rc1 { [%emt 0:00:58]
+[%think 4736] [%out 5046] [%in 2] [%cacheread 0] [%cachewrite 1585] Aa3
+上的黑车牵制了 c3 马：这匹马一动，黑车就沿第三横线将军 f3 的王。现在 c3
+马没有保护，黑方下一步可以 Rxc3+ 白吃一马。 几个办法的比较： -
+先走王解除牵制也不行，c3 马仍然没人保护，黑方照样白吃。 - Rd3 挡住虽然可行，
+但黑方有 Bf5 攻击 d3 车的手段，反而麻烦。 - 最稳的是 Rc1 直接保护 c3 马。
+之后黑车若吃 c3，白方用车回吃，黑方净亏半子。 - 走 Rc1 后，黑方若 Re3+，可以
+Kxe3，没有问题。 下一步再走王解除牵制，然后用 Nd5 或 Bc4 发挥多一子的优势。 }
+22... Bxc5 23. bxc5 { [%emt 0:00:16] [%think 945] [%out 1107] [%in 2]
+[%cacheread 0] [%cachewrite 1609] The b4 pawn can take the bishop on c5 and win
+a piece. Black's possible counterplay after bxc5: - **Rxc3+:** this is check,
+because the knight on c3 is pinned to our king along the third rank. We
+recapture with Rxc3. - **Rxe2:** we take back with Kxe2. - **Bg4+:** we take
+with Kxg4. In every line White keeps the extra piece and ends up a piece up for
+two pawns. } 23... Be6 24. Rhd1 { [%emt 0:01:10] [%think 5700] [%out 6042]
+[%in 2] [%cacheread 0] [%cachewrite 1628] **局面判断** 我多一个马，
+对方多两个兵。子力上白方占优，但要注意战术： - **c3 马被牵制。** 黑车 a3
+沿第三横线直指 f3 的白王，所以 c3 马不能动。 - **如果先走 Nb5**：马一离开
+c3，a3 车就直接照到 f3 的王，这步棋不合法。 - **黑方可能走 Bd5+**：
+因为马被牵制，Nxd5 吃不了这个象。 **选择 Rhd1** 1. 把 h1 的闲车调到开放的 d
+线，出子更积极。 2. d1 车控制 d5，黑方走 Bd5+ 就直接 Rxd5 吃象。 3. 黑方若
+Rxc3+，白 Rxc3 兑换，黑方亏半子。 4. 之后可以动王解除牵制，再走 Ne4-d6 或 Nb5，
+攻击 c7 并威胁双打。 } 24... h6 25. Kf2 { [%emt 0:00:42] [%think 3046]
+[%out 3296] [%in 2] [%cacheread 0] [%cachewrite 1652] **思路：** 白方多一个马，
+黑方多两个兵，局面对白方有利。 现在有个隐患：黑车 a3 和我的王 f3 在同一横线上，
+中间只隔着 c3 马，所以这个马被牵制，动不了。 - **不走 Rd3 垫挡：** 黑方可以
+...Bf5 攻击 d3 车。那样我要么丢半子（车换象），要么车离开 d3，马又重新被牵制。
+- **选择 Kf2：** 王离开第三横线，直接解除牵制，而且很安全。e2 象有王和马保护。
+之后可以走 Nb5 打 c7，或者 Nd5、Bb5 等主动着法。 } 25... c6 26. Bf3 {
+[%emt 0:00:46] [%think 3610] [%out 3895] [%in 2] [%cacheread 0]
+[%cachewrite 1673] **思路：** 白方多一个马，对方为此多了两个兵。
+黑方现在的反击手段有两个： - 黑象离开 e6 后，e 线会打开，Re8 能直接攻击 e2 象。
+- 黑车走 Ra2，可以沿第二横线牵制 e2 象。 走 Bf3 把象撤到安全格，既避开 e 线，
+也离开第二横线。f3 象有王和 g2 兵保护，同时控制 e2 和 e4。这样下一步马可以走 e4
+再跳到 d6。d6 格有 c5 兵和 d1 车支持，马在那里能攻击 b7、f7 并威胁 e8 车。 走
+Bf3 之后，如果黑方 Ra2+ 将军，Nc3 可以直接吃掉车。 } 26... Rea8 27. Ne4 {
+[%emt 0:00:32] [%think 2324] [%out 2486] [%in 2] [%cacheread 0]
+[%cachewrite 1699] 思路：白方多一马，黑方多两兵。黑方双车占 a 线，但 a2 目前由
+c3 马控制。我计划走 Ne4，下一步跳 d6，同时攻击 b7 和 f7。马离开 c3 后，黑车 a3
+会沿横线攻击 f3 象，但 f3 有 g2 兵和王保护。黑方如果走 Ra2+，白王可以退到 g1，
+没有危险。 } 27... Ra2+ 28. Kg1 { [%emt 0:00:32] [%think 2213] [%out 2470]
+[%in 2] [%cacheread 0] [%cachewrite 1724] The Black rook on a2 is checking my
+king along the second rank. I'm a piece up for two pawns, so the plan is to
+secure the king first and then look to trade rooks. - **Why not Kg3:** Black
+gets …R8a3, which pins the f3 bishop against the king. The bishop could then no
+longer defend the e4 knight, and …Bf5 would hit it. - **Why not Ke3:** …Ra3+
+keeps checking. - **Kg1:** The king is safe behind the g2 and h2 pawns, and my
+two rooks on c1 and d1 guard the back rank. If Black tries …Ra1 to trade, the
+rooks come off, leaving bishop, knight and three pawns against bishop and five
+pawns. That ending favours me. } 28... Bd5 29. Nc3 { [%emt 0:02:19]
+[%think 10857] [%out 11652] [%in 6] [%cacheread 0] [%cachewrite 5502]
+[%illegal 2] **思路：** 走 Nc3，马同时攻击 a2 的车和 d5 的象，是一步捉双。 -
+马离开 e4 后，f3 的象也能打到 d5。这样黑象同时受到 Nc3、Bf3、Rd1 三方攻击，只有
+c6 兵保护。 - 如果黑方 Bxf3 gxf3，白方仍是双车一马对双车，子力占优。 -
+如果黑象退到 b3 或 c4 来保护 a2 的车，白方 Nxa2 吃车，净得一次交换。 -
+如果黑车离开 a2，白方吃掉 d5 的象，再多得一个兵。 } 29... Bxf3 30. gxf3 {
+[%emt 0:00:19] [%think 1175] [%out 1418] [%in 2] [%cacheread 0]
+[%cachewrite 1773] 黑象在 f3 正在攻击我 d1 的车，所以要么吃掉它，要么让车避开。
+- **Nxa2 不好。** 这步马吃车看着诱人，但黑方会 Bxd1。之后 Rxd1 Rxa2，
+局面变成单车对单车，黑方还多几个兵，对我不利。 - **gxf3 更好。** 直接用兵吃象，
+干净地多得一个轻子。 - **兑换之后的形势。** 黑方的 a2 车仍受我马威胁。黑方就算
+Rg2+ 骚扰，我走 Kf1 也能避开长将。最后我是一马对两兵的优势，形势占优。 } 30...
+R2a3 31. Rd7 { [%emt 0:00:34] [%think 2507] [%out 2797] [%in 2] [%cacheread 0]
+[%cachewrite 1795] **思路：** 白方多一个马，只少两个兵，子力占优。黑方的 a3
+车在攻击 c3 马。c3 马有 c1 车保护，而且马留在 c3 还能挡住 a3 车对 f3 兵的攻击。
+如果现在跳马，f3 兵就会丢掉。 我选择把 d 线的车走到第七横排 Rd7： - 它同时攻击
+b7 和 f7，b7 兵目前没有保护。 - 如果黑方 Rxc3 Rxc3，黑方亏一个半子，
+白方净多一个车。 - 如果黑方 Ra1，白方 Rxa1 Rxa1+，再 Kg2，局面安全。 - 如果黑方
+b5，白方可以吃过路兵 cxb6，b 兵离升变很近。 } 31... b5 32. cxb6 {
+[%emt 0:00:33] [%think 2273] [%out 2492] [%in 2] [%cacheread 0]
+[%cachewrite 1816] 吃过路兵 cxb6。这样能除掉黑方的 b5 兵，它原本威胁走 b4
+赶走我的马。吃完后我在 b6 有一个通路兵，d7 车可以沿第七横线保护它推进到
+b7。 检查黑方的反击： - 如果黑车 Rxc3，我用 Rxc3 吃回，黑方另一个车在 a8，
+无法再吃。 - 如果黑方走 Ra1 对换，我走 Rxa1，黑方 Rxa1+，我王走 Kg2。
+此时我的兵推到 b7 仍然很强。 } 32... Rb3 33. b7 { [%emt 0:01:24] [%think 7244]
+[%out 7482] [%in 2] [%cacheread 0] [%cachewrite 1840] Черный ладья на b3
+одновременно бьёт мою пешку b6 и коня c3 (конь защищён ладьёй c1). Продвигаю
+пешку на b7: там её защищает ладья d7, а сама пешка нападает на ладью a8. -
+Если чёрные сыграют Rxc3, отвечаю bxa8=Q+ с большим материальным перевесом. -
+Если ладья a8 уйдёт с восьмой горизонтали, возможны Rd8+ и затем превращение
+b8. - Скорее всего, чёрным придётся пассивно отступить Rab8. При любом из этих
+ответов у белых по-прежнему лишняя фигура. } 33... Rb8 34. Ne4 { [%emt 0:01:43]
+[%think 9000] [%out 9290] [%in 2] [%cacheread 0] [%cachewrite 1863] The key
+idea is to move the knight off the c-file. That frees my c1 rook for Rxc6 and
+Rc8+. - **Where the knight goes:** Ne4 is protected by the f3 pawn. From there
+it threatens Nd6, which guards b7 and hits f7. - **If Black trades on b7:**
+after ...Rbxb7 Rxb7 Rxb7, I play Rxc6. Then I have rook, knight and two pawns
+against rook and three pawns, which is a big edge. - **If Black grabs f3
+(...Rxf3):** I play Rxc6. That threatens Rc8+, and the b7 pawn breaks through
+to promote. - **If Black plays ...Rb1:** I take with Rxb1. The rook on b8 is
+blocked by my b7 pawn, so it cannot recapture, and I win the rook. } 34...
+R3xb7 35. Rxb7 { [%emt 0:00:12] [%think 471] [%out 590] [%in 2] [%cacheread 0]
+[%cachewrite 1888] 白方的 d7 车正受到黑方 b7 车的攻击。先兑车 Rxb7，黑方 Rxb7
+回吃后，白方再用 Rxc6 吃掉无保护的 c6 兵。这样白方剩车、马和两个兵，
+对黑方车加三个兵，局面明显占优。 } 35... Rxb7 36. Rxc6 { [%emt 0:00:13]
+[%think 569] [%out 712] [%in 2] [%cacheread 0] [%cachewrite 1910] 黑方 c6
+兵没有保护：黑车在 b7，不看守 c6。白车可以沿 c 线直接吃掉它，
+净得一兵。 吃兵后检查黑方的反击。黑方可以 Rb1+，白王走到 f2 或 g2 即可，
+没有底线将杀的危险。e4 马有 f3 兵保护，也不怕黑车来攻击。 } 36... Rb1+ 37. Kg2
+{ [%emt 0:00:10] [%think 412] [%out 532] [%in 2] [%cacheread 0]
+[%cachewrite 1933] 被车将军，王只能走到 f2 或 g2；用车 c1 垫将会被车吃掉，
+而马走不到第一横线。白方多一马，局面优势明显，先把王走到安全位置。Kg2 较稳，
+之后若黑方 Rb2+，王可以走 g3，或者用马垫到 d2。 } 37... Rb2+ 38. Kg3 {
+[%emt 0:00:08] [%think 338] [%out 447] [%in 2] [%cacheread 0]
+[%cachewrite 1957] 白王在 g2 被 b2 的车沿第二横线将军。白方多一个马，局面占优，
+应让王走到安全又积极的位置。 走 Kg3 后，王守住 f3 兵；e4 的马也有 f3 兵保护，
+黑车的骚扰没有威胁。 } 38... Kh7 39. Rc7 { [%emt 0:00:14] [%think 733]
+[%out 938] [%in 2] [%cacheread 0] [%cachewrite 1979] 白方多一个马，局面占优，
+关键是把优势稳稳兑现。 - 走 **Rc7**，把车压到黑方第七横线，攻击 f7 兵，
+逼黑方被动防守。 - e4 的马有 f3 兵保护，所以黑方用 Re2 攻马不成立。 - 黑车 Rb3
+牵制 f3 兵也不构成威胁：f3 兵有王保护，Rxf3+ 之后 Kxf3 即可。 - h2
+兵同样有王保护，黑车吃 h2 后 Kxh2。 } 39... Kg6 40. Nd6 { [%emt 0:00:16]
+[%think 869] [%out 1058] [%in 2] [%cacheread 0] [%cachewrite 2004] **思路：**
+我多一个马，现在要继续扩大优势。黑方 f7 兵只有黑王在保护。Nd6 之后，马和 c7
+车同时攻击 f7，下一步可以吃掉这个兵。 黑方可能的反击都不难应付： - 如果走 Rb6
+或 Rd2 捉马，我可以 Nxf7。f7 上的马有 c7 车沿第七横线保护。 - 如果走 Rb3 攻击
+f3，f3 兵有我的王保护。 } 40... f6 41. Ne8 { [%emt 0:01:05] [%think 5066]
+[%out 5438] [%in 2] [%cacheread 0] [%cachewrite 2024] 执白：白方多一只马，
+局面占优。我走 Ne8，这只马同时攻击 g7 和 f6，意图 Rxg7+ 吃兵并组织杀棋： -
+**黑方 Kh5：** 若 Rxg7+ Kh5，Nxf6 就是将死。车控制整条 g 线，白王控制 h4 和
+g4，h6 被黑方自己的兵堵住，黑王无路可走。 - **黑方 Kh7：** 若 Rxg7+，Kxg7
+不合法，因为 g7 有马保护，黑王只能走 Kh8。之后 Nxf6，威胁 Rh7# 或 Rg8#。 -
+**黑方 Kf5：** Rxg7+ Kf5 后，白方多吃一个兵，继续保持优势。 - **黑方 Rb8
+捉马：** 白方照样 Rxg7+，得兵或者成杀。 马走 e8 后，c7 车仍有马保护。h2 和 f3
+两个兵都有王保护，没有后顾之忧。 } 41... h5 42. Rxg7+ { [%emt 0:00:28]
+[%think 1643] [%out 1902] [%in 4] [%cacheread 0] [%cachewrite 4191]
+[%illegal 1] 白车从 c7 吃掉 g7 兵并将军。e8 的马保护着 g7，所以黑王不能吃回。
+这样白方净多一个兵，下一步还有机会拿 f6 兵。 } 42... Kf5 43. h4 {
+[%emt 0:00:48] [%think 3691] [%out 3936] [%in 2] [%cacheread 0]
+[%cachewrite 2074] 我多一个马，最重要的是稳妥地巩固优势。 - **h4**：把兵推到
+h4，挡住黑兵 h5 继续前进，并把它固定在 h5。同时 h 兵离开第 2 横线，黑车 b2
+就攻击不到它了。h4 有王在 g3 保护。 - **后续计划**：再走 Rh7 去攻 h5 兵，或者走
+Re7–e6，用车和马一起攻 f6 兵。 - **排除吃 f6**：现在马吃 f6 是送子。
+黑王吃马后还会顺势攻击 g7 的车。 - **排除 Rg5+**：会被 f6 兵吃掉。 } 43... Rb3
+44. Nd6+ { [%emt 0:01:02] [%think 5146] [%out 5338] [%in 2] [%cacheread 0]
+[%cachewrite 2096] **思路：** 马在 e8 活动空间很小。f3 兵被黑车 b3
+沿第三横线牵制，所以它不能真正吃子来保护 e4。 先走 Nd6+ 将军，
+把马调到更好的位置： - 黑王走 Ke5 攻马，白方可以 Nf7+ 再将，马落在 f7 上有车 g7
+保护。 - 黑王走 Ke6，白方可以把马调到 f7 等安全格。 之后再用车和马配合去攻 h5
+兵。 } 44... Ke6 45. Ne4 { [%emt 0:00:16] [%think 1127] [%out 1246] [%in 2]
+[%cacheread 0] [%cachewrite 2120] The black king on e6 is attacking my knight
+on d6, and nothing defends the knight, so it has to move first. Ne4 is the most
+solid retreat: the f3 pawn defends the knight on e4. The knight on e4 also
+attacks the f6 pawn. Then the rook and knight can go after f6 together or
+target the h5 pawn. } 45... f5 46. Ng5+ { [%emt 0:00:20] [%think 1424]
+[%out 1559] [%in 2] [%cacheread 0] [%cachewrite 2141] 马在 e4 被 f5 兵攻击，
+需要离开。走 Ng5+ 可以一边将军一边躲开攻击，g5 格还有 h4 兵保护。之后即便黑王走
+Kf6 攻击车，车可以转到 h7 去攻击 h5 兵。马在 g5 同时控制 f7、h7，配合车很方便。
+} 46... Kf6 47. Rh7 { [%emt 0:00:40] [%think 3013] [%out 3260] [%in 2]
+[%cacheread 0] [%cachewrite 2166] 黑王在 f6 正攻击 g7 车，而 g7 没有保护，
+所以这步必须先处理车。 - 不能走 Rb7：黑车 b3 会直接吃掉它，白方没法回吃。 - 选
+Rh7：车能沿 h 线打 h5 兵，而且 h7 有 g5 马保护。 - 黑方如果走 Kg6 顶车，
+王不能吃被保护的车，只能守 h5，这样黑王被牵制在防守位置。 - 黑方如果走 Ke5
+之类离开，白方就 Rxh5 吃兵。 - 黑方的 ...Rxf3+ 不成立，f3 由马和王双重保护。 }
+47... Kg6 48. Rd7 { [%emt 0:00:52] [%think 3548] [%out 3845] [%in 2]
+[%cacheread 0] [%cachewrite 2189] **思路：** 白方多一个马，
+应该稳步把优势转化为胜势。 **当前局面的情况：** - 黑王在 g6 攻击 h7 车，但 g5
+马保护着这个车。 - 黑车拿 f3 兵也没用，因为这个兵有王和马双重保护。 **选择 Rd7
+的理由：** - 车离开 h7，不再被黑王盯着，也能摆脱马的牵制。 - 下一步可以 Rd6+，
+把黑王赶到第 7 横线，再去攻击 f5 兵。 - 车走开后，马可以走 Nh3 再 Nf4+，攻击 h5
+兵。 - 车不去 e7，是因为黑王走 Kf6 会同时攻击 e7 车和 g5 马，会失先。走 d7
+就没有这个问题。 } 48... Rb1 49. Kf4 { [%emt 0:00:24] [%think 1493] [%out 1710]
+[%in 2] [%cacheread 0] [%cachewrite 2214] **思路：** 白方多一个马，处于胜势。
+王走 Kf4 可以靠近并攻击 f5 兵，同时保护 f3 兵。 - 如果黑方走 Rg1+，白王已经离开
+g 线，不受这步棋影响。 - 如果黑方走 Rg4+，白方用 fxg4 吃掉。 - 如果黑方走
+Rb4+，白王可以退回 g3，或者走 Ke5，局面都没有问题。 - 下一步白方可以走 Rd6+，
+把黑王逼到 g7，然后用 Kxf5 吃兵。 } 49... Rb4+ 50. Kg3 { [%emt 0:00:31]
+[%think 2114] [%out 2369] [%in 2] [%cacheread 0] [%cachewrite 2240] **思路：**
+白方王在 f4，被 b4 的车沿第 4 横线将军。 - **垫将都不好：** - Rd4 垫将后，d4
+无子保护，会被车直接吃掉。 - Ne4 垫将后，会被 f5 兵吃掉。 - **所以只能走王：**
+可选 Kg3、Ke3、Ke5。 - Ke3 和 Ke5 都离开第 4 横线，h4 兵会被 Rxh4 白白吃掉。 -
+Kg3 能继续保护 h4 兵，同时 f3 兵有王和马双重保护，局面稳固。 白方多一个马，
+先稳住兵，再慢慢组织进攻。 } 50... f4+ 51. Kf2 { [%emt 0:00:16] [%think 959]
+[%out 1140] [%in 2] [%cacheread 0] [%cachewrite 2261] 被将军的是白王 g3，
+将军的是黑兵 f4。 - **不能吃兵**：Kxf4 不合法，因为 f4 兵在第四横线上受 b4
+车保护。 - **不能走 g4**：g4 受 h5 兵攻击。 -
+**可走的格子**：f2、g2、h2、h3。 白方多一个马，局面占优。选 Kf2：王靠近中心，
+同时保护 f3 兵，也便于之后配合马去围攻 f4 兵。 } 51... Rb2+ 52. Kg1 {
+[%emt 0:00:25] [%think 1718] [%out 1883] [%in 2] [%cacheread 0]
+[%cachewrite 2289] 被车将军，王不能去 e3 和 g3，因为这两格都被 f4 兵控制。车 d7
+回 d2 挡将也不行，王保护不到 d2，对方可以 Rxd2+ 白吃这个车。王往 e1
+走会离开王翼，还可能丢掉 f3 兵。所以王走 g1，之后可以经 g2 到 h3
+躲开横线上的连续将军，再用马去攻 f4 兵。 } 52... Kf5 53. Rf7+ { [%emt 0:00:17]
+[%think 993] [%out 1263] [%in 2] [%cacheread 0] [%cachewrite 2312] 走 Rf7+
+将军，下一步就能吃掉 f4 兵。 **黑王能去的格子：** - e4 和 e6 被 g5 马控制。 -
+g4 被 f3 兵控制。 - f6 在 f 线上，被车控制。 - 吃 g5 马不行，马有 h4 兵保护。 -
+所以黑王只能走 e5 或 g6。 **为什么车不会丢：** - 黑王走 g6 虽然贴着 f7 车，
+但车有 g5 马保护，不能吃。 **接下来：** - 黑王走开后，白方 Rxf4 吃掉 f4 兵。 -
+这样黑方只剩 h5 一个兵，白方多一匹马，赢棋很简单。 } 53... Ke5 54. Nh3 {
+[%emt 0:01:00] [%think 4584] [%out 4828] [%in 2] [%cacheread 0]
+[%cachewrite 2338] **思路：** 黑兵 f4 只由黑王保护，而我的车已在攻击它。 -
+**加强攻击：** 走 Nh3 后，马和车两子同攻 f4。 - **如果黑方走 Rb3 攻击 f3：**
+可以 Rxf4 吃兵。f4 有马保护，黑王吃不回；车在 f4 也同时保住 f3。 - **如果黑方走
+Rb4 保护 f4：** 我的王就能离开底线。之后马经 f2 跳到 d3，可以对黑王和 b4
+车形成双打。 - **如果黑方用车连续将军：** 可以用 Nf2 垫将，化解长将。 } 54...
+Rb4 55. Kg2 { [%emt 0:00:35] [%think 2705] [%out 2849] [%in 2] [%cacheread 0]
+[%cachewrite 2362] 白方多一个马，目前优势明显。
+先把局面稳住再扩大优势。 现在黑方的威胁是 Rb3 攻击 f3 兵。走 Kg2 可以同时保护
+f3 兵和 h3 马。 之后如果黑方 Rb2+ 将军，可以用 Nf2 垫将。接下来再走 Rh7 去吃 h5
+兵。 } 55... Rb2+ 56. Nf2 { [%emt 0:00:38] [%think 2783] [%out 3021] [%in 2]
+[%cacheread 0] [%cachewrite 2387] 白王在 g2 被 b2 的车将军。g3 格被黑兵 f4
+控制，王不能去。 我选择用马走 f2 垫将： - 马在 f2 有 g2 的王保护，
+这样能挡住车沿第二横线的连续将军，避免被长将或王被赶走。 -
+下一步如果王离开第二横线（例如走 Kf1），马就不再被牵制。那时 Nd3+ 可以同时将军
+e5 的王、攻击 b2 的车，形成捉双。 - 如果黑王离开 e5（例如走 Kd4），f4
+兵就没有保护，可以 Rxf4+ 带将吃兵。 } 56... Ke6 57. Rxf4 { [%emt 0:00:12]
+[%think 617] [%out 848] [%in 2] [%cacheread 0] [%cachewrite 2411] 黑王在 e6
+正在攻击 f7 的车，这个车没有保护，必须走开。 走 Rxf4 最好： - 车可以沿 f
+线直接吃掉 f4 兵，路线畅通。 - f4 兵没有保护：黑王在 e6，碰不到 f4；
+黑车在第二横线，也管不到 f4。 - 吃掉以后白方多一个马，还多兵。 吃完如果黑王走到
+e5 攻击车，车可以再走开，比如 Rf5+ 将军，或者 Ra4。 黑车在 b2 攻击 f2 的马，
+但马有王保护，不用担心。 } 57... Ke5 58. Kg3 { [%emt 0:00:13] [%think 664]
+[%out 874] [%in 2] [%cacheread 0] [%cachewrite 2434] 黑王在 e5 正攻击 f4
+的白车，而这只车没有子保护。同时，黑车 b2 沿第二横线牵制着 f2 的马（后面是白王
+g2）。 走 Kg3 可以同时解决这两个问题： - 王在 g3 保护 f4 的车。 -
+王离开第二横线后，马不再被牵制，而且 f2 的马也有王保护。 - g3
+格不受黑方任何棋子攻击，走法合法。 之后白方多一马，局面稳固，
+可以再用马和车去拿黑方的 h5 兵。 } 58... Rb3 59. Ne4 { [%emt 0:00:42]
+[%think 2993] [%out 3281] [%in 2] [%cacheread 0] [%cachewrite 2458]
+白方多一匹马，局面胜势，关键是安全地吃掉黑方 h5 兵，同时不给黑方反击机会。 -
+**Nd3+ 不好**：虽然将军，但马到 d3 后没有保护，会被黑车 b3 沿第三横线攻击。 -
+**Ng4+ 不好**：会被 hxg4 吃掉，白方丢马。 - **选择 Ne4**：马到中心，有 f3 兵和
+f4 车双重保护。下一步可以走 Nf6，那里有车保护，马从 f6 直接攻击 h5 兵。 -
+**检查黑方反击**： - Rxf3+ 不成立，f3 兵有王和车保护。 - 黑车沿第四横线攻击 f4
+车也不成立，被 e4 马挡住。 } 59... Rb1 60. Nf6 { [%emt 0:00:26] [%think 1754]
+[%out 2045] [%in 2] [%cacheread 0] [%cachewrite 2481] **思路：**
+白方多一个马和一个兵，优势很大。当前任务是吃掉黑方的 h5 兵。 - **Nf6 攻击 h5
+兵。** 马从 e4 跳到 f6 后，直接打到 h5。 - **f6 马是安全的。** 黑王在 e5 能碰到
+f6，但 f4 车沿 f 线保护着 f6，黑王不能吃。 - **黑方保不住 h5：** - 车从 h1
+上来会被 h4 兵挡住。 - 车在第五横线横着护，会被自己在 e5 的王挡住。 -
+黑王也够不到 h5。 - **将军不碍事。** 黑车走 Rg1+ 将军，白王走 Kf2 或 Kh3 就行，
+然后吃掉 h5。 } 60... Rg1+ 61. Kf2 { [%emt 0:00:48] [%think 3545] [%out 3795]
+[%in 2] [%cacheread 0] [%cachewrite 2507] **思路：** 车 g1 将军，只能动王。白车
+f4 现在只有 g3 的王保护，王一走开，f4 车就会被黑王吃掉。
+所以要选一个能反击的格子。 **选择 Kf2：** - 王到 f2 后，能攻击 g1 的黑车，
+同时保护 f3 兵。 - 如果黑方 Kxf4，白方走 Nxh5+，用马将军并吃掉 h5 兵。
+黑王避将后，白方再 Kxg1 吃车。白方剩马加两兵，对黑方光王，稳赢。 -
+如果黑车撤走，白方再把 f4 车转移到安全位置，仍保持子力优势。 } 61... Rh1 62.
+Nxh5 { [%emt 0:00:14] [%think 902] [%out 1116] [%in 2] [%cacheread 0]
+[%cachewrite 2530] 白方的 f4 车正被黑王攻击，而且没有保护；h4 兵也被 h1
+车盯着。 走 Nxh5 可以同时解决这两个问题： - 马吃掉 h5 兵后，从 h5 保护 f4 车。
+- h4 兵由 f4 车沿第四横线保护。如果黑方走 Rxh4，白方 Rxh4 吃回。 - h 线上的 h4
+兵挡住了黑车，所以黑车打不到 h5 的马。 吃兵后白方是车、马加两兵对单车，
+局面稳稳胜势。 } 62... Rh2+ 63. Kg3 { [%emt 0:00:12] [%think 714] [%out 835]
+[%in 2] [%cacheread 0] [%cachewrite 2555] 马在 h5，没法挡住 g2，
+所以只能走王。Kg3 可以避开将军，同时捉住 h2 的黑车。黑车没有保护，
+黑方必须走开它。另外，王到 g3 还能保护 h4 兵，也保护 f4 的车；这个车已经有 h5
+的马在保护。 } 63... Rh1 64. Nf6 { [%emt 0:00:32] [%think 2416] [%out 2727]
+[%in 2] [%cacheread 0] [%cachewrite 2577] **局面分析：** 白方有车、马加两兵，
+对黑方单车，优势很大。关键是保住兵并推进 h 兵。 - 现在 h5 上的马挡住了 h 兵，
+需要先把马挪开。 - 走 Ng7 不行：黑车可以 Rg1+ 将军，接着沿 g 线吃掉 g7 的马。 -
+走 Nf6 比较合适： - f6 虽然挨着黑王，但有 f4 的车沿 f 线保护，黑王吃不了。 -
+马在 f6 能控制 h5、h7、g8 等格，正好支持 h 兵前进。 - 如果黑车 Rg1+ 将军，
+白王走 Kf2 或 Kh2 就能赶走黑车。 - 白王去 f2 后，h4 兵仍有 f4
+的车沿第四横线保护。 } 64... Rg1+ 65. Kf2 { [%emt 0:01:09] [%think 5405]
+[%out 5826] [%in 2] [%cacheread 0] [%cachewrite 2605] 正被车 g1 将军。
+马不能垫，车也垫不到 g2，只能动王。 **局面要点：** - 黑王在 e5，同时攻击我 f4
+的车和 f6 的马。 - 马由车保护，车由王保护。 - 王一离开 g3，f4
+的车就没人保护了。 **三个可走的王步：** - **Kh3**：不攻击 g1 的车，黑方直接
+Kxf4 白吃一车，不行。 - **Kh2**：能反攻 g1 的车，但王缩到角落。 - **Kf2**：
+同样反攻 g1 的车，王更靠中心，所以选这步。 **Kf2 之后黑方的应对：** - 若黑方
+Kxf4，我 Kxg1 换车。黑方还能吃 f3，局面剩马加 h 兵对单王，白方仍占优。 -
+若黑车逃走（如 Rh1），我走 Nh5。马保护 f4 的车，黑王也够不到 h5，子力就稳住了，
+后面以车马双兵对车，应当能赢。 - 这条线也不会造成三次重复局面。 着法: e1f2
+等一下，王在 g3，更正如下： } 65... Rh1 66. Nh5 { [%emt 0:00:48] [%think 3697]
+[%out 3964] [%in 2] [%cacheread 0] [%cachewrite 2628] **思路：** 黑王在 e5，
+同时攻击我的 f4 车和 f6 马。马有车保护，但 f4 车本身无人保护。 - 车离开 f
+线，f6 马就会丢。 - Ng4+ 和 Nd7+ 虽然将军，但之后黑王可以直接吃掉 f4 车。 - Kg3
+能保车，但黑方有 Rg1+，会回到重复局面。 **选择 Nh5：** - 马到 h5 后保护 f4 车。
+- f4 车继续沿第 4 横线保护 h4 兵。 - h5 格不在黑王和黑车的攻击范围内，
+马是安全的。 - 局面得到巩固后，再用王和车护送 h 兵前进。 } 66... Rh2+ 67. Ke3 {
+[%emt 0:00:24] [%think 1451] [%out 1767] [%in 2] [%cacheread 0]
+[%cachewrite 2653] The move 66...Rh2+ gives check. The position before it (Kf2,
+Rf4, Nh5, pawns f3/h4 vs Ke5, Rh2) already appeared after move 62, so this is
+its second occurrence. Replaying Kg3 would walk back into the earlier repeating
+sequence, so I'll switch plans. Ke3 is the best way out of check: - **Legal:**
+the kings are two squares apart, so e3 is not attacked. - **Protection:** the
+king defends the f4 rook and the f3 pawn. - **Checks run out:** after Re2+ the
+king simply takes (Kxe2). After Rh3 the f3 pawn is protected. - **Pawn safe:**
+if Black plays Rxh4, then Rxh4 wins the rook, because the f4 rook guards h4
+along the fourth rank. With the king centralised, the next step is to use the
+king and rook together to push the pawns. } 67... Rh1 68. Rg4 { [%emt 0:00:23]
+[%think 1298] [%out 1500] [%in 2] [%cacheread 0] [%cachewrite 2675] 这一步走
+Rg4，先把车挪开，给 f 兵让出前进的路。 - **Rg4 是安全的**：g4 车有 f3 兵保护，
+黑王上 f5 也吃不到它。车还能继续沿第 4 横线保护 h4 兵。 - **后续计划**：
+下一步挺 f4+ 将军，把黑王从中心赶走，再用车和马配合推进 f、h 两个兵。 -
+**避免重复局面**：之前 Nh5、Nf6 来回走过几次，继续这样走会三次重复判和。 }
+68... Re1+ 69. Kf2 { [%emt 0:00:15] [%think 649] [%out 781] [%in 2]
+[%cacheread 0] [%cachewrite 2699] **思路：** 黑车在 e1 沿 e 线将军，e2
+格没法挡，只能走王。可选的是 Kd2、Kd3、Kf2。 Kf2 同时攻击 e1 的黑车，逼它离开。
+王也留在自己的 f、h 兵旁边保护。之后可以用王赶车，再推进 h 兵。 } 69... Rh1 70.
+Ng3 { [%emt 0:00:20] [%think 1485] [%out 1551] [%in 2] [%cacheread 0]
+[%cachewrite 2723] 马从 h5 跳到 g3 捉车，同时有 Kf2 保护。之后马能控制 h
+线上的格子，方便把 h 兵推上去。 } 70... Rh2+ 71. Ke3 { [%emt 0:00:28]
+[%think 1866] [%out 2161] [%in 2] [%cacheread 0] [%cachewrite 2749] 白王在 f2
+被 h2 的车沿第 2 横线将军。可选的应将方法有： - **Rg2 挡将**：g4 的车离开第 4
+横线后，h4 兵就没有保护了。黑方会不换车，直接走 Rxh4，白方丢掉 h 兵。 -
+**Kg1**：可以走，但王退到了底线。 - **Ke3**：王走到中心，同时保护 f3 兵，
+也和黑王对峙，挡住它前进。g4 的车继续保护 h4 兵和 g3 马，g3 马又控制着 h1、h5
+等格。黑车如果走 Rh3 攻击马，马有车保护；如果走 Re2+，可以直接吃掉车。 Ke3
+最稳，也最积极。接下来准备靠马和车的支援推进 h 兵。 } 71... Ra2 72. h5 {
+[%emt 0:00:13] [%think 710] [%out 793] [%in 2] [%cacheread 0]
+[%cachewrite 2772] 白方多一个马和两个兵，是赢棋局面。这步推进 h 兵：h5 格有 g3
+马保护。g4 车控制 g 线，黑王没法绕到兵的前面去阻挡。 } 72... Ra3+ 73. Kf2 {
+[%emt 0:00:14] [%think 799] [%out 919] [%in 2] [%cacheread 0]
+[%cachewrite 2796] 被将军，只能动王。Ke4、Kd4 和 Kf4 都挨着黑王，是非法着。
+其余可走的格子里，Kf2 同时保护 f3 兵和 g3 马，这样黑车沿第三横线也吃不到 f3。
+之后可以用车掩护 h 兵继续挺进。 } 73... Ra2+ 74. Ne2 { [%emt 0:00:23]
+[%think 1580] [%out 1685] [%in 2] [%cacheread 0] [%cachewrite 2822] 白方被 a2
+车沿第二横线将军。Ng3-e2 可以挡住将军。马在 e2 有王保护。g4 车有 f3 兵保护。
+下一步可以推 h6，让 h 兵前进。这样不用反复走王，也能避免重复局面。 } 74... Kf5
+75. h6 { [%emt 0:05:11] [%think 27120] [%out 27608] [%in 4] [%cacheread 0]
+[%cachewrite 5765] [%illegal 1] **思路：** - 黑车 a2 沿第二横线牵制着我的 e2
+马，马暂时不能动。 - g4 车守住整条 g 线，黑王过不去，接近不了 h 兵。 -
+黑车也没法经第二横线去 h 线，因为 e2 马挡着。 - 所以直接推兵最有效。如果黑方走
+…Rxe2+，Kxe2 后白方车加兵对单王，必胜。 - 如果黑王走 Kf6、Kf7，白方可以 h7、h8
+升变。 - 如果黑方走 …Ra8、…Rh8 拦兵，白方再调王和车，依然优势很大。 } 75... Kf6
+76. h7 { [%emt 0:00:22] [%think 1317] [%out 1534] [%in 2] [%cacheread 0]
+[%cachewrite 2868] h6 兵的升变格 h8 目前没人能挡住，所以直接冲兵 h7： -
+黑王走不了 g7，因为 g4 的车控制着整条 g 线。 - 如果黑方 Ra8 守 h8，白方走 Rg8
+挡住第八横线。黑方若 Rxg8，白方 hxg8=Q。 - 如果黑方 Rxe2+ 弃车，白方 Kxe2，
+之后黑王拦不住兵升变。 - 如果黑方 Kf5 去捉 g4 的车，白方可以先走 Rg8 再升变。 }
+76... Ra8 77. Rg8 { [%emt 0:00:35] [%think 2530] [%out 2809] [%in 2]
+[%cacheread 0] [%cachewrite 2890] **思路：** 走 Rg8，这步棋一举三得： -
+**保护兵的升变格。** 白车占住 h8 旁边的 g8，同时由 h7 兵保护，黑王吃不到它。 -
+**捉车。** 从 g8 到 a8 之间是空的，所以白车直接攻击黑车 a8。 -
+**黑方的主要应法都不行：** - Rxg8，白方 hxg8=Q，形成后加马对单王，轻松取胜。 -
+黑车离开第 8 横线（例如 Ra2 牵制马），白方 h8=Q 升变并将军（后经 g7 斜线将 f6
+的王），多一个后必胜。 - Kf7 或其他王步，白方 Rxa8 吃车，随后兵升后。 } 77...
+Rxg8 78. hxg8=Q { [%emt 0:00:06] [%think 216] [%out 286] [%in 2] [%cacheread 0]
+[%cachewrite 2915] 白方 h7 兵可以斜吃 g8 的车并升变为后。吃掉后白方剩后、马、
+兵，黑方只剩孤王，可以很快将死。 } 78... Kf5 79. Qd5+ { [%emt 0:00:37]
+[%think 2700] [%out 2993] [%in 2] [%cacheread 0] [%cachewrite 2943] 白方后、
+马、兵对黑方单王，胜势很大，但只剩 44 个半回合，要尽快将杀。 **选 Qd5+
+的理由：** - 后在 d5 沿第 5 横线将军。 - 黑王大部分逃格都被封住： - e4、g4 被
+f3 兵控制。 - f4 被 e2 马控制。 - e5、e6 被后控制。 - g5 被后沿第 5 横线穿过 f5
+控制。 - 黑王只能走 f6 或 g6，被赶向王翼角落。 **后续计划：** - 黑王走 f6，就走
+Qe4；走 g6，就走 Qe5。这样把它关进 f 到 h 线的小区域。 - 同时白王上前配合将杀。
+- 注意别造成逼和。 } 79... Kf6 80. Kg3 { [%emt 0:00:36] [%think 2623]
+[%out 2767] [%in 2] [%cacheread 0] [%cachewrite 2968] 目前是王、后、
+马加一个兵对单王。d5 的后离黑王正好隔一个马步，已经把黑王关在 e–h 线、第 6–8
+横线的区域里。现在该把白王调上来配合，逐步缩小这个区域，最后将死。这一步走 Kg3
+很稳妥：黑王仍有 e7、g6、g7 可走，不会造成逼和。 } 80... Kg6 81. Qe5 {
+[%emt 0:00:32] [%think 2313] [%out 2487] [%in 2] [%cacheread 0]
+[%cachewrite 2992] 白方后、马加王对单王，目标是在剩余的约 20 步内尽快将杀。 走
+Qe5 可以大幅限制黑王的活动范围： - 后控制 e 线和第 5 横线，也就是 f5、g5、h5。
+- 后还控制 f6-g7-h8 这条斜线。 - 这样黑王只剩 f7、h7、h6 三个格子，
+不会逼和。 之后再把白王调上来配合后和马，完成将杀。 } 81... Kh6 82. Qf6+ {
+[%emt 0:01:29] [%think 7424] [%out 7696] [%in 2] [%cacheread 0]
+[%cachewrite 3015] 白方用后和马配合将杀。 **思路：** - 先走 Qf6+ 将军，黑王只剩
+h5 和 h7 两格可走。 - 如果黑走 Kh5，白走 Nf4# 直接将死。此时 g4、h4 由白王和 f3
+兵控制，g5、g6、h6 由后控制，g6 同时也在马的控制下。 - 如果黑走 Kh7，白走 Nf4。
+黑王只能去 g8 或 h8，因为 g6、g7、h6 都被控制。 - 接着白走 Nh5，由马保护 g7
+格。黑王仍有格子可走，不会形成逼和。 - 最后 Qg7# 将死。 着法: f6 Wait,
+correcting the final line format: } 82... Kh7 83. Kg4 { [%emt 0:00:23]
+[%think 1515] [%out 1731] [%in 2] [%cacheread 0] [%cachewrite 3040] Black has
+only a bare king. We have about 36 half-moves left before the 200 half-move
+draw, so the mate has to come quickly. The black king on h7 can only go to g8
+or h8, since the queen covers g7, g6 and h6. - **Plan:** march the king g4,
+then g5 or h5, then g6 or h6. With the white king there, Qf8 or Qg7 gives mate.
+- **Example line:** Kg4 Kh8, Kh5 Kg8, Kg6 Kh8, Qf8#. - **Stalemate check:** at
+every step Black still has a legal move, so there is no stalemate risk. } 83...
+Kg8 84. Kg5 { [%emt 0:00:38] [%think 3000] [%out 3145] [%in 2] [%cacheread 0]
+[%cachewrite 3066] 白方有后、马、兵和王，只要安全将死、避开逼和即可。 - 走 Kg5
+之后，黑王只剩 h7 一格可走，所以不是逼和。 - 接着 Qe7+，黑王只能回 g8 或 h8。 -
+白走 Kg6，黑王只能在 g8 和 h8 之间换格。 - 最后 Qe8 将死。 } 84... Kh7 85. Qe7+
+{ [%emt 0:00:51] [%think 4091] [%out 4392] [%in 2] [%cacheread 0]
+[%cachewrite 3089] **思路：** 这是后王对单王的残局，关键是先把黑王逼到底线，
+同时避免逼和。 当前黑王只能走 g8，所以不能随便走一步闲着。例如 Qf7+ Kh8 之后，
+如果白王走 Kh6 或 Kg6，都会逼和。 走 Qe7+ 更稳妥： - 后沿第 7 横线将军。g6、h6
+被白王控制，g7 被后控制，黑王只能走 g8 或 h8。 - 接着走 Kg6。
+此时黑王只剩一个合法格：原先在 g8 就只能去 h8，原先在 h8 就只能去 g8，
+所以不会逼和。 - 最后走 Qe8，沿底线将军，g7、h7 由白王控制，三步将死。 着法: e7
+等等，格式要用完整着法。 } 85... Kg8 86. Kg6 { [%emt 0:00:13] [%think 762]
+[%out 869] [%in 2] [%cacheread 0] [%cachewrite 3115] 白王走到 g6，黑王只剩 h8
+一格可走，不会逼和。 白王在 g6 控制 f7、g7、h7。白后在 e7 控制 f8。 黑方走 Kh8
+之后，白方走 Qf8# 或 Qg7# 将死。 } 86... Kh8 87. Qh7# { [%emt 0:00:08]
+[%think 263] [%out 409] [%in 2] [%cacheread 0] [%cachewrite 3138] 白王在 g6，
+控制 g7 和 h7。白后从 e7 走到 h7，中间的 f7、g7 都是空格，可以直接走到。 -
+白后在 h7 将军黑王，而且 h7 有白王保护，黑王吃不了后。 - 黑王可去的 g8
+被后控制，g7 被后和白王同时控制。 黑王无路可走，这步是将死。 } 1-0
+

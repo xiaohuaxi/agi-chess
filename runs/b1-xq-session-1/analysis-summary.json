@@ -1,0 +1,102 @@
+{
+ "game": "xiangqi",
+ "sides": {
+  "w": {
+   "player": "claude:opus",
+   "plies": 78,
+   "undecided": 49,
+   "blunders": 4,
+   "mistakes": 4,
+   "events": 4,
+   "acpl": 39.4,
+   "acpl_undecided": 62.7,
+   "blunder_rate": 0.0816,
+   "mistake_rate": 0.0816,
+   "phases": [
+    {
+     "range": "1-15",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 2,
+     "acpl": 64.5
+    },
+    {
+     "range": "16-30",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 1,
+     "acpl": 62.6
+    },
+    {
+     "range": "31-45",
+     "plies": 15,
+     "undecided": 13,
+     "blunders": 1,
+     "acpl": 74.7
+    },
+    {
+     "range": "46-",
+     "plies": 33,
+     "undecided": 6,
+     "blunders": 0,
+     "acpl": 1.4
+    }
+   ]
+  },
+  "b": {
+   "player": "engine:fsf:nodes=100",
+   "plies": 78,
+   "undecided": 51,
+   "blunders": 2,
+   "mistakes": 5,
+   "events": 1,
+   "acpl": 29.5,
+   "acpl_undecided": 38.4,
+   "blunder_rate": 0.0392,
+   "mistake_rate": 0.098,
+   "phases": [
+    {
+     "range": "1-15",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 0,
+     "acpl": 13.7
+    },
+    {
+     "range": "16-30",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 2,
+     "acpl": 94.1
+    },
+    {
+     "range": "31-45",
+     "plies": 15,
+     "undecided": 11,
+     "blunders": 0,
+     "acpl": 41.9
+    },
+    {
+     "range": "46-",
+     "plies": 33,
+     "undecided": 10,
+     "blunders": 0,
+     "acpl": 1.7
+    }
+   ]
+  }
+ },
+ "events_global": 5,
+ "params": {
+  "version": 1,
+  "game": "xiangqi",
+  "engine": "Fairy-Stockfish 14.0.1 XQ",
+  "depth": 16,
+  "hash": 64,
+  "threads": 1,
+  "clip": 1000,
+  "big": 250,
+  "mistake": 100
+ },
+ "plies": 156
+}

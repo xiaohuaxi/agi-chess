@@ -1,0 +1,129 @@
+[Game "Chinese Chess"]
+[Event "llm-chess fsf-nodes100-s2-w"]
+[Red "claude:opus"]
+[Black "engine:fsf:nodes=100"]
+[RedEffort "max"]
+[Result "1-0"]
+[Termination "将死"]
+
+1. 马八进七 象７进５ 2. 马二进三 士６进５ 3. 兵七进一 卒３进１ 4. 兵七进一 {
+[%emt 0:03:02] [%think 17930] [%out 18278] [%in 2] [%cacheread 0]
+[%cachewrite 1793] **思路：**黑卒进到 c5，和我的 c4 兵顶头相对。 - **c4
+兵没有保护。**如果我不处理，黑方下一步卒3进1 就能白吃一兵。 -
+**兑兵最直接。**c5 卒只有 e7 的象能保护。我先走兵七进一吃卒，黑方大概率象5进3
+回吃，结果是兵卒相换。 - **兑完后黑方中路变弱。**黑象离开中路去了 c5，中卒 e6
+失去依托。我方可以接着炮二平五架中炮，或马七进六踩中卒，都有攻势。 -
+**需要注意黑方砲2平3。**黑方若平炮到 c 线，会借 c5 的子作炮架打我 c2 的马。 -
+**这一点可以应付。**我走马七进六跳开即可；若我已架好中炮，
+也可以先炮打中卒将军，再处理 c 线。 所以兑兵是积极又稳妥的选择。 } 象５进３ 5.
+马七进六 { [%emt 0:09:08] [%think 54726] [%out 55441] [%in 4] [%cacheread 0]
+[%cachewrite 3683] [%illegal 1] Red's h2 cannon cannot shift to the center
+because the g2 horse blocks the rank. **Analysis:** - **Why this move:** The c2
+horse can jump to d4, since its leg square c3 is empty. From d4 it sits in the
+center and attacks black's e6 pawn. - **e6 is undefended:** No black piece can
+recapture on that square, so red threatens 马六进五 to win a pawn. - **Opens
+the c-file:** Once the horse leaves c2, the cannon can play 炮八平七 next. The
+black elephant on c5 would act as the screen for capturing the c9 elephant, and
+that capture gives check. - **d4 is safe:** Black's elephant, cannons and
+horses cannot reach d4 right now. - **Checked black's replies:** - The b7
+cannon going to b3 can be taken by the horse. - Cannon to c7 and then capturing
+the c0 elephant with check is met by the a0 chariot recapturing. - The h7
+cannon capturing e3 is met by the g2 horse recapturing. None of these costs red
+material. - **Rejected alternative:** 马七进八 would put the horse on b4 as a
+screen. Black's cannon could then take red's b2 cannon, so I ruled it out. }
+马２进３ 6. 炮八平七 { [%emt 0:10:22] [%think 64228] [%out 64692] [%in 2]
+[%cacheread 0] [%cachewrite 1837] **思路：** 黑马在c7，
+与红方b2炮之间隔着黑方河口象c5。红炮平到c2后，可以借c5象作炮架，直接打c7马。
+**c7马无保护，逐一核对：** - a9车被a6卒和c9象挡住，够不到c7。 -
+两门黑砲在7线上与c7之间都没有炮架，吃不回来。 - 黑象、士、另一匹马都走不到c7。
+**黑方可能的应对：** - **象3退5 或 象3退1**：把c5象撤走，炮架消失。
+之后c9象会隔着c7马被炮瞄住，但有a9车保护。红方可以接着走车九平八（a0b0）
+捉b7砲，出车抢先手。 - **马跳开**：黑方e6卒失去保护，红方可以马六进五（d4e6）
+吃卒。 - **砲2进5 反击**：黑砲借c2炮作架打g2马。红方可以走相七进五（c0e2）
+垫在中间。这样黑砲只能打e2相，而e2有g0相保护，红方仍然保持打c7马的威胁，
+还可以随后出车捉这门砲。 **顺带确认：** h2炮被g2马挡住，不能平中，
+所以选择用八路炮调动。这步走完后，黑方没有任何吃子手段。 } 马８进７ 7. 车九平八
+{ [%emt 0:10:12] [%think 63684] [%out 64001] [%in 2] [%cacheread 0]
+[%cachewrite 1863] **思路：** - 黑方c7马被我方c2炮隔着c5象牵制。它靠h7炮保护，
+炮架是g7马。 - g7马又靠b7炮保护，炮架是c7马。 -
+b7炮本身没有子保护。 走车九平八（a0b0），出车并直接捉b7炮： -
+若黑炮2平1（b7a7），我车八进七（b0b7）。此后c7马走开会丢g7马，退象会丢c7马。
+黑若车1平2，我车八进二（b7b9）吃车。黑马3退2吃回，则c7空出，我炮七进七（c2c9）
+吃象，形成闷杀。 - 若黑马3进2（c7b5）去挡车，这匹马无保护，可以白吃。 -
+黑方其他应法也会丢子。 - 这步棋之后黑方既没有将军，也没有可吃的子，比较安全。 }
+马３进４ 8. 马六进四 { [%emt 0:10:42] [%think 65720] [%out 66172] [%in 2]
+[%cacheread 0] [%cachewrite 1888] **思路：** - 黑马７进４（c7d5）后，h7
+砲可以隔着 g7 马保护 b7 砲。这也意味着 b7 砲全靠 g7 马当炮架。 - 黑方 g7
+马本身没有子保护。我走马六进四（d4f5），马从 f5 经 f6 攻击 g7 马，
+这是实际威胁。 - 如果黑马 g7 退走，h7 砲就没了炮架，b7 砲失去保护，
+我可以车八进七（b0b7）吃砲。 - 我马离开 d4 后，黑 d5 马能踩 e3 兵。但 e3 有 g2
+马和 f5 马保护，黑方踩兵就是以马换兵。 - 黑方主要应法有三种： - 车1平3（i9g9）
+保马； - 马４进６（d5f6）塞住马腿； - 马４退６（d5f4）反捉我 g2
+马。 前两种我都可以接马四进六（f5d6），马踞 d6 捉 b7 砲，继续占先。
+第三种我可先马四进三（f5g7）吃马，对方再吃 g2 马后，我马三退五（g7e6）吃卒。
+这时 b7 砲和 c5 象同时受攻，我方仍然占优。 } 车９平７ 9. 马四进六 {
+[%emt 0:08:57] [%think 53776] [%out 54102] [%in 2] [%cacheread 0]
+[%cachewrite 1914] **思路：** - 黑方2路炮（b7）
+现在只有8路炮隔着7路马这个炮架来保护。 - 走马四进六（f5d6）后，
+六路马同时攻击两个目标： 1. 黑炮b7由红车和红马两子攻击，黑方只有一子保护，
+这个炮保不住。 2. 红马可以马六进七（d6c8）将军，同时抽黑方1路车（a9）。
+此时黑将只能出到f9，红马随即吃车。 - d6这个点，黑方没有任何棋子能攻击到，
+红马很安全。 **黑方的应法：** - 如果黑方随手走车7平6，红方马六进七就是绝杀。 -
+黑方比较顽强的应法是砲2平4（塞住马腿），或者车1平2（保炮，同时避开抽车）。 -
+即便如此，红马扎在黑方要点上，红方仍然保持主动。 } 炮２平５ 10. 马六进七 {
+[%emt 0:02:40] [%think 15801] [%out 16139] [%in 2] [%cacheread 0]
+[%cachewrite 1939] **思路：** 我方六路马（d6）可以跳到 c8 叫将。马从 c8 攻击 e9
+的黑将，马腿在 d8，d8 是空的。 黑方有以下几种应将方式，逐一检查： 1. **吃掉 c8
+的马**：士只能在九宫内走，象到不了 c8，双车、双炮、双马都攻击不到这个点。
+所以无子能吃。 2. **垫在 d8 蹩马腿**：黑方没有任何棋子能走到 d8。 3.
+**动将**：d9 和 e8 都被自己的士占着，只能走将5平6（到 f9）。f9 不受攻击，
+也不会与我方帅对面。 所以黑方唯一的应着是将5平6。之后 c8 的马同时攻击 a9
+的黑车和 e7 的黑炮。我方下一步马七进九吃掉黑车，净得一车。
+黑车一时也无法困住或吃回这匹马。 } 将５平６ 11. 马七进九 { [%emt 0:02:02]
+[%think 11650] [%out 11917] [%in 2] [%cacheread 0] [%cachewrite 1966]
+**思路：** - 我方七路马在 c8，上一步它照将，黑将只好走到 f9。 -
+现在这匹马可以从 c8 跳 a9。马腿 b8 是空的，所以能直接吃掉黑方的车。 -
+吃车后，a9 的马暂时没有子能吃它： - 黑车 g9 沿横线过去，被自家的将 f9 挡住。 -
+黑方的炮和马一步之内都够不到 a9。 - 马还可以从 b7 或 c8 跳出来，不会被困住。 -
+黑方可能的反击，比如用炮或马吃我中兵 e3，都构不成杀势，最多换掉一些子。 -
+吃车后我方净多一车，局面大优。 } 象３进１ 12. 车一进一 { [%emt 0:17:32]
+[%think 106589] [%out 107125] [%in 2] [%cacheread 0] [%cachewrite 1987] Red is
+a full rook up, so the aim is to activate the remaining pieces and create
+threats rather than grab more. **What Black threatens:** - Red's e3 pawn is
+attacked twice, by the knight on d5 and the cannon on e7 (through e6), and
+defended only once, by the knight on g2. With accurate play Black can win this
+pawn whatever Red does. Even Rb3 runs into …炮8退4 (h7h3), which adds a third
+attacker via g3. - …马4进6 (d5f4) would attack the unprotected red knight on
+g2. **Why 车一进一 (i0i1):** 1. It develops the last idle rook and threatens
+车一平四 (Rf1+) down the open f-file. - If Black answers with the king to e9,
+马七进七 (a9c8) is mate. The knight covers e9 through the empty d8, f9 is
+controlled by the rook, and nothing can block d8 or take the knight. - So Black
+would have to block with a piece, and Ae8-f7 weakens the palace. 2. If Black
+plays …马4进6 (d5f4), 车一平四 (Rf1) pins that knight to the king. It cannot
+move and nothing defends it, so it is lost. 3. If Black takes on e3 with the
+knight, 马三进五 (Nxe3) and then …炮xe3 follows. Now Rf1+ comes with tempo, and
+车八进三 (Rb3) can chase the cannon. Red is still up a rook for a pawn and has
+the initiative. 4. The rook on the first rank also guards d1 and f1 against
+later knight raids. } 将６平５ 13. 车一平四 { [%emt 0:10:37] [%think 64683]
+[%out 65244] [%in 2] [%cacheread 0] [%cachewrite 2013] **思路：**
+红方已经多一个车。现在黑方威胁吃红兵e3：黑炮e7隔着e6卒打e3，黑马d5也能吃e3。
+不过红方有一步更有力的棋。 1. **车一平四（i1f1）后威胁马九退七闷杀。**
+车占住f线，f2到f8全空，控制f9。红马再从a9跳c8，马腿b9空，将军e9，马腿d8也空。
+这时黑将左右是自己的两个士，f9被红车控制，
+走不动。d8没有黑子能垫，c8也没有黑子能吃，所以是杀。 2. **黑方吃兵不能解杀。**
+黑马吃e3或黑炮吃e3都不是将军，红方照样马九退七将死。 3. **黑方几种应法：** -
+马4退6（f6）或马4进6（f4）挡f线：这两格都没人保护，红车直接吃马，杀势还在。 -
+炮8进1（h8）护住c8：红车四进七到f8，同时捉h8炮，又把炮看c8的线挡住，
+继续威胁闷杀，黑方要丢炮。 - 士5进4或士5退6腾出e8：红车进到f8后控制e8和f9，
+黑方仍然要丢子。 - 车7平6或马7退6占f9：堵死自己的将，马九退七直接将死。 -
+比较顽强的是炮5平6或士5进6挡f线。之后红方可以马九退七将军，再马踏e7炮，
+至少用马换炮。黑方要守的e3也不再受威胁，红方继续多车占优。 } 马４进５ 14.
+马九退七 { [%emt 0:02:11] [%think 13342] [%out 13631] [%in 2] [%cacheread 0]
+[%cachewrite 2036] **思路：** 黑马吃兵到 e3 后，一旦走开，e7 的炮就隔着 e6
+卒将军，形成抽将。但红方有一步直接将死的棋。 **马九退七（a9c8）将军：** -
+红马从 a9 到 c8，马腿 b9 是空的，可以走。 - 马在 c8 攻 e9 的黑将，马腿 d8
+是空的，成立将军。 **黑方没有办法解将：** - **挪将：** d9、e8
+都被自己的士占着。f9 在红车 f1 的控制下，f2 到 f8 全空，不能去。 - **垫马腿：**
+黑方没有任何棋子能走到 d8。 - **吃马：** 黑方没有任何棋子能吃到
+c8。 所以这一步直接将死。 } 1-0
+
