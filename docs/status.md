@@ -28,6 +28,12 @@
 - **全仓更名为 `agi-chess`（Python 包 `agi_chess`）并更新双语 README 开篇**：
   - 按语法与生态惯例，Python 源码包目录与模块更名为 `agi_chess/`、环境变量改为 `AGI_CHESS_*`（兼容 `AGICHESS_*` 与旧 `LLMCHESS_*`）；其余项目名、文档标题、PGN `[Event "agi-chess <tag>"]`（含 171 份入库 `game.pgn` 及 `viewer/test/runs.test.js` 对本机未入库旧 PGN 的兼容）、前端包名 `agi-chess-viewer` 与临时目录前缀统一用连字符 `agi-chess`；
   - 更新 `README.md` 与 `README.zh-CN.md` 开篇导语，并在开篇醒目位置高亮展示零配置即用的交互式棋谱阅读器（`viewer/`）。
+- **Linux (WSL2) 跨平台实测与边角修复**：
+  - 修复 `viewer/record.mjs` 在 Ubuntu 22.04 默认 FFmpeg 4.4 下因输出侧 `-frames:v` 提前关闭输出流导致 AAC 音轨末尾被截断约 3 秒的问题，改为在 `-vf` 滤镜链内用 `trim=end_frame` 精确截帧；
+  - `viewer/record.mjs` 改为在 `record()` 内按需动态加载 `playwright-core`，确保未执行 `npm ci` 的干净环境下 `node viewer/record.mjs --help` 及 `viewer/test/` 下的纯 JS 测试正常跑通、浏览器测试按预期 skip；
+  - `viewer/lib/bins.mjs` 在显式指定二进制名称或路径（含环境变量 `VIEWER_FFMPEG`、`VIEWER_FFPROBE`、`VIEWER_CHROMIUM`）不存在时直接报错，不静默回退到系统默认版本；`viewer/test/record.test.js` 与 `viewer/test/wrap.test.js` 仅在缺少依赖时 skip，避免吞掉真实异常；
+  - `tests/test_cap.py` 的 `--dry-run` 用例改用 `engine:stockfish:depth=1` 以免依赖本地未分发的 Maia 权重；`agi_chess/engine.py` 引擎搜索路径纳入 `~/.local/bin`；`.gitignore` 补齐 `/.venv/`、`venv/`、`.env`、`.env.*`、`!.env.example`；
+  - 在 Linux (WSL2, Ubuntu 22.04) 配齐 `.venv`、`viewer/node_modules`、`stockfish` 与 `fairy-stockfish` 后，Python 全套 318 项测试（含 21 项真引擎测试）与阅读器全套 88 项测试（含 Python 往返与 Chromium/FFmpeg 有声录制）均以 0 失败、0 跳过、0 `ResourceWarning` 全绿通过。
 
 ## 公开文档整理（2026-11-05）
 

@@ -7,6 +7,7 @@ import os, queue, shutil, subprocess, threading, time
 
 
 ENGINE_SEARCH_DIRS = (
+    '~/.local/bin',
     '/usr/games',
     '/usr/local/games',
     '/usr/local/bin',
@@ -30,7 +31,7 @@ def find_engine_binary(name, env_var=None):
     if w:
         return w
     for d in ENGINE_SEARCH_DIRS:
-        candidate = os.path.join(d, name)
+        candidate = os.path.join(os.path.expanduser(d), name)
         if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
             return candidate
     return None

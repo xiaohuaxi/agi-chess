@@ -44,6 +44,17 @@ class FindEngineBinary(unittest.TestCase):
                 os.environ.pop('STOCKFISH', None)
                 self.assertEqual(find_engine_binary('stockfish', 'STOCKFISH'), usr_games_sf)
 
+            home_bin = os.path.join(tmp, '.local', 'bin')
+            os.makedirs(home_bin)
+            home_sf = os.path.join(home_bin, 'stockfish')
+            with open(home_sf, 'w', encoding='utf-8') as f:
+                f.write('#!/bin/sh\nexit 0\n')
+            os.chmod(home_sf, os.stat(home_sf).st_mode | stat.S_IXUSR)
+            with mock.patch.dict(os.environ, {'PATH': '', 'HOME': tmp}, clear=False), \
+                 mock.patch('agi_chess.engine.ENGINE_SEARCH_DIRS', ('~/.local/bin',)):
+                os.environ.pop('STOCKFISH', None)
+                self.assertEqual(find_engine_binary('stockfish', 'STOCKFISH'), home_sf)
+
 
 @unittest.skipIf(FSF_MISSING, '本机没有 fairy-stockfish')
 class XiangqiEngine(unittest.TestCase):

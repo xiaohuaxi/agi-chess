@@ -45,17 +45,20 @@ const CHROMIUM_EXTRAS = [
 export function resolveFfmpeg(explicit) {
   const pick = (explicit || process.env.VIEWER_FFMPEG || '').trim();
   if (pick) {
-    if (isBareCommand(pick)) return findExecutable([pick], FFMPEG_EXTRAS) || pick;
-    return pick;
+    const found = isBareCommand(pick) ? findExecutable([pick], []) : (isExecutableFile(pick) ? pick : null);
+    if (!found) throw new Error(`找不到可执行的 ffmpeg：${pick}`);
+    return found;
   }
   return findExecutable(['ffmpeg'], FFMPEG_EXTRAS) || 'ffmpeg';
 }
 
-export function resolveFfprobe(ffmpegPath) {
-  const pick = (process.env.VIEWER_FFPROBE || '').trim();
+export function resolveFfprobe(ffmpegPath, explicit) {
+  const isFfmpegSiblingHint = ffmpegPath && !explicit && /^ffmpeg(\.exe)?$/i.test(path.basename(ffmpegPath));
+  const pick = (explicit || (!isFfmpegSiblingHint ? ffmpegPath : '') || process.env.VIEWER_FFPROBE || '').trim();
   if (pick) {
-    if (isBareCommand(pick)) return findExecutable([pick], FFPROBE_EXTRAS) || pick;
-    return pick;
+    const found = isBareCommand(pick) ? findExecutable([pick], []) : (isExecutableFile(pick) ? pick : null);
+    if (!found) throw new Error(`找不到可执行的 ffprobe：${pick}`);
+    return found;
   }
   if (ffmpegPath && (ffmpegPath.includes(path.sep) || ffmpegPath.includes('/'))) {
     const sibling = path.join(path.dirname(ffmpegPath), 'ffprobe');
@@ -67,8 +70,9 @@ export function resolveFfprobe(ffmpegPath) {
 export function resolveChromium(explicit, pw) {
   const pick = (explicit || process.env.VIEWER_CHROMIUM || '').trim();
   if (pick) {
-    if (isBareCommand(pick)) return findExecutable([pick], CHROMIUM_EXTRAS) || pick;
-    return pick;
+    const found = isBareCommand(pick) ? findExecutable([pick], []) : (isExecutableFile(pick) ? pick : null);
+    if (!found) throw new Error(`找不到可执行的浏览器：${pick}`);
+    return found;
   }
   try {
     const p = pw?.chromium?.executablePath?.();
@@ -79,3 +83,5 @@ export function resolveChromium(explicit, pw) {
     CHROMIUM_EXTRAS,
   ) || undefined;
 }
+
+export { resolveChromium as resolveBrowser };

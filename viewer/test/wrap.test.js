@@ -40,12 +40,14 @@ for name, G, moves in (('chess', C, ['g1f3', 'g8f6', 'f3g1', 'f6g8'] * 25),
 print(json.dumps(res, ensure_ascii=False))
 `;
 
-const py = spawnSync('python3', ['-c', PY], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
-const skip = py.status === 0 ? false : `python3 导出失败：${(py.stderr || py.error || '').toString().slice(-300)}`;
-const data = skip ? {} : JSON.parse(py.stdout);
+const available = spawnSync('python3', ['-c', 'import chess, pyffish'], { cwd: ROOT, encoding: 'utf8' });
+const skip = available.status === 0 ? false : 'python3 缺少规则库';
+const py = skip ? null : spawnSync('python3', ['-c', PY], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
 
 for (const kind of ['chess', 'xiangqi']) {
   test(`折行往返：${kind} 理由文字逐字一致（含「中文 空格 中文」）`, { skip }, () => {
+    assert.equal(py.status, 0, py.stderr || String(py.error || ''));
+    const data = JSON.parse(py.stdout);
     const { pgn, why } = data[kind];
     assert.ok(why.some((w) => /[一-鿿] [一-鿿]/.test(w)), '样例里要有「中文 空格 中文」');
     const [g] = parsePgn(pgn);

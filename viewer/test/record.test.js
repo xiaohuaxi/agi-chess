@@ -13,16 +13,14 @@ import { fileURLToPath } from 'node:url';
 import { decodeText, parsePgn } from '../lib/pgn.js';
 import { replay } from '../lib/replay.js';
 import { stepSound } from '../lib/sound.js';
-import { parseServeCli, resolveChromium, resolveFfmpeg, resolveFfprobe, serve } from '../serve.mjs';
+import { parseServeCli, resolveBrowser, resolveChromium, resolveFfmpeg, resolveFfprobe, serve } from '../serve.mjs';
+import * as rec from '../record.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const FIX = join(ROOT, 'viewer', 'test', 'fixtures');
 const TMP = mkdtempSync(join(tmpdir(), 'viewer-rec-test-'));
 
-let rec = null, recSkip = false;
-try { rec = await import('../record.mjs'); } catch (e) { recSkip = `没有 playwright-core（cd viewer && npm ci）：${e.message.split('\n')[0]}`; }
-
-test('秒数换帧数：按累计时刻取整，总数 = round(总秒数 × 30)', { skip: recSkip }, () => {
+test('秒数换帧数：按累计时刻取整，总数 = round(总秒数 × 30)', () => {
   assert.deepEqual(rec.toFrames([3, 2.5, 4]), [90, 75, 120]);
   const f = rec.toFrames(Array(10).fill(0.11));                 // 每格 3.3 帧
   assert.equal(f.reduce((a, b) => a + b, 0), 33);
@@ -30,7 +28,7 @@ test('秒数换帧数：按累计时刻取整，总数 = round(总秒数 × 30)'
   assert.deepEqual(rec.toFrames([0.01, 0.01, 1]), [0, 1, 30]);   // 太短的格可能分到 0 帧，但总数不丢
 });
 
-test('命令行：停留时长透传、默认无标题 / --title 加 / --no-title 兼容、--set、不合法的报中文错', { skip: recSkip }, () => {
+test('命令行：停留时长透传、默认无标题 / --title 加 / --no-title 兼容、--set、不合法的报中文错', () => {
   const o = rec.parseCli(['a.pgn', 'b.pgn', '-o', 'x.mp4', '--gap', '1.5', '--resulthold', '0', '--set', 'layout=compact']);
   assert.deepEqual(o.inputs, ['a.pgn', 'b.pgn']);
   assert.deepEqual(o.params, { gap: '1.5', resulthold: '0', layout: 'compact' });   // 默认不带 title，页面默认无标题
@@ -62,10 +60,15 @@ test('serve CLI 与可执行文件查找：端口 0 保留、非法参数报错�
   assert.throws(() => parseServeCli(['--unknown']), /unknown/i);
   assert.throws(() => parseServeCli(['extra']), /位置参数/);
   assert.ok(resolveFfmpeg('sh').endsWith('/sh'));
+  assert.ok(resolveFfprobe('sh').endsWith('/sh'));
   assert.ok(resolveChromium('sh', {}).endsWith('/sh'));
+  assert.throws(() => resolveFfmpeg('nonexistent-ffmpeg-cmd'), /nonexistent-ffmpeg-cmd/);
+  assert.throws(() => resolveFfprobe('nonexistent-ffprobe-cmd'), /nonexistent-ffprobe-cmd/);
+  assert.throws(() => resolveChromium('nonexistent-browser-cmd', {}), /nonexistent-browser-cmd/);
+  assert.throws(() => resolveBrowser('nonexistent-browser-cmd', {}), /nonexistent-browser-cmd/);
 });
 
-test('命令行：默认有声、--no-sound 关掉；--vol 是正的倍数', { skip: recSkip }, () => {
+test('命令行：默认有声、--no-sound 关掉；--vol 是正的倍数', () => {
   const o = rec.parseCli(['a', '-o', 'x.mp4']);
   assert.equal(o.sound, true);
   assert.equal(o.vol, 1);
@@ -75,7 +78,7 @@ test('命令行：默认有声、--no-sound 关掉；--vol 是正的倍数', { s
   for (const v of ['0', '-1', 'x', '']) assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', `--vol=${v}`]), /--vol/, v);
 });
 
-test('声音时刻：和画面同一套累计帧数——响在动画帧之后那张静止画面的开头', { skip: recSkip }, () => {
+test('声音时刻：和画面同一套累计帧数——响在动画帧之后那张静止画面的开头', () => {
   // 开局 1.8 秒；第 1 步 9 张动画帧（各 1/30）+ 静止 1.5；第 2 步没动画、停 1；结果格停 4
   const sec = [1.8, ...Array(9).fill(1 / 30), 1.5, 1, 4];
   const t = rec.cueTimes(sec, [[10, 'move'], [11, 'capture'], [12, 'end'], [13, 'end']]);
@@ -85,7 +88,7 @@ test('声音时刻：和画面同一套累计帧数——响在动画帧之后�
   assert.equal(rec.cueTimes([0.25, 1], [[1, 'move']])[0].t, 8 / 30);
 });
 
-test('混音：按时刻叠进全长音轨、乘增益，超出片尾截掉、叠爆削到 ±1', { skip: recSkip }, () => {
+test('混音：按时刻叠进全长音轨、乘增益，超出片尾截掉、叠爆削到 ±1', () => {
   const pcm = { move: new Float32Array([0.5, 0.5]), capture: new Float32Array([1, 1, 1]), end: new Float32Array([0.9]) };
   const out = rec.mixTrack([{ t: 0, sound: 'move' }, { t: 2 / rec.RATE, sound: 'capture' }], 4 / rec.RATE, pcm, 1);
   assert.equal(out.length, 4);
@@ -97,7 +100,7 @@ test('混音：按时刻叠进全长音轨、乘增益，超出片尾截掉、�
   assert.equal(rec.mixTrack([], 0.5, pcm).length, rec.RATE / 2);
 });
 
-test('开工前检查：缺棋谱、输出不是 mp4、画幅不认识、ffmpeg 不在都直接报错', { skip: recSkip }, async () => {
+test('开工前检查：缺棋谱、输出不是 mp4、画幅不认识、ffmpeg 不在都直接报错', async () => {
   const pgn = join(FIX, 'xq-sample.pgn');
   const base = { inputs: [pgn], out: join(TMP, 'x.mp4'), params: {}, ffmpeg: '/bin/sh' };
   const bad = async (o, re) => assert.rejects(rec.record({ ...base, ...o }, () => {}), (e) => e instanceof rec.RecordError && re.test(e.message));
@@ -110,6 +113,8 @@ test('开工前检查：缺棋谱、输出不是 mp4、画幅不认识、ffmpeg 
   await bad({ out: join(TMP, 'no-dir', 'x.mp4') }, /输出目录不存在/);
   await bad({ aspect: '1:1' }, /画幅/);
   await bad({ ffmpeg: join(TMP, 'no-ffmpeg') }, /ffmpeg/);
+  await bad({ ffmpeg: 'nonexistent-ffmpeg-cmd' }, /ffmpeg/);
+  await bad({ chromium: 'nonexistent-browser-cmd' }, /浏览器/);
   const existingMp4 = join(TMP, `exist-${Math.random().toString(36).slice(2)}.mp4`);
   writeFileSync(existingMp4, 'old');
   await bad({ out: existingMp4 }, /输出文件已存在/);
@@ -134,12 +139,17 @@ test('服务：精确映射的文件照给，同目录别的文件和站点根�
 // ---------------------------------------------------------------- 真出片
 const FFMPEG = resolveFfmpeg();
 const FFPROBE = resolveFfprobe(FFMPEG);
-let skip = recSkip;
+let HAS_PW = false;
+let pw = null;
+try {
+  pw = await import('playwright-core');
+  HAS_PW = true;
+} catch {}
+let skip = HAS_PW ? false : '没有 playwright-core（cd viewer && npm ci）';
 if (!skip) {
   try { accessSync(FFMPEG, constants.X_OK); accessSync(FFPROBE, constants.X_OK); } catch { skip = `没有 ffmpeg / ffprobe（${FFMPEG}）`; }
 }
 if (!skip) {
-  const pw = await import('playwright-core');
   try { await (await pw.chromium.launch({ executablePath: resolveChromium(undefined, pw) })).close(); }
   catch (e) { skip = `起不来浏览器：${e.message.split('\n')[0]}`; }
 }

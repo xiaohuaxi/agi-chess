@@ -1,7 +1,6 @@
 // 录屏：脚本驱动页面一格一格截图，ffmpeg 拼成 mp4（docs/viewer.md「录屏：脚本出片」）；
 // 默认带走子音效：按 next() 给的 sound 在棋子落地那一刻混一声，作为 AAC 音轨（docs/viewer.md「走子音效」）。
 // 用法见 HELP（node viewer/record.mjs --help）。也可 import { record } 在测试里直接调。
-import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
 import { accessSync, constants, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -125,20 +124,32 @@ function preflight(o) {
     if (!moves) throw new RecordError(`棋谱里没读到任何一盘有着法的棋（不是棋谱文件？）：${p}`);
     return f;
   });
-  const ffmpeg = resolveFfmpeg(o.ffmpeg);
+  let ffmpeg;
+  try {
+    ffmpeg = resolveFfmpeg(o.ffmpeg);
+  } catch {
+    throw new RecordError(`找不到可执行的 ffmpeg：${o.ffmpeg || process.env.VIEWER_FFMPEG}（请安装 ffmpeg 或用 --ffmpeg / 环境变量 VIEWER_FFMPEG 指定）`);
+  }
   if (!isExecutableFile(ffmpeg)) {
     throw new RecordError(`找不到可执行的 ffmpeg：${ffmpeg}（请安装 ffmpeg 或用 --ffmpeg / 环境变量 VIEWER_FFMPEG 指定）`);
   }
   const explicitChromium = (o.chromium || process.env.VIEWER_CHROMIUM || '').trim();
-  const chromiumPath = resolveChromium(o.chromium, { chromium });
-  if (explicitChromium && (!chromiumPath || !isExecutableFile(chromiumPath))) {
-    throw new RecordError(`浏览器不存在或不可执行：${explicitChromium}`);
+  let explicitChromiumPath;
+  if (explicitChromium) {
+    try {
+      explicitChromiumPath = resolveChromium(o.chromium);
+    } catch {
+      throw new RecordError(`浏览器不存在或不可执行：${explicitChromium}`);
+    }
+    if (!explicitChromiumPath || !isExecutableFile(explicitChromiumPath)) {
+      throw new RecordError(`浏览器不存在或不可执行：${explicitChromium}`);
+    }
   }
   const scale = o.scale ?? 2;
   if (!(scale > 0) || !Number.isFinite(scale)) throw new RecordError(`--scale 要给有限正数，收到「${o.scale}」`);
   const size = [Math.round(view[0] * scale), Math.round(view[1] * scale)];
   if (size.some((n) => n % 2)) throw new RecordError(`出片尺寸 ${size.join('×')} 有奇数边，yuv420p 编不了；换个 --scale`);
-  return { out, view, scale, size, inputs, ffmpeg, chromiumPath };
+  return { out, view, scale, size, inputs, ffmpeg, explicitChromiumPath };
 }
 
 function withTimeout(p, ms, what) {
@@ -217,9 +228,12 @@ export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
     const files = Object.fromEntries(cfg.inputs.map((f, i) => [`/rec/${i + 1}.pgn`, f]));
     server = await serve(www, { '/viewer/': VIEWER }, files);
     live.add(closeServer);
+    let chromium;
     try {
+      ({ chromium } = await import('playwright-core'));
+      const chromiumPath = cfg.explicitChromiumPath || resolveChromium(o.chromium, { chromium });
       browser = await chromium.launch({
-        executablePath: cfg.chromiumPath, handleSIGINT: false, handleSIGTERM: false, handleSIGHUP: false,
+        executablePath: chromiumPath, handleSIGINT: false, handleSIGTERM: false, handleSIGHUP: false,
       });
     } catch (e) {
       throw new RecordError(`起不来浏览器：${e.message.split('\n')[0]}（用 --chromium 或环境变量 VIEWER_CHROMIUM 指到 Chromium / Chrome）`);
@@ -285,7 +299,7 @@ export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
     server = null;
     if (!list.length) throw new RecordError('一格画面都没有（各格停留时长全是 0？）');
 
-    // concat 列表：每张给足帧数的时长，末张再写一次（否则它的时长被忽略），总帧数用 -frames:v 截齐。
+    // concat 列表：每张给足帧数的时长，末张再写一次（否则它的时长被忽略），总帧数在 -vf 用 trim=end_frame 截齐。
     const counts = toFrames(list.map(([, s]) => s));
     const kept = list.map(([f], i) => [f, counts[i]]).filter(([, c]) => c > 0);
     const frames = counts.reduce((a, b) => a + b, 0);
@@ -318,10 +332,10 @@ export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
     await runFfmpeg(cfg.ffmpeg, [
       '-hide_banner', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', listFile, ...audioIn,
       // 截图是全范围 RGB：转 bt709 矩阵的有限范围 yuv420p，并在码流里如实标注。
-      '-vf', `fps=${FPS},scale=in_range=full:out_range=tv:out_color_matrix=bt709,format=yuv420p,setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709`,
+      '-vf', `fps=${FPS},trim=end_frame=${frames},scale=in_range=full:out_range=tv:out_color_matrix=bt709,format=yuv420p,setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709`,
       '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
       '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-color_range', 'tv',
-      '-r', String(FPS), '-frames:v', String(frames), ...audioOut, '-movflags', '+faststart', '-f', 'mp4', tmpOut,
+      '-r', String(FPS), ...audioOut, '-movflags', '+faststart', '-f', 'mp4', tmpOut,
     ]);
     if (o.force) {
       renameSync(tmpOut, cfg.out);

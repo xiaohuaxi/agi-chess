@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-export { findExecutable, isExecutableFile, resolveChromium, resolveFfmpeg, resolveFfprobe } from './lib/bins.mjs';
+export { findExecutable, isExecutableFile, resolveBrowser, resolveChromium, resolveFfmpeg, resolveFfprobe } from './lib/bins.mjs';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',

@@ -8,6 +8,11 @@ node_modules/
 __pycache__/
 *.pyc
 *.pyo
+/.venv/
+venv/
+.env
+.env.*
+!.env.example
 /.local/
 /scratchpad/
 /scratchpad_run_logs/

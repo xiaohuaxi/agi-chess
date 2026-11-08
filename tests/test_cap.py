@@ -112,7 +112,7 @@ class CapRuleInGames(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertIn('满 200 个半回合仍未分胜负时由裁判评估局面', out)
         # legacy 对引擎：旧提示、旧判法
-        rc, out = run_quiet(['play', '--game', 'chess', '--protocol', 'legacy', '--black', 'engine:maia-1100', '--dry-run'])
+        rc, out = run_quiet(['play', '--game', 'chess', '--protocol', 'legacy', '--black', 'engine:stockfish:depth=1', '--dry-run'])
         self.assertEqual(rc, 0)
         self.assertNotIn('裁判评估', out)
         with self.assertRaises(SystemExit):
