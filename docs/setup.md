@@ -116,8 +116,9 @@ python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --b
   wire_api = "chat"
   ```
 
+  配套的模型目录最小模板 `~/.codex/deepseek-models.json`：
+
   ```json
-  // ~/.codex/deepseek-models.json（配套模型目录最小模板）
   {
     "models": [
       {

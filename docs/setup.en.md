@@ -116,8 +116,9 @@ Available model slugs, rate limits, and billing depend on your own accounts and 
   wire_api = "chat"
   ```
 
+  Minimal accompanying model catalog `~/.codex/deepseek-models.json`:
+
   ```json
-  // ~/.codex/deepseek-models.json (minimal accompanying model catalog)
   {
     "models": [
       {
