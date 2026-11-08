@@ -13,7 +13,7 @@ description: 用本仓库的棋谱阅读器（viewer/）把对局录成 mp4，�
   - **已入库的 171 盘正式对局**（`runs/<tag>/` 下已有 `game.pgn`，含在 git worktree 中，无 `game.jsonl`）：自带最新导出的完整 `game.pgn`，可直接浏览或录屏，**不要**检查 `game.jsonl`，也**不要**运行 `python3 -m agi_chess export`。
   - **本机新跑、含 `game.jsonl` 的对局**：只录下完的棋——先确认 `runs/<tag>/game.jsonl` 最后一行是 `{"type": "end", …}`（没有这一行的可能正在下，别碰它的目录），再按需运行 `python3 -m agi_chess export runs/<tag>` 重写导出文件（`game.pgn`、`record.txt`），不动 `game.jsonl`。
 - 录制脚本认相对仓库根目录的路径或本机任意绝对路径。
-- 开发依赖：先在 `viewer/` 下跑一次 `npm ci`（安装锁定的 `playwright-core`）。脚本会自动从 `PATH` 与常见路径查找 `ffmpeg` 和 Chromium / Chrome；若本机尚无兼容浏览器，可执行 `cd viewer && npx playwright install chromium` 安装配套浏览器。
+- 开发依赖：先在 `viewer/` 下跑一次 `npm ci`（安装锁定的 `playwright-core==1.58.2`）。脚本会自动从 `PATH` 与常见路径查找 `ffmpeg` 和 Chromium / Chrome；若本机尚无兼容浏览器，可在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本配套的浏览器。
 
 ## 一条命令出片
 
@@ -75,7 +75,8 @@ python3 -m http.server --bind 127.0.0.1 8000
 
 ## 常见坑
 
-- **浏览器 / ffmpeg 找不到**：脚本优先读取 `--ffmpeg` / `--chromium` 或环境变量 `VIEWER_FFMPEG` / `VIEWER_CHROMIUM`；未指定时自动从 `PATH` 及常见系统路径查找 `ffmpeg`（如 `/usr/bin/ffmpeg`、`/usr/local/bin/ffmpeg`、`/opt/homebrew/bin/ffmpeg`）与浏览器（先查 `playwright-core` 配套缓存 Chromium，再查 `PATH` 与系统中的 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`），也可通过 `cd viewer && npx playwright install chromium` 安装配套浏览器。测试用的 `ffprobe` 优先读 `VIEWER_FFPROBE`，再查与 `ffmpeg` 同目录及 `PATH`。
+- **浏览器 / ffmpeg 找不到**：脚本优先读取 `--ffmpeg` / `--chromium` 或环境变量 `VIEWER_FFMPEG` / `VIEWER_CHROMIUM`；未指定时自动从 `PATH` 及常见系统路径查找 `ffmpeg`（如 `/usr/bin/ffmpeg`、`/usr/local/bin/ffmpeg`、`/opt/homebrew/bin/ffmpeg`）与浏览器（先查 `playwright-core` 配套缓存 Chromium，再查 `PATH` 与系统中的 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`），也可通过 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本配套的浏览器。测试用的 `ffprobe` 优先读 `VIEWER_FFPROBE`，再查与 `ffmpeg` 同目录及 `PATH`。
+- **输出覆盖保护**：`-o <输出.mp4>` 目标文件若已存在，脚本默认报错退出以防误覆盖；确认要覆盖时加 `-f` / `--force`。
 - **给错文件**：一盘带着法的棋都读不出来的文件（不是棋谱）会在开工前报错退出，不会出空片。可是一个多盘文件里夹着的空盘不会被挑出来。
 - **停留设成 0**：停 0 秒的那一格根本不截图，比如 `--resulthold 0` 就没有终局横幅。全设成 0 会报「一格画面都没有」。
 - **9:16 / 16:9 没专门排版**：只是换了视口尺寸，画面照 3:4 的窄版摆，可能多出空白或显得挤。要发布就用 3:4，另外两种先出一段看看再说。

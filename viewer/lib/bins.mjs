@@ -2,7 +2,7 @@
 import { accessSync, constants, statSync } from 'node:fs';
 import path from 'node:path';
 
-function isExecutableFile(p) {
+export function isExecutableFile(p) {
   if (!p) return false;
   try {
     accessSync(p, constants.X_OK);
@@ -27,37 +27,55 @@ export function findExecutable(names, extraPaths = []) {
   return null;
 }
 
+function isBareCommand(s) {
+  return Boolean(s) && !s.includes(path.sep) && !s.includes('/');
+}
+
+const FFMPEG_EXTRAS = ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg'];
+const FFPROBE_EXTRAS = ['/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe', '/usr/bin/ffprobe'];
+const CHROMIUM_EXTRAS = [
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/google-chrome',
+  '/snap/bin/chromium',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+];
+
 export function resolveFfmpeg(explicit) {
-  const pick = explicit || process.env.VIEWER_FFMPEG;
-  if (pick) return pick;
-  return findExecutable(['ffmpeg'], ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg']) || 'ffmpeg';
+  const pick = (explicit || process.env.VIEWER_FFMPEG || '').trim();
+  if (pick) {
+    if (isBareCommand(pick)) return findExecutable([pick], FFMPEG_EXTRAS) || pick;
+    return pick;
+  }
+  return findExecutable(['ffmpeg'], FFMPEG_EXTRAS) || 'ffmpeg';
 }
 
 export function resolveFfprobe(ffmpegPath) {
-  if (process.env.VIEWER_FFPROBE) return process.env.VIEWER_FFPROBE;
-  if (ffmpegPath && ffmpegPath.includes(path.sep)) {
+  const pick = (process.env.VIEWER_FFPROBE || '').trim();
+  if (pick) {
+    if (isBareCommand(pick)) return findExecutable([pick], FFPROBE_EXTRAS) || pick;
+    return pick;
+  }
+  if (ffmpegPath && (ffmpegPath.includes(path.sep) || ffmpegPath.includes('/'))) {
     const sibling = path.join(path.dirname(ffmpegPath), 'ffprobe');
     if (isExecutableFile(sibling)) return sibling;
   }
-  return findExecutable(['ffprobe'], ['/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe', '/usr/bin/ffprobe']) || 'ffprobe';
+  return findExecutable(['ffprobe'], FFPROBE_EXTRAS) || 'ffprobe';
 }
 
 export function resolveChromium(explicit, pw) {
-  const pick = explicit || process.env.VIEWER_CHROMIUM;
-  if (pick) return pick;
+  const pick = (explicit || process.env.VIEWER_CHROMIUM || '').trim();
+  if (pick) {
+    if (isBareCommand(pick)) return findExecutable([pick], CHROMIUM_EXTRAS) || pick;
+    return pick;
+  }
   try {
     const p = pw?.chromium?.executablePath?.();
     if (isExecutableFile(p)) return p;
   } catch { /* ignore and fall back to system browsers */ }
   return findExecutable(
     ['chromium', 'chromium-browser', 'google-chrome-stable', 'google-chrome'],
-    [
-      '/usr/bin/chromium',
-      '/usr/bin/chromium-browser',
-      '/usr/bin/google-chrome-stable',
-      '/usr/bin/google-chrome',
-      '/snap/bin/chromium',
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    ],
+    CHROMIUM_EXTRAS,
   ) || undefined;
 }

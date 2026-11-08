@@ -80,7 +80,7 @@ python -m unittest discover -s tests -t .
    - **Claude**：通过本机 `claude` CLI 调用（如 `--white claude:opus`）；
    - **GPT**：通过本机 `codex` CLI 调用（如 `--black codex:astra`）；
    - **Gemini（或经 agy 路由的模型）**：通过本机 `agy` CLI 调用（如 `--white gemini:gemini-4-argon-high` 或 `agy:claude-opus-5-5-high`）。
-   - 该通道直接使用用户本机已安装并登录的对应 CLI 订阅额度；开工前可先用 `claude --version`、`codex --version`、`agy --version` 自检本机 CLI 连通性。若本机未安装对应 CLI，`llm-chat` 会直接返回明确的未安装错误提示。
+   - 该通道直接使用用户本机已安装并登录的对应 CLI 订阅额度（研发实测版本：`claude 2.1.282`、`codex 0.156.1+`；开工前可用 `claude --version`、`codex --version`、`agy --version` 检查版本，并用 `python3 -m agi_chess play --game chess --white claude:opus --black random --dry-run` 离线核对提示生成）。若本机未安装对应 CLI，`llm-chat` 会直接返回明确的未安装错误提示。
 
 2. **HTTP API 通道（DeepSeek 及 OpenRouter）：**
    - 支持设置环境变量 `API_KEY_OPENROUTER`（或别名 `OPENROUTER_API_KEY`）以及 `API_KEY_DEEPSEEK`（或别名 `DEEPSEEK_API_KEY`）。
@@ -101,7 +101,20 @@ python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --b
 
 可用型号、额度与收费由账号和服务决定；本仓库不提供账号、凭据或额度。请注意 DeepSeek 在两种运行模式下的配置差异：
 - **整盘对弈模式**（`python3 -m agi_chess`）：由仓内 `.agents/skills/llm-chat/` 通过 HTTP 直连 DeepSeek 官方 API 或 OpenRouter，**只需设置 `DEEPSEEK_API_KEY`（`API_KEY_DEEPSEEK`）或 `OPENROUTER_API_KEY`（`API_KEY_OPENROUTER`）环境变量，无需安装 Codex CLI**。
-- **历史无状态局面题模式**（`python3 -m agi_chess.quiz`）：仍按原路径直调 `claude` 或 `codex exec`；其中 `python3 -m agi_chess.quiz --model deepseek` 走 Codex CLI profile，默认读取 `$CODEX_HOME/deepseek.config.toml`（未设 `CODEX_HOME` 时为 `~/.codex/deepseek.config.toml`）还原供应商与模型目录配置，也可通过环境变量 `AGI_CHESS_DEEPSEEK_CONFIG`（兼容 `AGICHESS_DEEPSEEK_CONFIG` 与 `LLMCHESS_DEEPSEEK_CONFIG`）覆盖配置文件路径。
+- **历史无状态局面题模式**（`python3 -m agi_chess.quiz`）：仍按原路径直调 `claude` 或 `codex exec`；其中 `python3 -m agi_chess.quiz run --game chess --batch batch2 --ids c01 --efforts medium --reps 1 --model deepseek` 走 Codex CLI profile，默认读取 `$CODEX_HOME/deepseek.config.toml`（未设 `CODEX_HOME` 时为 `~/.codex/deepseek.config.toml`）还原供应商与模型目录配置，也可通过环境变量 `AGI_CHESS_DEEPSEEK_CONFIG`（兼容 `AGICHESS_DEEPSEEK_CONFIG` 与 `LLMCHESS_DEEPSEEK_CONFIG`）覆盖配置文件路径。无凭据最小配置模板示例：
+
+  ```toml
+  # ~/.codex/deepseek.config.toml（仅在运行 quiz --model deepseek 时需要；整盘对弈无需此文件）
+  model = "deepseek/deepseek-v4-pro"
+  model_provider = "openrouter"
+  model_catalog_json = "~/.codex/deepseek-models.json"
+
+  [model_providers.openrouter]
+  name = "OpenRouter"
+  base_url = "https://openrouter.ai/api/v1"
+  env_key = "OPENROUTER_API_KEY"
+  wire_api = "chat"
+  ```
 
 先看 CLI 帮助与[对弈协议](design.md)第九节。上面的 `--max-plies 6` 配 `random` 对手只是短冒烟，不用于评测棋力。每盘用新的 `--tag`，输出写入 `runs/<tag>/`（新建本地运行目录默认仅入库指定的已提交正式批次，底层 `game.jsonl` 被 git 忽略）。真实评测条件与停止规则见设计文档；不要给模型棋手开放引擎或规则库工具。工具调用或明确的防思维链泄露类拒答应立即停盘分析，不自动重问续跑。
 
@@ -109,10 +122,10 @@ python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --b
 
 ## 阅读器测试与录制
 
-纯网页浏览不需要 Node.js、Chromium 自动化或 FFmpeg。只有开发测试和录制才需要额外工具（在 `viewer/` 下执行 `npm ci`，并准备 Chromium 与 `ffmpeg`，如 `cd viewer && npx playwright install --with-deps chromium` 或系统安装 `chromium` / `google-chrome-stable` 与 `ffmpeg`；在 Linux 服务器/无桌面环境录屏或截图时还需安装中文字体，如 Ubuntu/Debian：`sudo apt install fonts-noto-cjk fonts-arphic-ukai`，否则中国象棋棋盘上的汉字棋子会显示为方块）；安装及操作见[棋谱浏览与视频录制](viewer-guide.md)。
+纯网页浏览不需要 Node.js、Chromium 自动化或 FFmpeg。只有开发测试和录制才需要额外工具（在 `viewer/` 下执行 `npm ci`，并准备 Chromium 与 `ffmpeg`，如在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 以安装与锁定版本 `playwright-core==1.58.2` 配套的浏览器，或使用系统安装的 `chromium` / `google-chrome-stable` 与 `ffmpeg`；在 Linux 服务器/无桌面环境录屏或截图时还需安装中文字体，如 Ubuntu/Debian：`sudo apt install fonts-noto-cjk fonts-arphic-ukai`，否则中国象棋棋盘上的汉字棋子会显示为方块）；安装及操作见[棋谱浏览与视频录制](viewer-guide.md)。
 
 ```sh
-node --test 'viewer/test/*.test.js'
+node --test 'viewer/test/*.test.js'   # 引号通配需 Node 22+；Node 18/20 请去掉单引号运行 node --test viewer/test/*.test.js
 ```
 
 JS 测试会校验阅读器解析及已入库 `runs/` 下全部正式对局 `game.pgn`，并说明跳过的项目：没有 `playwright-core` 或可运行的 Chromium 时，浏览器部分会跳过；部分往返测试会启动 `python3`，它须能导入上述规则库。跳过不表示该部分已验证。

@@ -68,7 +68,7 @@ python3 -m http.server --bind 127.0.0.1 8000
    cd ..
    ```
 
-3. 可被 Playwright 驱动的 Chromium。`playwright-core` 不会在 `npm ci` 时自动下载浏览器；可通过 `--chromium /绝对路径/Chromium` 或设置 `VIEWER_CHROMIUM` 指定，未指定时脚本依次查找 Playwright 配套的缓存 Chromium（可执行 `cd viewer && npx playwright install --with-deps chromium` 安装）以及系统 `PATH` 和常见路径中的 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`。
+3. 可被 Playwright 驱动的 Chromium。`playwright-core` 不会在 `npm ci` 时自动下载浏览器；可通过 `--chromium /绝对路径/Chromium` 或设置 `VIEWER_CHROMIUM` 指定，未指定时脚本依次查找 Playwright 配套的缓存 Chromium（可在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本 `1.58.2` 配套的浏览器）以及系统 `PATH` 和常见路径中的 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`。
 4. FFmpeg 可执行文件；用 `--ffmpeg /绝对路径/ffmpeg` 或 `VIEWER_FFMPEG` 指定，未指定时自动从 `PATH` 及常见系统路径（`/usr/bin/ffmpeg`、`/usr/local/bin/ffmpeg`、`/opt/homebrew/bin/ffmpeg`）查找。核对视频还需 `ffprobe`。
 5. **Linux 服务器 / 无桌面环境的中文字体**：中国象棋棋盘上的汉字棋子与中文界面使用系统字体渲染；在无桌面 Linux 环境录屏或截图前，请先安装中文字体（如 Ubuntu/Debian：`sudo apt install fonts-noto-cjk fonts-arphic-ukai`），否则中国象棋棋盘上的汉字棋子会显示为方块（tofu）。
 

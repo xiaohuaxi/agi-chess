@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { decodeText, parsePgn } from '../lib/pgn.js';
 import { replay } from '../lib/replay.js';
 import { stepSound } from '../lib/sound.js';
-import { resolveChromium, resolveFfmpeg, resolveFfprobe, serve } from '../serve.mjs';
+import { parseServeCli, resolveChromium, resolveFfmpeg, resolveFfprobe, serve } from '../serve.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const FIX = join(ROOT, 'viewer', 'test', 'fixtures');
@@ -47,6 +47,22 @@ test('命令行：停留时长透传、默认无标题 / --title 加 / --no-titl
   assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--anim', 'x']), /--anim/);
   assert.deepEqual(rec.parseCli(['a', '-o', 'x.mp4', '--openhold', '0.5']).params, { openhold: '0.5' });
   assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--openhold', '-1']), /--openhold/);
+  assert.throws(() => rec.parseCli(['a', '-o', 'x.mp4', '--scale', 'Infinity']), /--scale/);
+  assert.equal(rec.parseCli(['a', '-o', 'x.mp4']).force, false);
+  assert.equal(rec.parseCli(['a', '-o', 'x.mp4', '--force']).force, true);
+  assert.equal(rec.parseCli(['a', '-o', 'x.mp4', '-f']).force, true);
+});
+
+test('serve CLI 与可执行文件查找：端口 0 保留、非法参数报错、裸命令名从 PATH 解析', () => {
+  assert.deepEqual(parseServeCli([]), { help: false, port: 8765, host: '127.0.0.1' });
+  assert.deepEqual(parseServeCli(['--port', '0', '--bind', '0.0.0.0']), { help: false, port: 0, host: '0.0.0.0' });
+  assert.deepEqual(parseServeCli(['-h']), { help: true });
+  assert.throws(() => parseServeCli(['--port', 'abc']), /--port/);
+  assert.throws(() => parseServeCli(['--port', '70000']), /--port/);
+  assert.throws(() => parseServeCli(['--unknown']), /unknown/i);
+  assert.throws(() => parseServeCli(['extra']), /位置参数/);
+  assert.ok(resolveFfmpeg('sh').endsWith('/sh'));
+  assert.ok(resolveChromium('sh', {}).endsWith('/sh'));
 });
 
 test('命令行：默认有声、--no-sound 关掉；--vol 是正的倍数', { skip: recSkip }, () => {
@@ -94,6 +110,9 @@ test('开工前检查：缺棋谱、输出不是 mp4、画幅不认识、ffmpeg 
   await bad({ out: join(TMP, 'no-dir', 'x.mp4') }, /输出目录不存在/);
   await bad({ aspect: '1:1' }, /画幅/);
   await bad({ ffmpeg: join(TMP, 'no-ffmpeg') }, /ffmpeg/);
+  const existingMp4 = join(TMP, `exist-${Math.random().toString(36).slice(2)}.mp4`);
+  writeFileSync(existingMp4, 'old');
+  await bad({ out: existingMp4 }, /输出文件已存在/);
 });
 
 test('服务：精确映射的文件照给，同目录别的文件和站点根都 404', async () => {

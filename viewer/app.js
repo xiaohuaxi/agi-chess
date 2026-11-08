@@ -22,8 +22,8 @@
 // 播完（到了 end 那格）在 body 上置 data-done="1"，window.viewer.done 为 true。
 // window.viewer.play() / pause()：自动播放的开关（rec=1 时不起作用）；空格键同样切换。
 // window.viewer.show(game, ply) / summary()：直接画某一格（截图、调试用）。
-import { decodeText, parsePgn, moveNote } from './lib/pgn.js';
-import { replay } from './lib/replay.js';
+import { decodeText, moveNote } from './lib/pgn.js';
+import { loadGamesWithAnalysis } from './lib/replay.js';
 import { playerOf, fullName, startMoveNumber, fmtTokens, thinkTotals, points, scoresBefore, fmtScore, resultParts, resultText, totals } from './lib/match.js';
 import { moveRows, nagLabel, noteItems } from './lib/panel.js';
 import { playOptions, sequence } from './lib/play.js';
@@ -55,49 +55,12 @@ async function fetchTexts(paths) {
   return Promise.all(paths.map(async (p) => {
     const res = await fetch(p);
     if (!res.ok) throw new Error(`读不到棋谱 ${p}：${res.status}`);
-    return decodeText(new Uint8Array(await res.arrayBuffer()));
+    return { name: p, text: decodeText(new Uint8Array(await res.arrayBuffer())) };
   }));
 }
 
-const CLS_NAG = { blunder: 4, mistake: 2, inaccuracy: 6 };
-
-function parseAnalysisJsonl(text) {
-  const lines = text.trim().split(/\r?\n/).filter(Boolean);
-  if (!lines.length || !lines[0].trim().startsWith('{')) return null;
-  const rows = [];
-  for (const line of lines) {
-    try {
-      const obj = JSON.parse(line);
-      if (!obj || typeof obj !== 'object') return null;
-      if (typeof obj.ply === 'number') rows.push(obj);
-    } catch {
-      return null;
-    }
-  }
-  return rows.length ? rows : null;
-}
-
-function parseGames(texts) {
-  const rawGames = [];
-  for (const t of texts) {
-    const analysis = parseAnalysisJsonl(t);
-    if (analysis) {
-      const target = rawGames.at(-1);
-      if (target) {
-        for (const r of analysis) {
-          const mv = target.moves[r.ply - 1];
-          if (!mv) continue;
-          const tag = String(r.cls || r.lichess || '').toLowerCase();
-          const nag = CLS_NAG[tag];
-          if (nag && !mv.nags.includes(nag)) mv.nags.push(nag);
-        }
-      }
-      continue;
-    }
-    rawGames.push(...parsePgn(t));
-  }
-  return rawGames.map((game) => {
-    const rep = replay(game);
+function parseGames(inputs) {
+  return loadGamesWithAnalysis(inputs).map(({ game, rep }) => {
     const notes = game.moves.slice(0, rep.steps.length).map(moveNote);
     const startTurn = rep.kind === 'xiangqi'
       ? (/\sb(\s|$)/.test(rep.start) ? 'b' : 'w')
@@ -684,12 +647,16 @@ async function init() {
 }
 
 // 拖文件进页面：按文件名排序后当作一场比赛，从头播（autoplay=0 时只画第一格）。
+// analysis.jsonl 会按每步坐标与走前局面自动校验并叠加到对应棋谱，不受文件名排序先后影响。
 async function onDrop(e) {
   e.preventDefault();
   const list = [...(e.dataTransfer?.files || [])].sort((a, b) => a.name.localeCompare(b.name));
   if (!list.length) return;
   try {
-    await useTexts(await Promise.all(list.map(async (f) => decodeText(new Uint8Array(await f.arrayBuffer())))));
+    await useTexts(await Promise.all(list.map(async (f) => ({
+      name: f.name,
+      text: decodeText(new Uint8Array(await f.arrayBuffer())),
+    }))));
     if (!REC && params.get('autoplay') !== '0') play();
     else await draw(seq[0]);
   } catch (err) {

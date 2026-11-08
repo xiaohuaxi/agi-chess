@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { resolveChromium, resolveFfmpeg, serve } from './serve.mjs';
+import { isExecutableFile, resolveChromium, resolveFfmpeg, serve } from './serve.mjs';
 import { decodeText, parsePgn } from './lib/pgn.js';
 import { replay } from './lib/replay.js';
 import { SOUNDS, linear } from './lib/sound.js';
@@ -29,7 +29,8 @@ const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -
 多个棋谱按给出的顺序连播，末尾加一格总比分。
 
 选项：
-  -o, --out <文件>         输出 mp4 路径（必填；目录须已存在，先写临时文件再改名）
+  -o, --out <文件>         输出 mp4 路径（必填；目录须已存在，默认不覆盖已存在文件，先写临时文件再改名）
+  -f, --force              允许覆盖已存在的输出 mp4 文件
   --gap <秒>               每步停多久（页面默认 1.8）
   --openhold <秒>          每盘开局局面（第一步之前）停多久（页面默认同 gap）；视频开头想快点动起来就调短，
                            如 0.5；加了 --title 时开局那格换成标题画面，这项不起作用
@@ -64,7 +65,8 @@ export function parseCli(argv) {
   const { values, positionals } = parseArgs({
     args: argv, allowPositionals: true, strict: true,
     options: {
-      out: { type: 'string', short: 'o' }, help: { type: 'boolean', short: 'h' }, title: { type: 'boolean' }, 'no-title': { type: 'boolean' },
+      out: { type: 'string', short: 'o' }, force: { type: 'boolean', short: 'f' },
+      help: { type: 'boolean', short: 'h' }, title: { type: 'boolean' }, 'no-title': { type: 'boolean' },
       aspect: { type: 'string' }, scale: { type: 'string' }, set: { type: 'string', multiple: true },
       chromium: { type: 'string' }, ffmpeg: { type: 'string' }, vol: { type: 'string' }, 'no-sound': { type: 'boolean' },
       ...Object.fromEntries(HOLDS.map((k) => [k, { type: 'string' }])),
@@ -87,11 +89,13 @@ export function parseCli(argv) {
     params[k] = kv.slice(i + 1);
   }
   const scale = values.scale === undefined ? 2 : Number(values.scale);
-  if (!(scale > 0)) throw new RecordError(`--scale 要给正数，收到「${values.scale}」`);
+  if (values.scale?.trim() === '' || !(scale > 0) || !Number.isFinite(scale)) {
+    throw new RecordError(`--scale 要给正数，收到「${values.scale}」`);
+  }
   const vol = values.vol === undefined ? 1 : Number(values.vol);
   if (values.vol?.trim() === '' || !(vol > 0) || !Number.isFinite(vol)) throw new RecordError(`--vol 要给正数（音量倍数），收到「${values.vol}」；不要声音用 --no-sound`);
   return {
-    inputs: positionals, out: values.out, params, aspect: values.aspect || '3:4', scale,
+    inputs: positionals, out: values.out, force: !!values.force, params, aspect: values.aspect || '3:4', scale,
     chromium: values.chromium, ffmpeg: values.ffmpeg, sound: !values['no-sound'], vol,
   };
 }
@@ -103,6 +107,7 @@ function preflight(o) {
   if (!o.out.toLowerCase().endsWith('.mp4')) throw new RecordError(`输出要是 .mp4 文件，收到「${o.out}」`);
   const out = path.resolve(o.out);
   if (!existsSync(path.dirname(out))) throw new RecordError(`输出目录不存在：${path.dirname(out)}`);
+  if (existsSync(out) && !o.force) throw new RecordError(`输出文件已存在：${out}（换个路径，或加 --force 覆盖）`);
   const view = ASPECTS[o.aspect || '3:4'];
   if (!view) throw new RecordError(`不认识的画幅「${o.aspect}」，可选 ${Object.keys(ASPECTS).join('、')}`);
   const inputs = o.inputs.map((p) => {
@@ -121,15 +126,16 @@ function preflight(o) {
     return f;
   });
   const ffmpeg = resolveFfmpeg(o.ffmpeg);
-  let ffmpegOk = false;
-  try { accessSync(ffmpeg, constants.X_OK); ffmpegOk = statSync(ffmpeg).isFile(); } catch {}
-  if (!ffmpegOk) {
+  if (!isExecutableFile(ffmpeg)) {
     throw new RecordError(`找不到可执行的 ffmpeg：${ffmpeg}（请安装 ffmpeg 或用 --ffmpeg / 环境变量 VIEWER_FFMPEG 指定）`);
   }
-  const explicitChromium = o.chromium || process.env.VIEWER_CHROMIUM || undefined;
-  if (explicitChromium && !existsSync(explicitChromium)) throw new RecordError(`浏览器不存在：${explicitChromium}`);
+  const explicitChromium = (o.chromium || process.env.VIEWER_CHROMIUM || '').trim();
   const chromiumPath = resolveChromium(o.chromium, { chromium });
+  if (explicitChromium && (!chromiumPath || !isExecutableFile(chromiumPath))) {
+    throw new RecordError(`浏览器不存在或不可执行：${explicitChromium}`);
+  }
   const scale = o.scale ?? 2;
+  if (!(scale > 0) || !Number.isFinite(scale)) throw new RecordError(`--scale 要给有限正数，收到「${o.scale}」`);
   const size = [Math.round(view[0] * scale), Math.round(view[1] * scale)];
   if (size.some((n) => n % 2)) throw new RecordError(`出片尺寸 ${size.join('×')} 有奇数边，yuv420p 编不了；换个 --scale`);
   return { out, view, scale, size, inputs, ffmpeg, chromiumPath };
@@ -283,6 +289,7 @@ export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
     const counts = toFrames(list.map(([, s]) => s));
     const kept = list.map(([f], i) => [f, counts[i]]).filter(([, c]) => c > 0);
     const frames = counts.reduce((a, b) => a + b, 0);
+    if (!kept.length || frames <= 0) throw new RecordError('总时长不足 1 帧，无法生成视频（调大停留时长）');
     const lines = kept.flatMap(([f, c]) => [`file '${path.basename(f)}'`, `duration ${(c / FPS).toFixed(6)}`]);
     lines.push(`file '${path.basename(kept.at(-1)[0])}'`);
     const listFile = path.join(shots, 'list.txt');

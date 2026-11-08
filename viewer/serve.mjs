@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-export { findExecutable, resolveChromium, resolveFfmpeg, resolveFfprobe } from './lib/bins.mjs';
+export { findExecutable, isExecutableFile, resolveChromium, resolveFfmpeg, resolveFfprobe } from './lib/bins.mjs';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -44,18 +44,62 @@ export async function serve(root, mounts = {}, files = {}, port = 0, host = '127
   return { port: server.address().port, close: () => new Promise((ok) => server.close(ok)) };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { values } = parseArgs({
-    args: process.argv.slice(2),
+export const SERVE_HELP = `用法：node viewer/serve.mjs [--port <端口>] [--bind <地址>]
+
+在仓库根目录启动零依赖本机静态服务，供浏览器查看 viewer/ 与 runs/ 下的对局。
+选项：
+  -p, --port <端口>   监听端口（0–65535，0 为系统自动分配；默认 8765）
+  -b, --bind <地址>   监听地址（默认 127.0.0.1）
+  -h, --help          显示本说明
+`;
+
+export function parseServeCli(argv) {
+  const { values, positionals } = parseArgs({
+    args: argv,
     options: {
-      port: { type: 'string', short: 'p', default: '8765' },
-      bind: { type: 'string', short: 'b', default: '127.0.0.1' },
+      port: { type: 'string', short: 'p' },
+      bind: { type: 'string', short: 'b' },
+      help: { type: 'boolean', short: 'h' },
     },
-    strict: false,
+    strict: true,
+    allowPositionals: true,
   });
+  if (positionals.length) throw new Error(`多余的位置参数：${positionals.join(' ')}`);
+  if (values.help) return { help: true };
+  const rawPort = values.port === undefined ? '8765' : values.port.trim();
+  if (!/^\d+$/.test(rawPort)) throw new Error(`--port 须为 0–65535 的整数，收到「${values.port}」`);
+  const port = Number(rawPort);
+  if (!Number.isInteger(port) || port < 0 || port > 65535) {
+    throw new Error(`--port 超出范围（0–65535）：${values.port}`);
+  }
+  const host = (values.bind === undefined ? '127.0.0.1' : values.bind).trim();
+  if (!host) throw new Error('--bind 不能为空');
+  return { help: false, port, host };
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  let cli;
+  try {
+    cli = parseServeCli(process.argv.slice(2));
+  } catch (e) {
+    console.error(`参数错误：${e.message}\n`);
+    console.error(SERVE_HELP);
+    process.exit(2);
+  }
+  if (cli.help) {
+    process.stdout.write(SERVE_HELP);
+    process.exit(0);
+  }
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const host = String(values.bind || '127.0.0.1');
-  const port = Number(values.port) || 8765;
-  const s = await serve(root, {}, {}, port, host);
-  console.log(`Viewer listening at http://${host}:${s.port}/viewer/`);
+  try {
+    const s = await serve(root, {}, {}, cli.port, cli.host);
+    console.log(`Viewer listening at http://${cli.host}:${s.port}/viewer/`);
+  } catch (e) {
+    if (e?.code === 'EADDRINUSE') {
+      console.error(`启动服务失败：端口 ${cli.port} 已被占用（可换 --port <端口>）`);
+    } else {
+      console.error(`启动服务失败：${e?.message || e}`);
+    }
+    process.exit(1);
+  }
 }

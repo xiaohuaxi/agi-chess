@@ -252,7 +252,8 @@ node viewer/record.mjs runs/g1-x-opus-sol -o /tmp/g1x-916.mp4 --aspect 9:16
 | 参数 | 默认 | 作用 |
 |---|---|---|
 | `<棋谱>` | — | 本机任意路径，可多个，按给出顺序连播；给目录时取其中 `game.pgn` |
-| `-o` / `--out` | 必填 | 输出 mp4；目录须已存在；先写同目录临时文件，成功再改名 |
+| `-o` / `--out` | 必填 | 输出 mp4；目录须已存在，默认不覆盖已存在文件（加 `-f` / `--force` 允许覆盖）；先写同目录临时文件，成功再改名 |
+| `-f` / `--force` | 否 | 允许覆盖已存在的输出 mp4 文件 |
 | `--gap` / `--openhold` / `--titlehold` / `--resulthold` / `--summaryhold` | 页面默认（1.8 / 同 gap / 3 / 4 / 5） | 透传给页面同名网址参数；脚本不自己算时长，只照 `next()` 的 `hold` |
 | `--title` | 无标题 | 透传 `title=1`，每盘开局前加标题画面 |
 | `--no-title` | — | 等同默认（不加标题），留作兼容旧命令 |
@@ -268,7 +269,7 @@ node viewer/record.mjs runs/g1-x-opus-sol -o /tmp/g1x-916.mp4 --aspect 9:16
 
 **实测**（2026-09-30，本机）：出片耗时主要花在截图（每格约 0.1–0.15 秒）和编码（按视频长度），当时（没有走子动画）默认时长下约每分钟视频 6 秒（国际象棋 95 步、244.5 秒视频用时 24 秒；象棋 33 步、89.5 秒用时 9.5 秒）。加了走子动画后每步要逐帧截 9 张动画画面，2026-10-02 实测约每分钟视频 25–35 秒（83 秒的国际象棋片 32 秒、89 秒的象棋片 48 秒）。9:16 每张图大、稍慢。测试 `viewer/test/record.test.js`：自带样例、停留时长调小，ffprobe 核对编码、帧率、分辨率、faststart、时长；没有浏览器或 ffmpeg / ffprobe（`VIEWER_FFPROBE`，默认先查与 ffmpeg 同目录再查 `PATH`）时跳过。
 
-**开发期依赖。** `viewer/package.json` 只放 playwright-core，**锁精确版本 1.58.2**。脚本（`viewer/lib/bins.mjs` 的 `resolveChromium`）优先读 `--chromium` 或 `VIEWER_CHROMIUM`，其次尝试 `playwright-core` 配套的缓存浏览器（可通过 `cd viewer && npx playwright install chromium` 安装），若无缓存则自动从 `PATH` 和常见系统路径查找 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`。`.gitignore` 加 `node_modules/`。
+**开发期依赖。** `viewer/package.json` 只放 playwright-core，**锁精确版本 1.58.2**。脚本（`viewer/lib/bins.mjs` 的 `resolveChromium`）优先读 `--chromium` 或 `VIEWER_CHROMIUM`，其次尝试 `playwright-core` 配套的缓存浏览器（可在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本配套的浏览器），若无缓存则自动从 `PATH` 和常见系统路径查找 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`。`.gitignore` 加 `node_modules/`。
 
 ## 仓库里的配套改动（`agi_chess/`）
 

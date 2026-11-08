@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { decodeText, moveNote, parseComment, parsePgn, unwrap, wide } from '../lib/pgn.js';
+import { loadGamesWithAnalysis } from '../lib/replay.js';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 test('标签、着法、评注、结果，一个文件多盘', () => {
   const text = `[Event "a \\"b\\" c"]
@@ -90,4 +96,48 @@ test('解码：UTF-8 优先，失败回退 gb18030（GBK）', () => {
   // 「炮二平五」的 GBK 编码
   const gbk = new Uint8Array([0xc5, 0xda, 0xb6, 0xfe, 0xc6, 0xbd, 0xce, 0xe5]);
   assert.equal(decodeText(gbk), '炮二平五');
+});
+
+test('analysis.jsonl 叠加：国际象棋仅用 lichess 口径，中国象棋仅用 cls 口径，不跨口径混用', () => {
+  const cPgn = readFileSync(join(ROOT, 'runs/g7-c-opus-astra-1/game.pgn'), 'utf-8');
+  const cAna = readFileSync(join(ROOT, 'runs/g7-c-opus-astra-1/analysis.jsonl'), 'utf-8');
+  const [cg] = loadGamesWithAnalysis([
+    { name: '/runs/g7-c-opus-astra-1/game.pgn', text: cPgn },
+    { name: '/runs/g7-c-opus-astra-1/analysis.jsonl', text: cAna },
+  ]);
+  // 半回合 47：cls=blunder, lichess=Mistake -> 应标 ? (NAG 2) 而非 ?? (NAG 4)
+  assert.deepEqual(cg.game.moves[46].nags, [2]);
+  // 半回合 68、71：cls=mistake, lichess=Blunder -> 应标 ?? (NAG 4) 而非 ? (NAG 2)
+  assert.deepEqual(cg.game.moves[67].nags, [4]);
+  assert.deepEqual(cg.game.moves[70].nags, [4]);
+  // lichess=null 而 cls=mistake 的半回合（如半回合 28）不应跨口径标上 NAG
+  assert.deepEqual(cg.game.moves[27].nags, []);
+
+  // 中国象棋：使用 cls 口径，且拖放排序 analysis 在 game.pgn 前面时仍能正确关联
+  const xPgn = readFileSync(join(ROOT, 'runs/g1-x-opus-sol/game.pgn'), 'utf-8');
+  const xAna = readFileSync(join(ROOT, 'runs/g1-x-opus-sol/analysis.jsonl'), 'utf-8');
+  const [xg] = loadGamesWithAnalysis([
+    { name: 'analysis.jsonl', text: xAna },
+    { name: 'game.pgn', text: xPgn },
+  ]);
+  assert.deepEqual(xg.game.moves[8].nags, [4]); // ply 9 blunder
+  assert.deepEqual(xg.game.moves[9].nags, [4]); // ply 10 blunder
+});
+
+test('analysis.jsonl 校验：着法或局面不匹配、孤立分析、多盘 PGN 歧义均显式报错', () => {
+  const pgn = '[Event "x"]\n\n1. e4 e5 *\n';
+  const badMove = JSON.stringify({
+    ply: 1, move: 'a7a6', fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', lichess: 'Blunder',
+  });
+  const badFen = JSON.stringify({
+    ply: 1, move: 'e2e4', fen: 'WRONG POSITION', lichess: 'Blunder',
+  });
+  const goodRow = JSON.stringify({
+    ply: 1, move: 'e2e4', fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', lichess: 'Blunder',
+  });
+  assert.throws(() => loadGamesWithAnalysis([pgn, badMove]), /不匹配/);
+  assert.throws(() => loadGamesWithAnalysis([pgn, badFen]), /不匹配/);
+  assert.throws(() => loadGamesWithAnalysis([goodRow]), /只有分析文件/);
+  const multiPgn = '[Event "a"]\n\n1. e4 e5 *\n\n[Event "b"]\n\n1. d4 d5 *\n';
+  assert.throws(() => loadGamesWithAnalysis([multiPgn, goodRow]), /多盘棋谱存在歧义/);
 });

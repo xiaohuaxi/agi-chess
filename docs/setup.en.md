@@ -80,7 +80,7 @@ Full-game matches run through `agi_chess/chat.py`, which invokes `llm-chat`. **T
    - **Claude:** Invoked via the local `claude` CLI (e.g., `--white claude:opus`);
    - **GPT:** Invoked via the local `codex` CLI (e.g., `--black codex:astra`);
    - **Gemini (or models routed via agy):** Invoked via the local `agy` CLI (e.g., `--white gemini:gemini-4-argon-high` or `agy:claude-opus-5-5-high`).
-   - This channel directly uses the subscription quota of the locally installed and authenticated CLI (you can sanity-check your local CLI setup with `claude --version`, `codex --version`, or `agy --version`). If the required CLI executable is not installed on your machine, `llm-chat` immediately returns a clear "not installed" error message.
+   - This channel directly uses the subscription quota of the locally installed and authenticated CLI (tested during development with `claude 2.1.282` and `codex 0.156.1+`; you can sanity-check your local CLI setup with `claude --version`, `codex --version`, or `agy --version`, and verify prompt generation offline with `python3 -m agi_chess play --game chess --white claude:opus --black random --dry-run`). If the required CLI executable is not installed on your machine, `llm-chat` immediately returns a clear "not installed" error message.
 
 2. **HTTP API Channel (DeepSeek & OpenRouter):**
    - Configured via environment variables `API_KEY_OPENROUTER` (or alias `OPENROUTER_API_KEY`) and `API_KEY_DEEPSEEK` (or alias `DEEPSEEK_API_KEY`).
@@ -101,7 +101,20 @@ python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --b
 
 Available model slugs, rate limits, and billing depend on your own accounts and subscriptions; this repository does not provide accounts, credentials, or quota. Note the configuration difference for DeepSeek between the two execution modes:
 - **Full-game match mode** (`python3 -m agi_chess`): Driven by the built-in `.agents/skills/llm-chat/` over HTTP directly to DeepSeek or OpenRouter. **You only need to set `DEEPSEEK_API_KEY` (`API_KEY_DEEPSEEK`) or `OPENROUTER_API_KEY` (`API_KEY_OPENROUTER`); Codex CLI is not required.**
-- **Historical stateless position-quiz mode** (`python3 -m agi_chess.quiz`): Invokes `claude` or `codex exec` directly; running `python3 -m agi_chess.quiz --model deepseek` uses a Codex CLI profile and reads `$CODEX_HOME/deepseek.config.toml` (or `~/.codex/deepseek.config.toml` when `CODEX_HOME` is unset) by default, overridable via `AGI_CHESS_DEEPSEEK_CONFIG` (with backward compatibility for `AGICHESS_DEEPSEEK_CONFIG` and `LLMCHESS_DEEPSEEK_CONFIG`).
+- **Historical stateless position-quiz mode** (`python3 -m agi_chess.quiz`): Invokes `claude` or `codex exec` directly; running `python3 -m agi_chess.quiz run --game chess --batch batch2 --ids c01 --efforts medium --reps 1 --model deepseek` uses a Codex CLI profile and reads `$CODEX_HOME/deepseek.config.toml` (or `~/.codex/deepseek.config.toml` when `CODEX_HOME` is unset) by default, overridable via `AGI_CHESS_DEEPSEEK_CONFIG` (with backward compatibility for `AGICHESS_DEEPSEEK_CONFIG` and `LLMCHESS_DEEPSEEK_CONFIG`). Minimal credential-free template:
+
+  ```toml
+  # ~/.codex/deepseek.config.toml (needed only for quiz --model deepseek; not needed for full-game matches)
+  model = "deepseek/deepseek-v4-pro"
+  model_provider = "openrouter"
+  model_catalog_json = "~/.codex/deepseek-models.json"
+
+  [model_providers.openrouter]
+  name = "OpenRouter"
+  base_url = "https://openrouter.ai/api/v1"
+  env_key = "OPENROUTER_API_KEY"
+  wire_api = "chat"
+  ```
 
 Review the CLI `--help` output and Section 9 of [System Design (zh-CN)](design.md) before launching live games. The `--max-plies 6` command against `random` above is only a short smoke check, not a strength evaluation. Use a fresh `--tag` for each run; outputs are written to `runs/<tag>/` (local `game.jsonl` event streams are git-ignored). Never grant model players access to chess engines or rule-library tools. Any tool call attempt or anti-CoT-extraction safety refusal immediately halts the match for inspection without auto-retrying.
 
@@ -109,10 +122,10 @@ For engine opponents, International Chess supports `stockfish` or `lc0` with Mai
 
 ## Viewer Tests & Video Recording
 
-Browsing PGNs in a web browser requires neither Node.js, Chromium automation, nor FFmpeg. Those tools are only needed for running the viewer test suite or recording MP4 videos (run `cd viewer && npm ci`, install Chromium via `cd viewer && npx playwright install --with-deps chromium` or a system `chromium` / `google-chrome-stable` package along with `ffmpeg`, and on headless Linux servers install CJK fonts such as `sudo apt install fonts-noto-cjk fonts-arphic-ukai` on Ubuntu/Debian so Chinese Xiangqi piece glyphs do not render as tofu boxes); see the [Viewer & Video Guide](viewer-guide.en.md).
+Browsing PGNs in a web browser requires neither Node.js, Chromium automation, nor FFmpeg. Those tools are only needed for running the viewer test suite or recording MP4 videos (run `cd viewer && npm ci && cd ..`, install the locked Chromium revision from the repository root via `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` or use a system `chromium` / `google-chrome-stable` package along with `ffmpeg`, and on headless Linux servers install CJK fonts such as `sudo apt install fonts-noto-cjk fonts-arphic-ukai` on Ubuntu/Debian so Chinese Xiangqi piece glyphs do not render as tofu boxes); see the [Viewer & Video Guide](viewer-guide.en.md).
 
 ```sh
-node --test 'viewer/test/*.test.js'
+node --test 'viewer/test/*.test.js'   # Quoted globbing requires Node 22+; on Node 18/20, omit single quotes: node --test viewer/test/*.test.js
 ```
 
 The JS test suite validates the PGN parser, UI logic, and all checked-in `game.pgn` files under `runs/`. It explicitly reports skipped tests: browser playback tests are skipped when `playwright-core` or a working Chromium binary is absent, and Python round-trip tests require a `python3` interpreter with `chess` and `pyffish` installed.
