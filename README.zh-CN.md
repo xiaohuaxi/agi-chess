@@ -8,7 +8,7 @@
 
 > **棋谱阅读器（[`viewer/`](viewer/)）——零配置直接回放 171 盘对局**
 >
-> 无需安装引擎或配置 API Key，在仓库根目录运行 `python3 -m http.server 8000` 并打开 [`http://localhost:8000/viewer/`](http://localhost:8000/viewer/)，即可在浏览器里逐步回放已入库的全部 171 盘国际象棋与中国象棋对局，查看每一步的模型思考理由、引擎百兵损耗与恶手判定、耗时与 token 统计，或导出复盘视频（详见[棋谱阅读器指南](docs/viewer-guide.md)）。
+> 无需安装引擎或配置 API Key，在仓库根目录运行 `node viewer/serve.mjs --port 8765 --bind 127.0.0.1`（或 `python3 -m http.server 8765 --bind 127.0.0.1`），直接点开示例对局 [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl) 即可看到棋盘、每步模型思考理由、引擎复盘恶手标注、耗时与 token 统计。也可不带参数打开 [`http://127.0.0.1:8765/viewer/`](http://127.0.0.1:8765/viewer/) 并把任意 `runs/<tag>/game.pgn` 拖入页面查看；导出 MP4 复盘视频需先在 `viewer/` 下执行 `npm ci` 并具备 Chromium 与 `ffmpeg`（详见[棋谱阅读器指南](docs/viewer-guide.md)）。
 
 ## 从这里开始
 
@@ -30,7 +30,8 @@
 若需运行命令行对弈、导出棋谱、离线校验已入库题库或执行 Python 离线测试，可通过仓库提供的 `requirements.txt` 安装规则库：
 
 ```sh
-python3 -m pip install -r requirements.txt
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
 python3 data/batch2/select_positions.py check
 ```
 

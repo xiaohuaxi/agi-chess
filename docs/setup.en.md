@@ -62,7 +62,7 @@ python data/batch2/select_positions.py check
 python -m unittest discover -s tests -t .
 ```
 
-`chess` is the PyPI distribution for `import chess` (`python-chess`); Xiangqi rules are provided by `pyffish`, while Chinese move notation uses our in-repo implementation (no `cchess` needed). Because `pyffish` includes a native C++ extension, installing it on a new platform may require a C++ build toolchain. If installation fails, check your Python version and native compiler setup.
+`chess` is the PyPI distribution for `import chess` (`python-chess`); Xiangqi rules are provided by `pyffish`, while Chinese move notation uses our in-repo implementation (no `cchess` needed). Because `pyffish` includes a native C++ extension, installing it on a new platform may require a C++ build toolchain; on Debian/Ubuntu, if `venv`, build tools, or Stockfish are missing, install them via `sudo apt install python3-venv build-essential python3-dev stockfish`. If installation fails, check your Python version and native compiler setup.
 
 `python3 data/batch2/select_positions.py check` relies only on the two rule libraries above to validate the checked-in Batch 2 position bank (`data/batch2/{xiangqi,chess}.jsonl` FENs, side to move, and move legality) offline, without launching engines or reading `runs/`.
 
@@ -80,7 +80,7 @@ Full-game matches run through `agi_chess/chat.py`, which invokes `llm-chat`. **T
    - **Claude:** Invoked via the local `claude` CLI (e.g., `--white claude:opus`);
    - **GPT:** Invoked via the local `codex` CLI (e.g., `--black codex:astra`);
    - **Gemini (or models routed via agy):** Invoked via the local `agy` CLI (e.g., `--white gemini:gemini-4-argon-high` or `agy:claude-opus-5-5-high`).
-   - This channel directly uses the subscription quota of the locally installed and authenticated CLI. If the required CLI executable is not installed on your machine, `llm-chat` immediately returns a clear "not installed" error message.
+   - This channel directly uses the subscription quota of the locally installed and authenticated CLI (you can sanity-check your local CLI setup with `claude --version`, `codex --version`, or `agy --version`). If the required CLI executable is not installed on your machine, `llm-chat` immediately returns a clear "not installed" error message.
 
 2. **HTTP API Channel (DeepSeek & OpenRouter):**
    - Configured via environment variables `API_KEY_OPENROUTER` (or alias `OPENROUTER_API_KEY`) and `API_KEY_DEEPSEEK` (or alias `DEEPSEEK_API_KEY`).
@@ -99,15 +99,17 @@ export API_KEY_OPENROUTER="sk-or-..."   # or alias OPENROUTER_API_KEY
 python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --black random --effort low --max-plies 6 --on-limit pause
 ```
 
-Available model slugs, rate limits, and billing depend on your own accounts and subscriptions; this repository does not provide accounts, credentials, or quota. Stateless position quizzes (`python3 -m agi_chess.quiz`) continue to invoke `claude` or `codex exec` directly; for `deepseek` position quizzes, `codex_cli.py` reads `$CODEX_HOME/deepseek.config.toml` (or `~/.codex/deepseek.config.toml` when `CODEX_HOME` is unset) by default, overridable via `AGI_CHESS_DEEPSEEK_CONFIG` (with backward compatibility for `AGICHESS_DEEPSEEK_CONFIG` and `LLMCHESS_DEEPSEEK_CONFIG`).
+Available model slugs, rate limits, and billing depend on your own accounts and subscriptions; this repository does not provide accounts, credentials, or quota. Note the configuration difference for DeepSeek between the two execution modes:
+- **Full-game match mode** (`python3 -m agi_chess`): Driven by the built-in `.agents/skills/llm-chat/` over HTTP directly to DeepSeek or OpenRouter. **You only need to set `DEEPSEEK_API_KEY` (`API_KEY_DEEPSEEK`) or `OPENROUTER_API_KEY` (`API_KEY_OPENROUTER`); Codex CLI is not required.**
+- **Historical stateless position-quiz mode** (`python3 -m agi_chess.quiz`): Invokes `claude` or `codex exec` directly; running `python3 -m agi_chess.quiz --model deepseek` uses a Codex CLI profile and reads `$CODEX_HOME/deepseek.config.toml` (or `~/.codex/deepseek.config.toml` when `CODEX_HOME` is unset) by default, overridable via `AGI_CHESS_DEEPSEEK_CONFIG` (with backward compatibility for `AGICHESS_DEEPSEEK_CONFIG` and `LLMCHESS_DEEPSEEK_CONFIG`).
 
 Review the CLI `--help` output and Section 9 of [System Design (zh-CN)](design.md) before launching live games. The `--max-plies 6` command against `random` above is only a short smoke check, not a strength evaluation. Use a fresh `--tag` for each run; outputs are written to `runs/<tag>/` (local `game.jsonl` event streams are git-ignored). Never grant model players access to chess engines or rule-library tools. Any tool call attempt or anti-CoT-extraction safety refusal immediately halts the match for inspection without auto-retrying.
 
-For engine opponents, International Chess supports `stockfish` or `lc0` with Maia weights (looked up by default at `~/.local/share/maia/maia-1100.pb.gz`, etc., not bundled in this repo). Xiangqi uses `fairy-stockfish`. `stockfish` and `lc0` are searched in `PATH` and then `/opt/homebrew/bin/`; `fairy-stockfish` can also be specified via the `FAIRY_STOCKFISH` environment variable. Engines serve strictly as opponents or post-game arbiters—never as move advisors for model players.
+For engine opponents, International Chess supports `stockfish` or `lc0` with Maia weights (looked up by default at `~/.local/share/maia/maia-1100.pb.gz`, etc., not bundled in this repo). Xiangqi uses `fairy-stockfish`. Engine binaries are resolved in order via environment variables (`STOCKFISH`, `LC0`, `FAIRY_STOCKFISH`), `PATH`, and standard system directories (`/usr/games`, `/usr/local/games`, `/usr/local/bin`, `/usr/bin`, `/opt/homebrew/bin`). Engines serve strictly as opponents or post-game arbiters—never as move advisors for model players.
 
 ## Viewer Tests & Video Recording
 
-Browsing PGNs in a web browser requires neither Node.js, Chromium automation, nor FFmpeg. Those tools are only needed for running the viewer test suite or recording MP4 videos; see the [Viewer & Video Guide](viewer-guide.en.md).
+Browsing PGNs in a web browser requires neither Node.js, Chromium automation, nor FFmpeg. Those tools are only needed for running the viewer test suite or recording MP4 videos (run `cd viewer && npm ci`, install Chromium via `cd viewer && npx playwright install --with-deps chromium` or a system `chromium` / `google-chrome-stable` package along with `ffmpeg`, and on headless Linux servers install CJK fonts such as `sudo apt install fonts-noto-cjk fonts-arphic-ukai` on Ubuntu/Debian so Chinese Xiangqi piece glyphs do not render as tofu boxes); see the [Viewer & Video Guide](viewer-guide.en.md).
 
 ```sh
 node --test 'viewer/test/*.test.js'

@@ -59,8 +59,44 @@ async function fetchTexts(paths) {
   }));
 }
 
+const CLS_NAG = { blunder: 4, mistake: 2, inaccuracy: 6 };
+
+function parseAnalysisJsonl(text) {
+  const lines = text.trim().split(/\r?\n/).filter(Boolean);
+  if (!lines.length || !lines[0].trim().startsWith('{')) return null;
+  const rows = [];
+  for (const line of lines) {
+    try {
+      const obj = JSON.parse(line);
+      if (!obj || typeof obj !== 'object') return null;
+      if (typeof obj.ply === 'number') rows.push(obj);
+    } catch {
+      return null;
+    }
+  }
+  return rows.length ? rows : null;
+}
+
 function parseGames(texts) {
-  return texts.flatMap((t) => parsePgn(t)).map((game) => {
+  const rawGames = [];
+  for (const t of texts) {
+    const analysis = parseAnalysisJsonl(t);
+    if (analysis) {
+      const target = rawGames.at(-1);
+      if (target) {
+        for (const r of analysis) {
+          const mv = target.moves[r.ply - 1];
+          if (!mv) continue;
+          const tag = String(r.cls || r.lichess || '').toLowerCase();
+          const nag = CLS_NAG[tag];
+          if (nag && !mv.nags.includes(nag)) mv.nags.push(nag);
+        }
+      }
+      continue;
+    }
+    rawGames.push(...parsePgn(t));
+  }
+  return rawGames.map((game) => {
     const rep = replay(game);
     const notes = game.moves.slice(0, rep.steps.length).map(moveNote);
     const startTurn = rep.kind === 'xiangqi'

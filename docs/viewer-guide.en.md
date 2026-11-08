@@ -59,7 +59,7 @@ Do not combine static positioning parameters (`game`, `ply`, `summary`) with `au
 
 Video recording uses a Node.js script to drive headless Chromium frame-by-frame and pipes frames into FFmpeg to produce an MP4. It does not require Python rule libraries and makes no model calls. Prerequisites:
 
-1. **Node.js and npm** (verified on the maintainer's machine on 2026-11-05 with Node.js 24.20.0 and npm 11.19.0; recorded as tested environment, not a strict minimum requirement).
+1. **Node.js >= 22 and npm** (quoted globbing in `node --test 'viewer/test/*.test.js'` requires Node.js 22+; on Node 18/20, omit the single quotes so the shell expands the glob: `node --test viewer/test/*.test.js`. Verified on 2026-11-05 with Node.js 24.20.0 and npm 11.19.0).
 2. Install locked dev dependencies in `viewer/`:
 
    ```sh
@@ -68,8 +68,9 @@ Video recording uses a Node.js script to drive headless Chromium frame-by-frame 
    cd ..
    ```
 
-3. **A Chromium browser compatible with Playwright.** `playwright-core` does not download browsers automatically; point to an existing Chromium binary via `--chromium /abs/path/to/Chromium` or the `VIEWER_CHROMIUM` environment variable. When unspecified, the script searches Playwright's local browser cache.
-4. **FFmpeg executable**, specified via `--ffmpeg /abs/path/to/ffmpeg` or `VIEWER_FFMPEG` (falls back to `/opt/homebrew/bin/ffmpeg` if unspecified). Inspecting output streams also uses `ffprobe`.
+3. **A Chromium browser compatible with Playwright.** `playwright-core` does not download browsers during `npm ci`; point to an existing binary via `--chromium /abs/path/to/Chromium` or `VIEWER_CHROMIUM`. When unspecified, the script checks Playwright's local browser cache (installable via `cd viewer && npx playwright install --with-deps chromium`) and then searches `PATH` and standard system paths for `chromium`, `chromium-browser`, `google-chrome-stable`, or `google-chrome`.
+4. **FFmpeg executable**, specified via `--ffmpeg /abs/path/to/ffmpeg` or `VIEWER_FFMPEG` (otherwise searched automatically in `PATH` and standard paths such as `/usr/bin/ffmpeg`, `/usr/local/bin/ffmpeg`, and `/opt/homebrew/bin/ffmpeg`). Inspecting output streams also uses `ffprobe`.
+5. **CJK fonts on headless Linux servers:** Xiangqi piece glyphs and Chinese UI text render using system fonts. On headless Linux systems, install Chinese fonts before recording or taking screenshots (e.g., on Ubuntu/Debian: `sudo apt install fonts-noto-cjk fonts-arphic-ukai`); otherwise the Chinese characters on Xiangqi pieces will render as missing-glyph tofu boxes.
 
 The web viewer itself does not depend on these recording tools—you never need Chromium or FFmpeg just to browse games.
 

@@ -8,7 +8,7 @@ This project puts untuned general-purpose models at the board like human players
 
 > **Interactive Game Viewer ([`viewer/`](viewer/)) — Browse All 171 Games Zero-Config**
 >
-> Without installing any chess engine or configuring API keys, run `python3 -m http.server 8000` in the repository root and open [`http://localhost:8000/viewer/?lang=en`](http://localhost:8000/viewer/?lang=en) to step through all 171 checked-in International Chess and Xiangqi matches in your browser, inspect per-move model rationales, engine centipawn loss and blunder classifications, elapsed time and token stats, or export MP4 replay videos (see [Viewer & Video Guide](docs/viewer-guide.en.md)).
+> Without installing any chess engine or configuring API keys, run `node viewer/serve.mjs --port 8765 --bind 127.0.0.1` (or `python3 -m http.server 8765 --bind 127.0.0.1`) in the repository root and open [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl&lang=en`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl&lang=en) to immediately see the board, per-move model rationales, engine blunder/mistake annotations, elapsed time, and token stats. You can also open [`http://127.0.0.1:8765/viewer/?lang=en`](http://127.0.0.1:8765/viewer/?lang=en) without query parameters and drag any `runs/<tag>/game.pgn` onto the page; exporting MP4 replay videos requires running `npm ci` in `viewer/` with Chromium and `ffmpeg` available (see [Viewer & Video Guide](docs/viewer-guide.en.md)).
 
 ## Start Here
 
@@ -30,7 +30,8 @@ All commands below run from the repository root and require neither model creden
 If you want to run command-line matches, re-export game records, verify checked-in quiz banks offline, or run the Python offline test suite, install the rule libraries from `requirements.txt`:
 
 ```sh
-python3 -m pip install -r requirements.txt
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
 python3 data/batch2/select_positions.py check
 ```
 

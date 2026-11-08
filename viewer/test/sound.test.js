@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { SOUNDS, linear, soundOptions, stepSound } from '../lib/sound.js';
 import { decodeText, parsePgn } from '../lib/pgn.js';
 import { replay } from '../lib/replay.js';
-import { serve } from '../serve.mjs';
+import { resolveChromium, serve } from '../serve.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const FIX = '/viewer/test/fixtures/';
@@ -52,7 +52,7 @@ let browser = null, skip = pw ? false : '没有 playwright-core（cd viewer && n
 if (pw) {
   try {
     browser = await pw.chromium.launch({
-      executablePath: process.env.VIEWER_CHROMIUM || undefined, args: ['--autoplay-policy=no-user-gesture-required'],
+      executablePath: resolveChromium(undefined, pw), args: ['--autoplay-policy=no-user-gesture-required'],
     });
   } catch (e) { skip = `起不来浏览器：${e.message.split('\n')[0]}`; }
 }

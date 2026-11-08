@@ -3,7 +3,52 @@
 两种棋都走它；棋种模块给出启动命令、setoption 参数、go 命令和坐标换算（engine_spec / to_engine / from_engine）。
 构造时不起进程，start() 才起，close() 收掉；也可以 with Engine(spec) as e。
 """
-import queue, subprocess, threading, time
+import os, queue, shutil, subprocess, threading, time
+
+
+ENGINE_SEARCH_DIRS = (
+    '/usr/games',
+    '/usr/local/games',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/opt/homebrew/bin',
+)
+
+
+def find_engine_binary(name, env_var=None):
+    """查找本机引擎可执行文件：先查环境变量 env_var，再查 PATH（shutil.which），最后查 Linux / macOS 常见安装目录。
+    找到返回可执行路径，找不到（或显式指定的环境变量路径不可执行）返回 None。"""
+    if env_var:
+        raw = (os.environ.get(env_var) or '').strip()
+        if raw:
+            p = os.path.expanduser(raw)
+            if os.path.isfile(p) and os.access(p, os.X_OK):
+                return p
+            w = shutil.which(p)
+            return w if w else None
+    w = shutil.which(name)
+    if w:
+        return w
+    for d in ENGINE_SEARCH_DIRS:
+        candidate = os.path.join(d, name)
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+def engine_available(name, env_var=None):
+    return find_engine_binary(name, env_var) is not None
+
+
+def resolve_engine_cmd(name, env_var=None):
+    """供 engine_spec 使用：优先返回 find_engine_binary 找到的路径；若用户显式设了 env_var 但路径不存在，
+    仍返回展开后的 env_var 值，以便 Popen 报出明确的路径错误。"""
+    found = find_engine_binary(name, env_var)
+    if found:
+        return found
+    if env_var and (os.environ.get(env_var) or '').strip():
+        return os.path.expanduser(os.environ[env_var].strip())
+    return name
 
 
 class EngineError(RuntimeError):

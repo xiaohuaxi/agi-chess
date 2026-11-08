@@ -1,14 +1,14 @@
 // 静态截图：起本机服务，无头打开 index.html 的若干格画面，各截一张 2 倍图（540×720 → 1080×1440）。
 // 用法：node viewer/shot.mjs <输出目录> [--runs <目录>] [--measure] [--size 宽x高] <名字>=<网址参数> ...
 //   例：node viewer/shot.mjs /tmp/shots --runs ~/repos/agi-chess/runs chess-open='files=/runs/g1-c-opus-sol/game.pgn&ply=0'
-//   --runs 把网址 /runs/ 映射到给定目录（worktree 里没有 runs/）；--measure 另存 <名字>.json：页面里实测的各块尺寸。
+//   --runs 把网址 /runs/ 映射到给定目录（供查看外部未入库的本地对局目录；已入库对局直接在仓内 runs/ 下）；--measure 另存 <名字>.json：页面里实测的各块尺寸。
 //   --size 换视口（默认 540x720，宽版截图用如 1440x900）；网址参数里没写 layout= 时补 layout=compact。
-// 浏览器：playwright-core 锁在 1.58.2，默认用它配套的缓存 chromium-1208；缓存里没有时用 VIEWER_CHROMIUM 指到可执行文件。
+// 浏览器：优先用 VIEWER_CHROMIUM，其次用 playwright-core 配套的缓存浏览器，再从 PATH 与常见系统路径查找 Chromium / Chrome。
 import { chromium } from 'playwright-core';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { serve } from './serve.mjs';
+import { resolveChromium, serve } from './serve.mjs';
 
 const args = process.argv.slice(2);
 const out = args.shift();
@@ -77,7 +77,7 @@ function measurePage() {
 }
 
 const server = await serve(root, runs ? { '/runs/': runs } : {});
-const browser = await chromium.launch({ executablePath: process.env.VIEWER_CHROMIUM || undefined });
+const browser = await chromium.launch({ executablePath: resolveChromium(undefined, { chromium }) });
 let failed = 0;
 try {
   const ctx = await browser.newContext({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 2 });

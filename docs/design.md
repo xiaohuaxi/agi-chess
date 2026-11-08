@@ -2,7 +2,7 @@
 
 - 日期：2026-09-25。本机 Claude Code 2.1.282，服务端模型串 `claude-opus-5-5`；Codex CLI 0.156.1。
 - 目的：研究通用大模型下棋为什么臭、基础设施怎么搭才对。对局流程外壳两种棋共用一份，棋种相关的部分各写一个平铺的模块（不写基类、不做继承层），无界面，命令行跑、全程落盘。
-- 背景：既有工作调研 `~/repos/ai-research/topics/llm-board-games-survey.md`、上一轮中国象棋实测 `~/repos/ai-research/topics/llm-xiangqi-play.md`（读盘 67/67 全对，但每 6 步丢一个马炮级子力，错全在"谁能吃到谁"）。上一轮脚本是 jev-study 本地分支 `archive/duel-web` 上的 `games/xiangqi/llm_duel.py`（`11d0bf0`）和同分支的 `play_xiangqi.py`（`ending`、`banned`、`notation`、`rule_end`），规则底座是 jev-study 主干的 `games/xiangqi/boards.py`；本仓库从它们搬代码、不从 jev-study 导入。
+- 背景：前序工作调研（通用大模型棋类评测综述）与上一轮中国象棋实测（读盘 67/67 全对，但每 6 步丢一个马炮级子力，错全在"谁能吃到谁"）。上一轮脚本是前序研究仓库 `archive/duel-web` 分支上的 `games/xiangqi/llm_duel.py`（`11d0bf0`）和同分支的 `play_xiangqi.py`（`ending`、`banned`、`notation`、`rule_end`），规则底座是主干的 `games/xiangqi/boards.py`；本仓库从它们搬代码、不从外部仓库导入。
 - 结构选型（全抽象 / 完全分开 / 折中）的评估见 2026-09-25 的方案评估，采纳折中：一份流程外壳加两个棋种模块。
 
 ## 一、前提清单
@@ -126,7 +126,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 
 ## 四、记录格式
 
-每盘一个目录 `runs/<tag>/`（入 `.gitignore`），一行一条 JSON，和上一轮兼容并补字段：
+每盘一个目录 `runs/<tag>/`（其中已入库 74 个正式对局/局面题目录的 `game.pgn`、`analysis*.json*`、`summary.*`、`judged.jsonl`、`report.txt`；原始大文件 `game.jsonl`、`record.txt`、`.mp4` 及新跑目录由 `.gitignore` 忽略），`game.jsonl` 一行一条 JSON，和上一轮兼容并补字段：
 
 - `config`：全部变量、两边系统提示、完整命令行、本机 Claude Code 版本、引擎名与参数、代码 commit；随机开局另有 `opening`（种子、半回合数、开局引擎与参数、`moves` / `record`、每步的候选与评分 `detail`）。
 - `attempt`（每次调用一条）：半回合号、哪方、第几次尝试、提示原文、回复原文、解析出的着法、是否合法及原因、便条文本、复述得分；`usage` 展开成 `in`（无缓存输入）、`cache_read`、`cache_write`、`out`、`think`、`text_out = out − think`；`cost`、`duration_ms`、`ttft_ms`、`session_id`、服务端模型串、`stop_reason`、`api_error_status`；`claude` 字段存返回 JSON 原样。
@@ -138,7 +138,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 - `drop_warn`：开了去掉此前思考的一方，续接轮 `thinking_dropped` 为 0 或没给（第九节）；不中断对局。开了的一方每条 `attempt` 另记 `thinking_dropped`。
 - `pause` / `resume` / `forfeit` / `end`（结果、每方合计与中位数：调用数、非法数、每步输入/输出/思考 token、用时、花费）。
 - 不管给模型的 `history` 设多少，记录里都有起始局面和全部落定着法；续跑时按它重放，重复局面照样判得出。
-- 结束时另写 `record.txt`（棋谱加统计）和 `game.pgn`（国际象棋标准 PGN；中国象棋是 xqbase PGN，2026-09-29 起），中国象棋的 `record.txt` 用中文记谱。PGN 标签里有自定义的思考深度 `WhiteEffort` / `BlackEffort`（中国象棋 `RedEffort` / `BlackEffort`），取 `config` 里双方的 effort，只给模型棋手。终局原因用棋种自己的说法。已结束的盘可以按 `game.jsonl` 重新导出这两个文件（不调模型、不写记录）：`python3 -m agi_chess export runs/<tag>`。
+- 结束时另写 `record.txt`（棋谱加统计）和 `game.pgn`（国际象棋标准 PGN；中国象棋是 xqbase PGN，2026-09-29 起），中国象棋的 `record.txt` 用中文记谱。PGN 标签里有自定义的思考深度 `WhiteEffort` / `BlackEffort`（中国象棋 `RedEffort` / `BlackEffort`），取 `config` 里双方的 effort，只给模型棋手。终局原因用棋种自己的说法。含 `game.jsonl` 的本地已结束对局目录可重新导出这两个文件（不调模型、不写记录，已入库 `runs/<tag>/` 已有最新 `game.pgn`、不含 `game.jsonl` 无需运行）：`python3 -m agi_chess export runs/<tag>`。
 - **每步元信息**（2026-09-28 起，`records.move_meta` / `meta_comment`）：模型下的每个半回合，在棋谱里这步着法后面跟一段评注。写法是 PGN 评注里的内嵌命令 `[%名 参数]`（出自 PGN Specification Supplement：`[%` + 字母数字命令名 + 空格 + 参数 + `]`；读不懂的命令阅读器应原样保留、不做处理）。例：`1. e4 { [%emt 0:00:12] [%think 280] [%out 300] [%in 2] [%cacheread 100] [%cachewrite 50] }`。
   - `%emt h:mm:ss`：**标准命令**（规范补充：该步用掉的时间，只到整秒，四舍五入）。取本步各次调用用时之和（`attempt.elapsed`，只算成功回来的那次子进程，不含调不通的重试和等额度；llm-chat 路径含脚本起进程的开销）。
   - 以下都是**自定义命令**，没有通行写法：`%think` 思考 token、`%out` 输出 token（含思考）、`%in` 没走缓存的输入、`%cacheread` / `%cachewrite` 缓存读 / 写，都是本步所有调用的合计，口径同 `attempt.usage`；`%illegal` / `%flagged` / `%empty` 本步非法重选、被安全分类器拦、空回复的次数，为 0 时不写；`%dropped` 只有开了去掉此前思考的一方有（第九节），本步各次调用 llm-chat 报的 `thinking_dropped` 之和，0 也写（续接轮为 0 是要看的异常）。命令名按规范只用字母数字，所以不带下划线。

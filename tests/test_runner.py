@@ -13,8 +13,9 @@ from unittest import mock
 from agi_chess import chess_ as C, claude_cli, cli, codex_cli, quiz, records, runner
 from agi_chess import xiangqi as X
 from agi_chess.claude_cli import Paused
+from agi_chess.engine import find_engine_binary
 
-FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
+FSF_MISSING = find_engine_binary('fairy-stockfish', 'FAIRY_STOCKFISH') is None
 
 
 def run_quiet(argv):

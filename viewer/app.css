@@ -49,7 +49,9 @@
   --cb-light: #f0d9b5; --cb-dark: #b58863;
   --cb-last: rgba(155, 199, 0, 0.41);     /* lichess 上一步：起止两格盖黄绿色 */
   /* 中国象棋：照象棋巫师 / 象棋小巫师（xqbase）取色 */
-  --xq-font: "Kaiti SC", "STKaiti", "KaiTi", "BiauKai", "Kaiti TC", serif;  /* 棋子、河界、路数 */
+  --xq-font: "Kaiti SC", "STKaiti", "KaiTi", "BiauKai", "Kaiti TC", "AR PL UKai CN", "AR PL UKai HK", "AR PL UKai TW", "AR PL KaitiM GB", "TW-Kai", "FandolKai-Regular", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", serif;  /* 棋子、河界、路数 */
+  --sans: -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", sans-serif;
+  --title-font: -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", sans-serif;
   --xq-bg: #f6d49b; --xq-line: #3b2a17; --xq-file-color: #5a4126;
   --xq-red-hi: #f7c8a0; --xq-red-lo: #d98d5a;       /* 红方棋子木面（偏橙红） */
   --xq-black-hi: #fad9a0; --xq-black-lo: #e0a651;   /* 黑方棋子木面（偏金黄） */
@@ -60,13 +62,13 @@
 }
 
 html, body { margin: 0; background: var(--bg); color: var(--text);
-  font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+  font-family: var(--sans);
   -webkit-font-smoothing: antialiased; }
 body { overflow: hidden; }
 /* 英文界面（lang=en，app.js 把 html 的 lang 换成 en）：拉丁字母用系统字体（本机即 -apple-system，与中文界面里的拉丁字母同一款），
    不拷字体文件；棋谱里的中文（模型写的理由）仍退回中文字体。中文界面不受影响。 */
 html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-  "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; }
+  "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", sans-serif; }
 
 #stage.compact { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
 

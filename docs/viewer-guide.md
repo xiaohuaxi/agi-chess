@@ -59,7 +59,7 @@ python3 -m http.server --bind 127.0.0.1 8000
 
 录制由 Node.js 脚本启动无头 Chromium 截图，再用 FFmpeg 拼成 MP4，不需要 Python 规则库，也不会调用模型。准备：
 
-1. Node.js 与 npm；2026-11-05 核实时本机为 Node.js 24.20.0、npm 11.19.0，仅记录实测环境，不构成最低版本要求。
+1. **Node.js >= 22** 与 npm（`node --test 'viewer/test/*.test.js'` 的引号通配需要 Node.js 22+；若使用 Node 18/20，可去掉单引号由 shell 展开：`node --test viewer/test/*.test.js`。2026-11-05 实测环境为 Node.js 24.20.0、npm 11.19.0）。
 2. 在 `viewer/` 安装锁文件中的开发依赖：
 
    ```sh
@@ -68,8 +68,9 @@ python3 -m http.server --bind 127.0.0.1 8000
    cd ..
    ```
 
-3. 可被 Playwright 驱动的 Chromium。`playwright-core` 不会自动下载浏览器；已有兼容浏览器可通过 `--chromium /绝对路径/Chromium` 指定，或设置 `VIEWER_CHROMIUM`。未指定时脚本查找 Playwright 配套的缓存 Chromium；没有缓存仍会失败。
-4. FFmpeg 可执行文件；用 `--ffmpeg /绝对路径/ffmpeg` 或 `VIEWER_FFMPEG` 指定。未指定时默认尝试 `/opt/homebrew/bin/ffmpeg`，这不是各平台通用路径。核对视频还需 FFprobe。
+3. 可被 Playwright 驱动的 Chromium。`playwright-core` 不会在 `npm ci` 时自动下载浏览器；可通过 `--chromium /绝对路径/Chromium` 或设置 `VIEWER_CHROMIUM` 指定，未指定时脚本依次查找 Playwright 配套的缓存 Chromium（可执行 `cd viewer && npx playwright install --with-deps chromium` 安装）以及系统 `PATH` 和常见路径中的 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`。
+4. FFmpeg 可执行文件；用 `--ffmpeg /绝对路径/ffmpeg` 或 `VIEWER_FFMPEG` 指定，未指定时自动从 `PATH` 及常见系统路径（`/usr/bin/ffmpeg`、`/usr/local/bin/ffmpeg`、`/opt/homebrew/bin/ffmpeg`）查找。核对视频还需 `ffprobe`。
+5. **Linux 服务器 / 无桌面环境的中文字体**：中国象棋棋盘上的汉字棋子与中文界面使用系统字体渲染；在无桌面 Linux 环境录屏或截图前，请先安装中文字体（如 Ubuntu/Debian：`sudo apt install fonts-noto-cjk fonts-arphic-ukai`），否则中国象棋棋盘上的汉字棋子会显示为方块（tofu）。
 
 页面自己不依赖这些开发工具。`viewer/package-lock.json` 固定了 `playwright-core` 版本；不必为浏览棋谱下载浏览器或安装视频工具。
 

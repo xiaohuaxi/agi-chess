@@ -25,6 +25,7 @@
 | cm-chessboard 8.15.1 | vendored；[SOURCE](../viewer/vendor/cm-chessboard/SOURCE.md) 有 commit 与一处本地改动 | MIT，已附 LICENSE；未采用其自带非宽松许可棋子 |
 | Cburnett 12 个 SVG 与生成精灵图 | vendored；[SOURCE](../viewer/vendor/cburnett-pieces/SOURCE.md) 有逐图来源、版本、哈希 | 多重授权中选择 BSD-3-Clause，已附 LICENSE；不是被迫选择 GPL |
 | el_boss 三个 MP3 | vendored；[SOURCE](../viewer/vendor/sounds/SOURCE.md) 有逐音来源、哈希 | CC0 1.0；本轮沿用仓库既有逐项来源核验 |
+| Node.js >= 22 | 外部运行环境，不入库（2026-11-05 实测 24.20.0） | 跑 `viewer/` 测试与录制脚本；`node --test 'viewer/test/*.test.js'` 的引号通配需 Node 22+（若使用 Node 18/20 可去掉单引号运行 `node --test viewer/test/*.test.js`） |
 | playwright-core 1.58.2 | 本体不入库；`viewer/package-lock.json` 固定版本 | Apache-2.0，录制/测试开发依赖；旧实验目录另声明 `^1.61.1`，不是正式阅读器版本 |
 | Chromium、FFmpeg | 外部录制工具，不入库；FFmpeg 本机 9.0.2 | Chromium 含多方许可；FFmpeg 依构建选项可能 LGPL/GPL。当前调用工具不等于分发工具；将来随包附带须另核构建与声明 |
 | `.agents/skills/llm-chat/` | 仓内自研脚本（`llm_chat.py`、`agy_core.py`），已随仓入库 | MIT（属本仓自有代码） |

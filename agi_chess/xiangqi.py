@@ -763,6 +763,8 @@ def pgn(st, cfg, end, meta):
     return '\n'.join(records.pgn_tag(k, v) for k, v in tags) + '\n\n' + records.wrap(toks, 79) + '\n\n'
 
 
+from agi_chess.engine import resolve_engine_cmd
+
 # ---------------------------------------------------------------- 引擎对手
 def engine_spec(desc):
     """'fsf'、'fsf:nodes=200'、'fsf:depth=2'、'fsf:movetime=100'（毫秒）。不写参数时 nodes=1000。
@@ -773,7 +775,7 @@ def engine_spec(desc):
     k, _, v = (arg or 'nodes=1000').partition('=')
     if k not in ('nodes', 'depth', 'movetime') or not v.isdigit():
         raise ValueError('fsf 的参数写成 nodes=N / depth=N / movetime=毫秒，收到 %r' % arg)
-    path = os.environ.get('FAIRY_STOCKFISH') or shutil.which('fairy-stockfish') or '/opt/homebrew/bin/fairy-stockfish'
+    path = resolve_engine_cmd('fairy-stockfish', 'FAIRY_STOCKFISH')
     return {'name': desc, 'cmd': [path], 'go': 'go %s %s' % (k, v),
             'options': [('UCI_Variant', 'xiangqi'), ('Threads', '1'), ('Hash', '16')]}
 

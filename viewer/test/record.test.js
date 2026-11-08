@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { decodeText, parsePgn } from '../lib/pgn.js';
 import { replay } from '../lib/replay.js';
 import { stepSound } from '../lib/sound.js';
-import { serve } from '../serve.mjs';
+import { resolveChromium, resolveFfmpeg, resolveFfprobe, serve } from '../serve.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const FIX = join(ROOT, 'viewer', 'test', 'fixtures');
@@ -113,15 +113,15 @@ test('服务：精确映射的文件照给，同目录别的文件和站点根�
 });
 
 // ---------------------------------------------------------------- 真出片
-const FFMPEG = process.env.VIEWER_FFMPEG || '/opt/homebrew/bin/ffmpeg';
-const FFPROBE = process.env.VIEWER_FFPROBE || join(dirname(FFMPEG), 'ffprobe');
+const FFMPEG = resolveFfmpeg();
+const FFPROBE = resolveFfprobe(FFMPEG);
 let skip = recSkip;
 if (!skip) {
   try { accessSync(FFMPEG, constants.X_OK); accessSync(FFPROBE, constants.X_OK); } catch { skip = `没有 ffmpeg / ffprobe（${FFMPEG}）`; }
 }
 if (!skip) {
   const pw = await import('playwright-core');
-  try { await (await pw.chromium.launch({ executablePath: process.env.VIEWER_CHROMIUM || undefined })).close(); }
+  try { await (await pw.chromium.launch({ executablePath: resolveChromium(undefined, pw) })).close(); }
   catch (e) { skip = `起不来浏览器：${e.message.split('\n')[0]}`; }
 }
 

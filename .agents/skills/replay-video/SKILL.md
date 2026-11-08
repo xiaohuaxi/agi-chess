@@ -9,10 +9,11 @@ description: 用本仓库的棋谱阅读器（viewer/）把对局录成 mp4，�
 
 ## 先备好棋谱
 
-- **只录下完的棋**：`runs/<tag>/game.jsonl` 最后一行是 `{"type": "end", …}` 才算下完。没有这一行的可能正在下，别碰它的目录。
-- **用当前代码重导一遍**：`python3 -m agi_chess export runs/<tag>`。只重写导出文件（`game.pgn`、`record.txt` 这类），不动 `game.jsonl`。旧代码导出的棋谱可能少思考深度标签，或者中文评注在字中间断行，读回来会多出空格。
-- `runs/` 被 git 忽略，只在主检出根目录下的 `runs/` 里有，worktree 里没有。录制脚本认相对仓库根目录的路径或本机任意绝对路径。
-- 开发依赖：先在 `viewer/` 下跑一次 `npm ci`（只装 playwright-core，版本锁死，配套本机缓存里的 Chromium）。
+- **已入库对局 vs 本机新跑对局**：
+  - **已入库的 171 盘正式对局**（`runs/<tag>/` 下已有 `game.pgn`，含在 git worktree 中，无 `game.jsonl`）：自带最新导出的完整 `game.pgn`，可直接浏览或录屏，**不要**检查 `game.jsonl`，也**不要**运行 `python3 -m agi_chess export`。
+  - **本机新跑、含 `game.jsonl` 的对局**：只录下完的棋——先确认 `runs/<tag>/game.jsonl` 最后一行是 `{"type": "end", …}`（没有这一行的可能正在下，别碰它的目录），再按需运行 `python3 -m agi_chess export runs/<tag>` 重写导出文件（`game.pgn`、`record.txt`），不动 `game.jsonl`。
+- 录制脚本认相对仓库根目录的路径或本机任意绝对路径。
+- 开发依赖：先在 `viewer/` 下跑一次 `npm ci`（安装锁定的 `playwright-core`）。脚本会自动从 `PATH` 与常见路径查找 `ffmpeg` 和 Chromium / Chrome；若本机尚无兼容浏览器，可执行 `cd viewer && npx playwright install chromium` 安装配套浏览器。
 
 ## 一条命令出片
 
@@ -70,11 +71,11 @@ python3 -m http.server --bind 127.0.0.1 8000
 - 网址参数：`?files=/runs/a/game.pgn,/runs/b/game.pgn&autoplay=1&gap=1.5`。路径从站点根算起，所以要在同时有 `viewer/` 和 `runs/` 的目录下起服务。静态看某一格用 `game=2&ply=30`（`ply=end` 是终局），多盘总比分用 `summary=1`；`layout=wide` / `layout=compact` 强制宽版或窄版。
 - 也可以不带参数打开页面，把 `.pgn` 文件拖进去。多个文件按文件名排序连播。
 - 声音默认关着，网址加 `sound=1` 打开（`vol=0.5` 调轻）。浏览器要页面上点过一下或按过键才放得出声，所以 `autoplay=1&sound=1` 打开后先点一下页面。
-- 快捷键：← → 单步，空格播放 / 暂停，Home / End 跳到本盘首尾，PgUp / PgDn 换盘。宽版（窗口宽 ≥ 900）右栏可以点着法跳步，看每步的评注、用时、token。
+- 快捷键：← → 单步，空格播放 / 暂停，Home / End 跳到本盘首尾，PgUp / PgDn 换盘；改了样式或脚本后可在浏览器里硬刷新（macOS: Cmd+Shift+R / Linux & Windows: Ctrl+Shift+R）。宽版（窗口宽 ≥ 900）右栏可以点着法跳步，看每步的评注、用时、token。
 
 ## 常见坑
 
-- **浏览器 / ffmpeg 找不到**：ffmpeg 默认用 `/opt/homebrew/bin/ffmpeg`（Playwright 缓存里那个在本机跑不起来），浏览器默认用 playwright-core 配套的缓存 Chromium。换路径用 `--ffmpeg` / `--chromium`，或者设环境变量 `VIEWER_FFMPEG` / `VIEWER_CHROMIUM`。测试用的 ffprobe 默认和 ffmpeg 在同一个目录，也可以用 `VIEWER_FFPROBE` 指定。
+- **浏览器 / ffmpeg 找不到**：脚本优先读取 `--ffmpeg` / `--chromium` 或环境变量 `VIEWER_FFMPEG` / `VIEWER_CHROMIUM`；未指定时自动从 `PATH` 及常见系统路径查找 `ffmpeg`（如 `/usr/bin/ffmpeg`、`/usr/local/bin/ffmpeg`、`/opt/homebrew/bin/ffmpeg`）与浏览器（先查 `playwright-core` 配套缓存 Chromium，再查 `PATH` 与系统中的 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`），也可通过 `cd viewer && npx playwright install chromium` 安装配套浏览器。测试用的 `ffprobe` 优先读 `VIEWER_FFPROBE`，再查与 `ffmpeg` 同目录及 `PATH`。
 - **给错文件**：一盘带着法的棋都读不出来的文件（不是棋谱）会在开工前报错退出，不会出空片。可是一个多盘文件里夹着的空盘不会被挑出来。
 - **停留设成 0**：停 0 秒的那一格根本不截图，比如 `--resulthold 0` 就没有终局横幅。全设成 0 会报「一格画面都没有」。
 - **9:16 / 16:9 没专门排版**：只是换了视口尺寸，画面照 3:4 的窄版摆，可能多出空白或显得挤。要发布就用 3:4，另外两种先出一段看看再说。

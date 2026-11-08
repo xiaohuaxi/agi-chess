@@ -488,6 +488,8 @@ def _pgn_movetext(g, meta):
     return records.wrap(toks, 79)
 
 
+from agi_chess.engine import resolve_engine_cmd
+
 # ---------------------------------------------------------------- 引擎对手
 def engine_spec(desc):
     """'maia-1100' … 'maia-1900'（lc0 加 Maia 权重，go nodes 1，按官方 README 不搜索）；
@@ -500,10 +502,10 @@ def engine_spec(desc):
         w = os.path.join(MAIA_DIR, 'maia-%s.pb.gz' % m[1])
         if not os.path.exists(w):
             raise ValueError('找不到 Maia 权重 %s' % w)
-        lc0 = shutil.which('lc0') or '/opt/homebrew/bin/lc0'
+        lc0 = resolve_engine_cmd('lc0', 'LC0')
         return {'name': desc, 'cmd': [lc0, '--weights=' + w], 'go': 'go nodes 1', 'options': [('Threads', '1')]}
     if name == 'stockfish':
-        path = shutil.which('stockfish') or '/opt/homebrew/bin/stockfish'
+        path = resolve_engine_cmd('stockfish', 'STOCKFISH')
         opts = [('Threads', '1'), ('Hash', '16')]
         k, _, v = (arg or 'depth=12').partition('=')
         if not v.isdigit() or k not in ('elo', 'nodes', 'depth', 'movetime'):

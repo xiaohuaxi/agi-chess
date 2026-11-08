@@ -8,9 +8,10 @@ import tempfile
 import unittest
 
 from agi_chess import analyze, cli, records, runner
+from agi_chess.engine import find_engine_binary
 
-FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
-STOCKFISH_MISSING = shutil.which('stockfish') is None and not os.path.exists('/opt/homebrew/bin/stockfish')
+FSF_MISSING = find_engine_binary('fairy-stockfish', 'FAIRY_STOCKFISH') is None
+STOCKFISH_MISSING = find_engine_binary('stockfish', 'STOCKFISH') is None
 
 
 def run_quiet(argv):

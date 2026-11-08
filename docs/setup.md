@@ -62,7 +62,7 @@ python data/batch2/select_positions.py check
 python -m unittest discover -s tests -t .
 ```
 
-`chess` 是代码中 `import chess` 对应的包；中国象棋规则由 `pyffish` 提供，中文记谱已改用仓内自研实现（无需 `cchess`）。`pyffish` 含本机扩展，新平台可能需要编译环境。本文没有核实全新的 Python/操作系统组合能否安装；安装失败时先检查解释器和该包的构建要求。
+`chess` 是代码中 `import chess` 对应的包；中国象棋规则由 `pyffish` 提供，中文记谱已改用仓内自研实现（无需 `cchess`）。`pyffish` 含本机扩展，新平台可能需要编译环境；在 Debian/Ubuntu 上若系统缺少 `venv`、编译工具或 Stockfish，可先运行 `sudo apt install python3-venv build-essential python3-dev stockfish`。本文没有核实全新的 Python/操作系统组合能否安装；安装失败时先检查解释器和该包的构建要求。
 
 `python3 data/batch2/select_positions.py check` 仅依赖上述规则库，离线校验已入库的第二批局面题（`data/batch2/{xiangqi,chess}.jsonl` 的 FEN、行棋方与着法合法性），不启动引擎、不读取 `runs/`。
 
@@ -80,7 +80,7 @@ python -m unittest discover -s tests -t .
    - **Claude**：通过本机 `claude` CLI 调用（如 `--white claude:opus`）；
    - **GPT**：通过本机 `codex` CLI 调用（如 `--black codex:astra`）；
    - **Gemini（或经 agy 路由的模型）**：通过本机 `agy` CLI 调用（如 `--white gemini:gemini-4-argon-high` 或 `agy:claude-opus-5-5-high`）。
-   - 该通道直接使用用户本机已安装并登录的对应 CLI 订阅额度；若本机未安装对应 CLI，`llm-chat` 会直接返回明确的未安装错误提示。
+   - 该通道直接使用用户本机已安装并登录的对应 CLI 订阅额度；开工前可先用 `claude --version`、`codex --version`、`agy --version` 自检本机 CLI 连通性。若本机未安装对应 CLI，`llm-chat` 会直接返回明确的未安装错误提示。
 
 2. **HTTP API 通道（DeepSeek 及 OpenRouter）：**
    - 支持设置环境变量 `API_KEY_OPENROUTER`（或别名 `OPENROUTER_API_KEY`）以及 `API_KEY_DEEPSEEK`（或别名 `DEEPSEEK_API_KEY`）。
@@ -99,15 +99,17 @@ export API_KEY_OPENROUTER="sk-or-..."   # 或使用同义变量 OPENROUTER_API_K
 python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --black random --effort low --max-plies 6 --on-limit pause
 ```
 
-可用型号、额度与收费由账号和服务决定；本仓库不提供账号、凭据或额度。无状态局面题（`python3 -m agi_chess.quiz`）仍按原路径直调 `claude` 或 `codex exec`；其中 `deepseek` 局面题默认读取 `$CODEX_HOME/deepseek.config.toml`（未设 `CODEX_HOME` 时为 `~/.codex/deepseek.config.toml`）还原供应商与模型目录配置，可通过环境变量 `AGI_CHESS_DEEPSEEK_CONFIG`（兼容 `AGICHESS_DEEPSEEK_CONFIG` 与 `LLMCHESS_DEEPSEEK_CONFIG`）覆盖配置文件路径。
+可用型号、额度与收费由账号和服务决定；本仓库不提供账号、凭据或额度。请注意 DeepSeek 在两种运行模式下的配置差异：
+- **整盘对弈模式**（`python3 -m agi_chess`）：由仓内 `.agents/skills/llm-chat/` 通过 HTTP 直连 DeepSeek 官方 API 或 OpenRouter，**只需设置 `DEEPSEEK_API_KEY`（`API_KEY_DEEPSEEK`）或 `OPENROUTER_API_KEY`（`API_KEY_OPENROUTER`）环境变量，无需安装 Codex CLI**。
+- **历史无状态局面题模式**（`python3 -m agi_chess.quiz`）：仍按原路径直调 `claude` 或 `codex exec`；其中 `python3 -m agi_chess.quiz --model deepseek` 走 Codex CLI profile，默认读取 `$CODEX_HOME/deepseek.config.toml`（未设 `CODEX_HOME` 时为 `~/.codex/deepseek.config.toml`）还原供应商与模型目录配置，也可通过环境变量 `AGI_CHESS_DEEPSEEK_CONFIG`（兼容 `AGICHESS_DEEPSEEK_CONFIG` 与 `LLMCHESS_DEEPSEEK_CONFIG`）覆盖配置文件路径。
 
 先看 CLI 帮助与[对弈协议](design.md)第九节。上面的 `--max-plies 6` 配 `random` 对手只是短冒烟，不用于评测棋力。每盘用新的 `--tag`，输出写入 `runs/<tag>/`（新建本地运行目录默认仅入库指定的已提交正式批次，底层 `game.jsonl` 被 git 忽略）。真实评测条件与停止规则见设计文档；不要给模型棋手开放引擎或规则库工具。工具调用或明确的防思维链泄露类拒答应立即停盘分析，不自动重问续跑。
 
-若改用引擎对手，国际象棋支持 Stockfish，或 lc0 配 Maia 权重；Maia 权重默认在 `~/.local/share/maia/maia-1100.pb.gz` 等文件中，仓库不提供。中国象棋使用 Fairy-Stockfish。Stockfish/lc0 先从 `PATH` 查找，再尝试 `/opt/homebrew/bin/`；Fairy-Stockfish 还可通过 `FAIRY_STOCKFISH` 指定。引擎只当对手或事后裁判，不替模型选着。
+若改用引擎对手，国际象棋支持 Stockfish，或 lc0 配 Maia 权重；Maia 权重默认在 `~/.local/share/maia/maia-1100.pb.gz` 等文件中，仓库不提供。中国象棋使用 Fairy-Stockfish。引擎按环境变量（`STOCKFISH`、`LC0`、`FAIRY_STOCKFISH`）、`PATH` 以及 `/usr/games`、`/usr/local/games`、`/usr/local/bin`、`/usr/bin`、`/opt/homebrew/bin` 顺序查找。引擎只当对手或事后裁判，不替模型选着。
 
 ## 阅读器测试与录制
 
-纯网页浏览不需要 Node.js、Chromium 自动化或 FFmpeg。只有开发测试和录制才需要额外工具；安装及操作见[棋谱浏览与视频录制](viewer-guide.md)。
+纯网页浏览不需要 Node.js、Chromium 自动化或 FFmpeg。只有开发测试和录制才需要额外工具（在 `viewer/` 下执行 `npm ci`，并准备 Chromium 与 `ffmpeg`，如 `cd viewer && npx playwright install --with-deps chromium` 或系统安装 `chromium` / `google-chrome-stable` 与 `ffmpeg`；在 Linux 服务器/无桌面环境录屏或截图时还需安装中文字体，如 Ubuntu/Debian：`sudo apt install fonts-noto-cjk fonts-arphic-ukai`，否则中国象棋棋盘上的汉字棋子会显示为方块）；安装及操作见[棋谱浏览与视频录制](viewer-guide.md)。
 
 ```sh
 node --test 'viewer/test/*.test.js'

@@ -7,7 +7,7 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { serve } from '../serve.mjs';
+import { resolveChromium, serve } from '../serve.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const FIX = '/viewer/test/fixtures/';
@@ -16,7 +16,7 @@ let pw = null;
 try { pw = await import('playwright-core'); } catch { /* 没装开发依赖 */ }
 let browser = null, skip = pw ? false : '没有 playwright-core（cd viewer && npm ci）';
 if (pw) {
-  try { browser = await pw.chromium.launch({ executablePath: process.env.VIEWER_CHROMIUM || undefined }); }
+  try { browser = await pw.chromium.launch({ executablePath: resolveChromium(undefined, pw) }); }
   catch (e) { skip = `起不来浏览器：${e.message.split('\n')[0]}`; }
 }
 

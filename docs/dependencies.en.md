@@ -25,6 +25,7 @@ The rule libraries required to run matches and unit tests are pinned in the root
 | `cm-chessboard 8.15.1` | Vendored; upstream commit and one local patch recorded in [SOURCE](../viewer/vendor/cm-chessboard/SOURCE.md) | MIT (`LICENSE` included); upstream non-permissive piece SVGs were excluded |
 | Cburnett 12 piece SVGs & generated sprite | Vendored; per-file provenance, revisions, and hashes recorded in [SOURCE](../viewer/vendor/cburnett-pieces/SOURCE.md) | BSD-3-Clause selected from upstream multi-licensing (`LICENSE` included); not bound to GPL |
 | `el_boss` 3 MP3 sound effects | Vendored; per-file provenance and hashes recorded in [SOURCE](../viewer/vendor/sounds/SOURCE.md) | CC0 1.0 |
+| `Node.js >= 22` | External runtime, not bundled (tested with 24.20.0 on 2026-11-05) | Runs `viewer/` tests and recorder; quoted globbing in `node --test 'viewer/test/*.test.js'` requires Node 22+ (on Node 18/20, omit single quotes and run `node --test viewer/test/*.test.js`) |
 | `playwright-core 1.58.2` | Not bundled; version pinned in `viewer/package-lock.json` | Apache-2.0, dev/recording dependency |
 | Chromium, FFmpeg | External recording executables, not bundled (tested with local FFmpeg 9.0.2) | Chromium includes multiple licenses; FFmpeg may be LGPL or GPL depending on build flags. Invoking local tools does not constitute distributing them; verify build flags before bundling |
 | `.agents/skills/llm-chat/` | First-party in-repo scripts (`llm_chat.py`, `agy_core.py`), checked into the repository | MIT (covered by root [LICENSE](../LICENSE)) |

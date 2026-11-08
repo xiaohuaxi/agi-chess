@@ -1,13 +1,13 @@
 ---
 name: llm-chat
-description: Plain-text, multi-turn chat with another model (DeepSeek, Grok, Gemini, Claude, GPT, any OpenRouter id) through one script, with no tools; Gemini via agy also takes attached audio, video, image and PDF files. Use when you need another model to generate or discuss text or to describe media; not for handing off an agent task (use codex-run or agy-run) or for built-in subagents.
+description: Plain-text, multi-turn chat with another model (DeepSeek, Grok, Gemini, Claude, GPT, any OpenRouter id) through one script, with no tools; Gemini via agy also takes attached audio, video, image and PDF files. Use when you need another model to generate or discuss text or to describe media; not for handing off an agent task that requires tools or for built-in subagents.
 ---
 
 # LLM Chat
 
 `scripts/llm_chat.py` sends one user message to a model and prints the answer. It is plain text generation: the model gets no tools, no files, and no project rules, and nothing runs as an agent. The one exception is `--attach` on agy models: the model may open exactly the attached files. Sessions let you continue the same conversation over several calls.
 
-Use this when a task needs another model's words: a second opinion, a draft, a translation, a persona reply. When the other model must look around files on its own, run commands, or edit code, use `codex-run` or `agy-run` instead.
+Use this when a task needs another model's words: a second opinion, a draft, a translation, a persona reply. When the other model must look around files on its own, run commands, or edit code, use the host environment's own subagent or CLI agent task mechanism instead; this skill is strictly for tool-free plain-text Q&A.
 
 ## Invoke
 
@@ -108,7 +108,7 @@ The model should answer from its own knowledge. Each route is locked down as bel
 - OpenRouter: ids with a variant suffix (`:online` turns on web search; `:free`, `:nitro` and the rest change provider routing) and ids containing `multi-agent` are refused before sending. Every request sends `"plugins": [{"id": "web", "enabled": false}]` to override an account-wide web default. A response with `annotations` (web citations), `tool_calls`, or any server-tool or search counter above 0 in `usage` is an error.
 - DeepSeek: no built-in search; the same response checks apply.
 - Claude: the tool list is empty; any `usage.server_tool_use` counter above 0 is an error.
-- agy: the session agent has one tool, `view_file`, inherits no rules, skills or MCP servers, and is not callable as a subagent. Headless agy cannot ask for permission, so a read outside the session workspace ends the turn; that, any other tool, or a `view_file` on anything other than the files attached on this turn or an earlier saved turn fails the turn (a failed turn's attachments are removed). agy fixes an agent's tools when the conversation starts, so `view_file` is present from the first turn even if nothing is ever attached. agy also writes Gemini safety-filter notices into the answer with a success status; such an answer fails the turn too (the filter is intermittent; retrying often works).
+- agy: the session agent has one tool, `view_file`, inherits no rules, skills or MCP servers, and is not callable as a subagent. Headless agy cannot ask for permission, so a read outside the session workspace ends the turn; that, any other tool, or a `view_file` on anything other than the files attached on this turn or an earlier saved turn fails the turn (a failed turn's attachments are removed). agy fixes an agent's tools when the conversation starts, so `view_file` is present from the first turn even if nothing is ever attached. agy also writes Gemini safety-filter notices into the answer with a success status; such an answer fails the turn too.
 - GPT: web search is off. GPT-6 models still get a few built-in local tools (exec, wait, and similar) that cannot actually run here and have no network access. Any event other than the answer, a reasoning summary, or the exact code-mode-unavailable notice codex prints each turn is an error (a tool call, web search, command, file change, any other error).
 
 Limits of this guarantee:

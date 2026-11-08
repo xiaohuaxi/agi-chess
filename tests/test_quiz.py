@@ -9,9 +9,10 @@ import chess
 
 from agi_chess import claude_cli, quiz as Q, records, runner, xiangqi as X
 from agi_chess.claude_cli import Paused
+from agi_chess.engine import find_engine_binary
 
-FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
-STOCKFISH_MISSING = shutil.which('stockfish') is None and not os.path.exists('/opt/homebrew/bin/stockfish')
+FSF_MISSING = find_engine_binary('fairy-stockfish', 'FAIRY_STOCKFISH') is None
+STOCKFISH_MISSING = find_engine_binary('stockfish', 'STOCKFISH') is None
 
 
 def fake_reply(text, think=50):

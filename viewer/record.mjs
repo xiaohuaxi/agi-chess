@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { serve } from './serve.mjs';
+import { resolveChromium, resolveFfmpeg, serve } from './serve.mjs';
 import { decodeText, parsePgn } from './lib/pgn.js';
 import { replay } from './lib/replay.js';
 import { SOUNDS, linear } from './lib/sound.js';
@@ -48,8 +48,8 @@ const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -
                            --set vendor=0 标题画面名字前不补厂商（「GPT astra」→「astra」）
                            --set lang=en 英文界面；--set 'names=claude:opus=Claude Opus,codex:astra=GPT astra'
                            覆盖棋手显示名（棋谱里的名字=显示名，逗号分隔；值里有空格要加引号）。参数名写错不报错，出片后抽帧核对
-  --chromium <路径>        浏览器可执行文件；默认环境变量 VIEWER_CHROMIUM，再默认 playwright-core 配套的缓存浏览器
-  --ffmpeg <路径>          ffmpeg；默认环境变量 VIEWER_FFMPEG，再默认 /opt/homebrew/bin/ffmpeg
+  --chromium <路径>        浏览器可执行文件；默认环境变量 VIEWER_CHROMIUM，再查 playwright-core 缓存及 PATH 中的 Chromium / Chrome
+  --ffmpeg <路径>          ffmpeg；默认环境变量 VIEWER_FFMPEG，再从 PATH 及常见路径查找 ffmpeg
   -h, --help               显示本说明
 
 没给的停留时长用页面的默认值；各格停多久由页面决定，脚本只照 next() 返回的 anim 与 hold 办。
@@ -120,12 +120,15 @@ function preflight(o) {
     if (!moves) throw new RecordError(`棋谱里没读到任何一盘有着法的棋（不是棋谱文件？）：${p}`);
     return f;
   });
-  const ffmpeg = o.ffmpeg || process.env.VIEWER_FFMPEG || '/opt/homebrew/bin/ffmpeg';
-  try { accessSync(ffmpeg, constants.X_OK); } catch {
-    throw new RecordError(`找不到可执行的 ffmpeg：${ffmpeg}（用 --ffmpeg 或环境变量 VIEWER_FFMPEG 指定）`);
+  const ffmpeg = resolveFfmpeg(o.ffmpeg);
+  let ffmpegOk = false;
+  try { accessSync(ffmpeg, constants.X_OK); ffmpegOk = statSync(ffmpeg).isFile(); } catch {}
+  if (!ffmpegOk) {
+    throw new RecordError(`找不到可执行的 ffmpeg：${ffmpeg}（请安装 ffmpeg 或用 --ffmpeg / 环境变量 VIEWER_FFMPEG 指定）`);
   }
-  const chromiumPath = o.chromium || process.env.VIEWER_CHROMIUM || undefined;
-  if (chromiumPath && !existsSync(chromiumPath)) throw new RecordError(`浏览器不存在：${chromiumPath}`);
+  const explicitChromium = o.chromium || process.env.VIEWER_CHROMIUM || undefined;
+  if (explicitChromium && !existsSync(explicitChromium)) throw new RecordError(`浏览器不存在：${explicitChromium}`);
+  const chromiumPath = resolveChromium(o.chromium, { chromium });
   const scale = o.scale ?? 2;
   const size = [Math.round(view[0] * scale), Math.round(view[1] * scale)];
   if (size.some((n) => n % 2)) throw new RecordError(`出片尺寸 ${size.join('×')} 有奇数边，yuv420p 编不了；换个 --scale`);

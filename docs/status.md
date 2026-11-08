@@ -219,12 +219,13 @@
 
 - 设计与前提核实 `design.md`、跨轮思考调研 `thinking-carryover.md`；引擎 Stockfish 19、lc0、Maia 1100–1900（`~/.local/share/maia/`）。
 - 程序 `agi_chess/`：对弈循环、两个棋种模块、事后分析器、局面题（含各提示档与「说明理由」档）、随机开局、批量跑盘、限额等待续跑；着法提取的改口修复已合（a363108）。离线测试 250 个全过。
-- 第一至四批全部实验和结论文档，第一轮总结论 `results/summary-round1.md`，棋力人群对照 `results/rating-reference.md`。原始数据都在被忽略的 `runs/`。
-- 棋谱每步带元信息（2026-09-28）：`game.pgn` / `record.txt` 每步评注里写 `[%emt 用时]`（PGN 标准命令）和自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite]`、非法 / 被拦 / 空回复次数，后端没给的项省掉不补 0（`design.md` 第四节）。已结束的盘不用重下：`python3 -m agi_chess export runs/<tag>`。
+- 第一至四批全部实验和结论文档，第一轮总结论 `results/summary-round1.md`，棋力人群对照 `results/rating-reference.md`。`runs/` 已随仓入库 74 个正式对局/局面题目录的 `game.pgn`、`analysis*.json*`、`summary.*`、`judged.jsonl`、`report.txt`；原始大文件 `game.jsonl`、`record.txt`、`.mp4` 及新跑目录由 `.gitignore` 忽略。
+- 棋谱每步带元信息（2026-09-28）：`game.pgn` / `record.txt` 每步评注里写 `[%emt 用时]`（PGN 标准命令）和自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite]`、非法 / 被拦 / 空回复次数，后端没给的项省掉不补 0（`design.md` 第四节）。含 `game.jsonl` 的本地已结束对局可不用重下直接重导：`python3 -m agi_chess export runs/<tag>`（已入库 `runs/<tag>/` 自带最新 `game.pgn`、不含 `game.jsonl`，无需运行 `export`）。
 - 局面给法开关 `show`（all / board / pieces / fen / boardpieces），整盘和局面题共用，默认按第四批结论。
 - 棋谱阅读器（`docs/viewer.md`，2026-09-30）：方案第 1–5 步（导出、解析、打样、页面含窄版 / 宽版 / 播放 / 录制接口、录制脚本 `viewer/record.mjs`）已实施完，版式用户已定稿，2026-09-30 合回 main（阅读器认得 `drop_thinking` 对局的 `[%dropped]` 评注）。一条命令出 3:4 mp4，用法见项目 skill `.agents/skills/replay-video/`。第 6 步走子滑动动画（两种棋，默认 0.3 秒、算在每步间隔内）2026-09-30 做完并合回 main。合回时已用新代码把当时已结束的对局重导（`python3 -m agi_chess export runs/<tag>`）；合回时还在下的对局（进程里跑的仍是旧代码，如 g6-x-opusdrop-astra-2）结束后要再重导一次。
 - 阅读器走子音效（2026-10-02 合回 main）：落子 / 吃子各一声、将军不单配、终局再一声，两种棋共用 CC0 素材（`viewer/vendor/sounds/`）。录视频默认有声（单声道，落子峰值约 -10 dBFS、不做整体归一化），`--vol` 调、`--no-sound` 关；网页默认静音，`sound=1` 开。默认音量按「多数人手机音量约一半」的实测研究定，不再压低（调研见 `docs/viewer.md` 音效一节）。同次修了评注在「……」「——」后断行、读回多一个空格的问题，受影响的已结束对局已重导。
 - 连播开局停留控制（2026-10-04）：阅读器新增 `openhold`，每盘初始局面停留时间可独立设置，默认仍同 `gap`；视频核验使用0.5秒。该功能及英文界面已合入main，见11-05验收。
+- 开源跨平台兼容性与文档收敛（2026-11-08）：补齐 `viewer/` 跨平台 `ffmpeg` / `ffprobe` / Chromium 查找与 `serve.mjs` CLI 入口、`agi_chess/engine.py` 跨平台引擎探测（含 `/usr/games` 及环境变量）、`viewer/app.css` Linux CJK 楷体与中文字体回退栈；修正 `.agents/skills/replay-video`、`.agents/skills/llm-chat`、`AGENTS.md` 与双语文档对已入库 `runs/` 的说明。
 
 ## 已拍板
 

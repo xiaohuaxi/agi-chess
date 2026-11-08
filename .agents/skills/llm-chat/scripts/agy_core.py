@@ -373,8 +373,8 @@ def check_turn(code, out, err, allowed_tools):
                        + "; ".join(f"{c.get('name')} {tool_target(c)}" for c in bad), kind="tool")
     response = result.get("response") or ""
     if FILTER_NOTICE in response:
-        raise AgyError("Gemini's safety filter blocked the answer (agy wrote its notice into the reply). "
-                       "It is intermittent and sometimes trips on harmless words; retry or rephrase", kind="filtered")
+        raise AgyError("Gemini's safety filter blocked the answer (agy wrote its notice into the reply)",
+                       kind="filtered")
     if not response.strip():
         reason = "agy returned an empty answer"
         if NO_OUTPUT_NOTICE in err:
