@@ -101,7 +101,7 @@ python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --b
 
 Available model slugs, rate limits, and billing depend on your own accounts and subscriptions; this repository does not provide accounts, credentials, or quota. Note the configuration difference for DeepSeek between the two execution modes:
 - **Full-game match mode** (`python3 -m agi_chess`): Driven by the built-in `.agents/skills/llm-chat/` over HTTP directly to DeepSeek or OpenRouter. **You only need to set `DEEPSEEK_API_KEY` (`API_KEY_DEEPSEEK`) or `OPENROUTER_API_KEY` (`API_KEY_OPENROUTER`); Codex CLI is not required.**
-- **Historical stateless position-quiz mode** (`python3 -m agi_chess.quiz`): Invokes `claude` or `codex exec` directly; running `python3 -m agi_chess.quiz run --game chess --batch batch2 --ids c01 --efforts medium --reps 1 --model deepseek` uses a Codex CLI profile and reads `$CODEX_HOME/deepseek.config.toml` (or `~/.codex/deepseek.config.toml` when `CODEX_HOME` is unset) by default, overridable via `AGI_CHESS_DEEPSEEK_CONFIG` (with backward compatibility for `AGICHESS_DEEPSEEK_CONFIG` and `LLMCHESS_DEEPSEEK_CONFIG`). Minimal credential-free template:
+- **Historical stateless position-quiz mode** (`python3 -m agi_chess.quiz`): Invokes `claude` or `codex exec` directly; running `python3 -m agi_chess.quiz run --game chess --batch batch2 --ids c2-01 --efforts medium --reps 1 --model deepseek` uses a Codex CLI profile and reads `$CODEX_HOME/deepseek.config.toml` (or `~/.codex/deepseek.config.toml` when `CODEX_HOME` is unset) by default, overridable via `AGI_CHESS_DEEPSEEK_CONFIG` (with backward compatibility for `AGICHESS_DEEPSEEK_CONFIG` and `LLMCHESS_DEEPSEEK_CONFIG`). Minimal credential-free templates:
 
   ```toml
   # ~/.codex/deepseek.config.toml (needed only for quiz --model deepseek; not needed for full-game matches)
@@ -114,6 +114,18 @@ Available model slugs, rate limits, and billing depend on your own accounts and 
   base_url = "https://openrouter.ai/api/v1"
   env_key = "OPENROUTER_API_KEY"
   wire_api = "chat"
+  ```
+
+  ```json
+  // ~/.codex/deepseek-models.json (minimal accompanying model catalog)
+  {
+    "models": [
+      {
+        "slug": "deepseek/deepseek-v4-pro",
+        "supported_reasoning_levels": [{"effort": "low"}, {"effort": "medium"}, {"effort": "high"}]
+      }
+    ]
+  }
   ```
 
 Review the CLI `--help` output and Section 9 of [System Design (zh-CN)](design.md) before launching live games. The `--max-plies 6` command against `random` above is only a short smoke check, not a strength evaluation. Use a fresh `--tag` for each run; outputs are written to `runs/<tag>/` (local `game.jsonl` event streams are git-ignored). Never grant model players access to chess engines or rule-library tools. Any tool call attempt or anti-CoT-extraction safety refusal immediately halts the match for inspection without auto-retrying.

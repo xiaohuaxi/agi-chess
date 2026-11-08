@@ -3,7 +3,7 @@
 // 用法见 HELP（node viewer/record.mjs --help）。也可 import { record } 在测试里直接调。
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
-import { accessSync, constants, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -323,7 +323,17 @@ export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
       '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-color_range', 'tv',
       '-r', String(FPS), '-frames:v', String(frames), ...audioOut, '-movflags', '+faststart', '-f', 'mp4', tmpOut,
     ]);
-    renameSync(tmpOut, cfg.out);
+    if (o.force) {
+      renameSync(tmpOut, cfg.out);
+    } else {
+      try {
+        linkSync(tmpOut, cfg.out);
+        rmSync(tmpOut, { force: true });
+      } catch (e) {
+        if (e?.code === 'EEXIST') throw new RecordError(`输出文件已存在：${cfg.out}（换个路径，或加 --force 覆盖）`);
+        throw e;
+      }
+    }
     return { out: cfg.out, seconds: frames / FPS, frames, shots: n, cells, sounds, ms: Date.now() - t0 };
   } finally {
     if (browser) await browser.close().catch(() => {});

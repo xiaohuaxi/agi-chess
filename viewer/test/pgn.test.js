@@ -132,12 +132,24 @@ test('analysis.jsonl 校验：着法或局面不匹配、孤立分析、多盘 P
   const badFen = JSON.stringify({
     ply: 1, move: 'e2e4', fen: 'WRONG POSITION', lichess: 'Blunder',
   });
+  const badCastlingFen = JSON.stringify({
+    ply: 1, move: 'e2e4', fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1', lichess: 'Blunder',
+  });
   const goodRow = JSON.stringify({
     ply: 1, move: 'e2e4', fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', lichess: 'Blunder',
   });
   assert.throws(() => loadGamesWithAnalysis([pgn, badMove]), /不匹配/);
   assert.throws(() => loadGamesWithAnalysis([pgn, badFen]), /不匹配/);
+  assert.throws(() => loadGamesWithAnalysis([pgn, badCastlingFen]), /不匹配/);
   assert.throws(() => loadGamesWithAnalysis([goodRow]), /只有分析文件/);
   const multiPgn = '[Event "a"]\n\n1. e4 e5 *\n\n[Event "b"]\n\n1. d4 d5 *\n';
   assert.throws(() => loadGamesWithAnalysis([multiPgn, goodRow]), /多盘棋谱存在歧义/);
+
+  // 以花括号评注开头的合法 PGN（无论是否带 .pgn 文件名）均不应被误判为 JSONL
+  const commentFirstPgn = '{Opening comment}\n1. e4 e5 *\n';
+  const [g1] = loadGamesWithAnalysis([commentFirstPgn]);
+  assert.deepEqual(g1.game.pre, ['Opening comment']);
+  assert.deepEqual(g1.game.moves.map((m) => m.text), ['e4', 'e5']);
+  const [g2] = loadGamesWithAnalysis([{ name: 'game.pgn', text: '{"jsonLikeComment": 1}\n1. e4 e5 *\n' }]);
+  assert.deepEqual(g2.game.moves.map((m) => m.text), ['e4', 'e5']);
 });

@@ -71,7 +71,7 @@ export function replayChess(game) {
   return out;
 }
 
-function fenBoardAndTurn(fen, kind) {
+function fenStateKey(fen, kind) {
   if (typeof fen !== 'string') return null;
   const parts = fen.trim().split(/\s+/);
   if (parts.length < 2) return null;
@@ -82,8 +82,11 @@ function fenBoardAndTurn(fen, kind) {
       return null;
     }
   }
-  if (parts[0].split('/').length !== 8) return null;
-  return `${parts[0]} ${parts[1]}`;
+  try {
+    return new Chess(fen.trim()).fen();
+  } catch {
+    return null;
+  }
 }
 
 export function parseAnalysisJsonl(text, name = '') {
@@ -121,11 +124,19 @@ export function analysisMatchesRep(rows, rep) {
     const step = rep.steps[r.ply - 1];
     if (typeof r.move !== 'string' || r.move.trim().toLowerCase() !== step.move.toLowerCase()) return false;
     const expectedFen = r.ply === 1 ? rep.start : rep.steps[r.ply - 2].fen;
-    const gotKey = fenBoardAndTurn(r.fen, rep.kind);
-    const wantKey = fenBoardAndTurn(expectedFen, rep.kind);
+    const gotKey = fenStateKey(r.fen, rep.kind);
+    const wantKey = fenStateKey(expectedFen, rep.kind);
     if (!gotKey || !wantKey || gotKey !== wantKey) return false;
   }
   return true;
+}
+
+function isAnalysisInput(name, text) {
+  if (/\.pgn$/i.test(name)) return false;
+  if (/\.jsonl$/i.test(name)) return true;
+  const lines = String(text || '').trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return false;
+  return lines.every((l) => /^\{\s*"/.test(l) && l.endsWith('}'));
 }
 
 function dirOf(name) {
@@ -143,8 +154,7 @@ export function loadGamesWithAnalysis(inputs) {
   for (const item of inputs || []) {
     const name = typeof item === 'string' ? '' : String(item?.name || '');
     const text = typeof item === 'string' ? item : String(item?.text || '');
-    const trimmed = text.trim();
-    if (/\.jsonl$/i.test(name) || trimmed.startsWith('{')) {
+    if (isAnalysisInput(name, text)) {
       analyses.push({ name, dir: dirOf(name), rows: parseAnalysisJsonl(text, name) });
       continue;
     }
