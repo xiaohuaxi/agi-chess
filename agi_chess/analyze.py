@@ -145,7 +145,12 @@ def lichess_judgement(before, after):
 
 # ---------------------------------------------------------------- 读记录、重放
 def load_run(run_dir):
-    recs = records.read(os.path.join(run_dir, 'game.jsonl'))
+    log_path = os.path.join(run_dir, 'game.jsonl')
+    if not os.path.exists(log_path):
+        if os.path.exists(os.path.join(run_dir, 'analysis-summary.json')) or os.path.exists(os.path.join(run_dir, 'game.pgn')):
+            raise SystemExit('%s 下没有原始对局记录 game.jsonl（公开仓仅入库 game.pgn 与 analysis*.json*），无法重跑引擎分析或重算 token/耗时明细' % run_dir)
+        raise SystemExit('%s 下没有对局记录 game.jsonl' % run_dir)
+    recs = records.read(log_path)
     if not recs or recs[0]['type'] != 'config':
         raise SystemExit('%s：game.jsonl 第一行应是 config' % run_dir)
     return recs[0]['cfg'], recs
@@ -172,13 +177,25 @@ def params_of(cfg, depth, eng_id):
 
 def analyse_run(run_dir, depth=None, force=False, log=print):
     """分析一盘。返回 summary dict（跳过时读旧的）。"""
+    out_rows = os.path.join(run_dir, 'analysis.jsonl')
+    out_sum = os.path.join(run_dir, 'analysis-summary.json')
+    if not force and not os.path.exists(os.path.join(run_dir, 'game.jsonl')) and os.path.exists(out_rows) and os.path.exists(out_sum):
+        try:
+            with open(out_sum, encoding='utf-8') as f:
+                old = json.load(f)
+            p = old.get('params', {})
+            g = p.get('game')
+            want_depth = depth or DEPTH.get(g)
+            if p.get('version') == VERSION and p.get('depth') == want_depth and p.get('hash') == HASH and g in DEPTH:
+                log('%s：已分析过（%d 个半回合，深度 %d），跳过' % (run_dir, old.get('plies', 0), want_depth))
+                return old
+        except (OSError, ValueError):
+            pass
     cfg, recs = load_run(run_dir)
     game = cfg['game']
     depth = depth or DEPTH[game]
     G = game_module(game)
     mrecs = moves_of(recs)
-    out_rows = os.path.join(run_dir, 'analysis.jsonl')
-    out_sum = os.path.join(run_dir, 'analysis-summary.json')
     spec = analysis_spec(game, depth)
     if not force and os.path.exists(out_rows) and os.path.exists(out_sum):
         try:

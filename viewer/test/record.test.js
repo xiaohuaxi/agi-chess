@@ -6,14 +6,16 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { accessSync, constants, mkdtempSync, openSync, readFileSync, readSync, closeSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { chmodSync, accessSync, constants, existsSync, mkdtempSync, openSync, readFileSync, readSync, closeSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findExecutable } from '../lib/bins.mjs';
 import { decodeText, parsePgn } from '../lib/pgn.js';
 import { replay } from '../lib/replay.js';
 import { stepSound } from '../lib/sound.js';
 import { parseServeCli, resolveBrowser, resolveChromium, resolveFfmpeg, resolveFfprobe, serve } from '../serve.mjs';
+import { parseShotCli } from '../shot.mjs';
 import * as rec from '../record.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -66,6 +68,38 @@ test('serve CLI 与可执行文件查找：端口 0 保留、非法参数报错�
   assert.throws(() => resolveFfprobe('nonexistent-ffprobe-cmd'), /nonexistent-ffprobe-cmd/);
   assert.throws(() => resolveChromium('nonexistent-browser-cmd', {}), /nonexistent-browser-cmd/);
   assert.throws(() => resolveBrowser('nonexistent-browser-cmd', {}), /nonexistent-browser-cmd/);
+  // Windows 扩展名补全：在 PATH 中找到 .exe
+  const fakeBinDir = join(TMP, 'win-bin');
+  mkdirSync(fakeBinDir, { recursive: true });
+  const fakeExe = join(fakeBinDir, 'my-tool.exe');
+  writeFileSync(fakeExe, '#!/bin/sh\n');
+  chmodSync(fakeExe, 0o755);
+  const oldPath = process.env.PATH;
+  try {
+    process.env.PATH = fakeBinDir;
+    assert.equal(findExecutable('my-tool', [], 'win32'), fakeExe);
+    assert.equal(findExecutable('my-tool', [], 'linux'), null);
+  } finally {
+    process.env.PATH = oldPath;
+  }
+});
+
+test('shot.mjs CLI：--help 不创建目录、非法参数报错', () => {
+  assert.deepEqual(parseShotCli(['--help']), { help: true });
+  assert.deepEqual(parseShotCli(['-h']), { help: true });
+  assert.deepEqual(parseShotCli(['/tmp/out', '--measure', '--size', '720x960', 'a=ply=0']), {
+    out: '/tmp/out', runs: null, measure: true, size: [720, 960], shots: [['a', 'ply=0']],
+  });
+  assert.throws(() => parseShotCli([]), /缺少/);
+  assert.throws(() => parseShotCli(['--unknown']), /第一个参数/);
+  assert.throws(() => parseShotCli(['/tmp/out']), /至少给出/);
+  assert.throws(() => parseShotCli(['/tmp/out', 'bad-entry']), /名字>=<网址参数/);
+  assert.throws(() => parseShotCli(['/tmp/out', '--size', 'bad', 'a=b']), /--size/);
+  const helpCwd = join(TMP, 'shot-help-cwd');
+  mkdirSync(helpCwd, { recursive: true });
+  const out = execFileSync(process.execPath, [join(ROOT, 'viewer', 'shot.mjs'), '--help'], { cwd: helpCwd, encoding: 'utf8' });
+  assert.match(out, /用法：node viewer\/shot\.mjs/);
+  assert.equal(existsSync(join(helpCwd, '--help')), false);
 });
 
 test('命令行：默认有声、--no-sound 关掉；--vol 是正的倍数', () => {

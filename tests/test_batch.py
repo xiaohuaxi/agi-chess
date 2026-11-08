@@ -258,6 +258,38 @@ class PassThrough(unittest.TestCase):
             self.assertEqual((seen[k].on_limit, seen[k].timeout), ('pause', 100))
             self.assertTrue(seen[k].stop_file.endswith(B.STOP))
 
+    def test_clean_clone_protections(self):
+        from agi_chess import cli
+        tmp = tempfile.mkdtemp(prefix='agi-chess-clean-')
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        # 1) batch summary 无 game.jsonl 时拒绝覆盖已有的 summary.md / summary.json
+        bdir = os.path.join(tmp, 'zc')
+        os.makedirs(os.path.join(bdir, 'maia-1900-s1-w'))
+        with open(os.path.join(bdir, 'maia-1900-s1-w', 'game.pgn'), 'w') as f:
+            f.write('[Result "1-0"]\n\n1. e4 e5 1-0\n')
+        for ext in ('.md', '.json'):
+            with open(os.path.join(bdir, 'summary' + ext), 'w') as f:
+                f.write('KEEP')
+        with self.assertRaises(SystemExit) as ctx:
+            B.main(['summary', bdir])
+        self.assertIn('game.jsonl', str(ctx.exception))
+        for ext in ('.md', '.json'):
+            with open(os.path.join(bdir, 'summary' + ext)) as f:
+                self.assertEqual(f.read(), 'KEEP')
+        # 2) play 拒绝复用已有 game.pgn / analysis.jsonl 的目录；resume / export 在缺 game.jsonl 时友好退出
+        gdir = os.path.join(tmp, 'g7-c-opus-astra-1')
+        os.makedirs(gdir)
+        with open(os.path.join(gdir, 'game.pgn'), 'w') as f:
+            f.write('[Result "1-0"]\n\n1. e4 e5 1-0\n')
+        with self.assertRaises(SystemExit) as ctx:
+            cli.main(['play', '--out', tmp, '--game', 'chess', '--tag', 'g7-c-opus-astra-1',
+                      '--white', 'random', '--black', 'random', '--max-plies', '2'])
+        self.assertIn('换个 --tag', str(ctx.exception))
+        for sub in ('resume', 'export'):
+            with self.assertRaises(SystemExit) as ctx:
+                cli.main([sub, gdir])
+            self.assertIn('game.jsonl', str(ctx.exception))
+
 
 class Signals(unittest.TestCase):
     """Ctrl-C / SIGTERM 走 claude_cli 同一套停止处理：第一次置 STOP、放 .stop、给每个在跑的盘发一次 SIGTERM

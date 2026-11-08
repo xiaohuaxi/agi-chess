@@ -356,7 +356,15 @@ def xq_fill(taken_rows, need):
 
 
 def xiangqi(jobs):
-    games = {run: load_game(run) for run in game_runs('b1-xq-')}
+    runs = game_runs('b1-xq-')
+    b1 = load_b1_select()
+    req = [os.path.join(RUNS, r, 'game.jsonl') for r in runs] + [
+        os.path.join(b1.XQ_DIR, 'blunder_cases.tsv'), os.path.join(b1.XQ_DIR, 'plies.tsv')] + [
+        os.path.join(b1.XQ_ART, g, 'game.jsonl') for g in 'ABCDE']
+    if not runs or not all(os.path.isfile(p) for p in req):
+        raise SystemExit('未找到本地原始对局记录 runs/b1-xq-*/game.jsonl 或前序研究原始目录；重建第二批题库依赖未入库的原始对局记录，'
+                         '公开克隆可直接使用已入库的 data/batch2/xiangqi.jsonl，或运行 `python3 data/batch2/select_positions.py check` 校验。')
+    games = {run: load_game(run) for run in runs}
     part1 = xq_b1_quiz()
     part2 = xq_blunders(games)
     part3, extra, dropped = xq_mates(games, jobs)
@@ -376,6 +384,10 @@ def xiangqi(jobs):
 
 # ---------------------------------------------------------------- 国际象棋
 def chess_rows():
+    runs = game_runs('b1-ch-')
+    if not runs or not all(os.path.isfile(os.path.join(RUNS, r, 'game.jsonl')) for r in runs):
+        raise SystemExit('未找到本地原始对局记录 runs/b1-ch-*/game.jsonl；重建第二批题库依赖未入库的原始对局记录，'
+                         '公开克隆可直接使用已入库的 data/batch2/chess.jsonl，或运行 `python3 data/batch2/select_positions.py check` 校验。')
     import chess
     blund = b1_errors('chess', lambda r: r['blunder'] and r['effort'] in ('xhigh', 'max'))
     rows = []

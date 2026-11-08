@@ -105,7 +105,7 @@ def section_overview(game, bdir):
         for sd in 'wb':
             rr = [r for r in rs if r['side'] == sd and r['finished']]
             n, pts = len(rr), sum(r['score'] for r in rr)
-            sides[sd] = '–' if not n else '%d/%d（%s）' % (pts, n, pct(pts / n))
+            sides[sd] = '–' if not n else '%g/%d（%s）' % (pts, n, pct(pts / n))
         lines.append('| %s | %d/%d | %d-%d-%d | %s | %s | %s | %s | %s | %s |' % (
             opp, g['finished'], g['games'], g['win'], g['draw'], g['loss'], pct(g['score_rate']),
             '–' if g['ci95'][0] is None else '%s–%s' % (pct(g['ci95'][0]), pct(g['ci95'][1])),

@@ -51,6 +51,12 @@ def write_jsonl(path, rows):
 # ---------------------------------------------------------------- 中国象棋
 def xiangqi():
     from agi_chess import xiangqi as X
+    req = [os.path.join(XQ_DIR, 'blunder_cases.tsv'), os.path.join(XQ_DIR, 'plies.tsv')] + [
+        os.path.join(XQ_ART, g, 'game.jsonl') for g in 'ABCDE']
+    if not all(os.path.isfile(p) for p in req):
+        raise SystemExit('未找到前序研究的原始目录（%s 或 %s）；重建第一批题库依赖维护者本机的前序研究原始目录，'
+                         '公开克隆可直接使用已入库的 data/batch1/xiangqi.jsonl，或运行 `python3 data/batch1/select_positions.py check` 校验。'
+                         % (XQ_DIR, XQ_ART))
     cases = list(csv.DictReader(open(os.path.join(XQ_DIR, 'blunder_cases.tsv'), encoding='utf-8'), delimiter='\t'))
     plies = {(r['game'], int(r['ply'])): r
              for r in csv.DictReader(open(os.path.join(XQ_DIR, 'plies.tsv'), encoding='utf-8'), delimiter='\t')}
@@ -116,6 +122,9 @@ def xiangqi():
 
 # ---------------------------------------------------------------- 国际象棋
 def chess_rows(csv_path):
+    if not os.path.isfile(csv_path):
+        raise SystemExit('未找到 lichess 谜题 CSV 文件：%s；公开克隆可直接使用已入库的 data/batch1/chess.jsonl，'
+                         '或运行 `python3 data/batch1/select_positions.py check` 校验。' % csv_path)
     import chess
     pool = []
     with open(csv_path, encoding='utf-8', newline='') as f:
@@ -169,22 +178,62 @@ def chess_rows(csv_path):
     return rows
 
 
+# ---------------------------------------------------------------- 只读检查
+def check():
+    import chess
+    from agi_chess import quiz as Q, xiangqi as X
+    bad = 0
+    for game in ('xiangqi', 'chess'):
+        path = os.path.join(HERE, '%s.jsonl' % game)
+        with open(path, encoding='utf-8') as f:
+            rows = [json.loads(l) for l in f if l.strip()]
+        ids = [r['id'] for r in rows]
+        assert len(rows) == N, ('题数不对', path, len(rows))
+        assert len(set(ids)) == len(ids), ('id 重复', path)
+        for p in rows:
+            try:
+                st = Q.build_state(p)
+                fen = st['fens'][-1]
+                if game == 'xiangqi':
+                    legal = X.legal(st)
+                    assert X.turn(st) == p['turn'] == fen.split()[1], '走子方不一致'
+                    assert legal, '走子方无着'
+                    assert p['prev_move'] in legal, 'prev_move 不合法'
+                    assert p['engine_best'] in legal, 'engine_best 不合法'
+                else:
+                    b = chess.Board(fen)
+                    assert b.is_valid(), 'FEN 不合法'
+                    assert ('w' if b.turn else 'b') == p['turn'], '走子方不一致'
+                    assert not b.is_game_over(), '已终局'
+                    assert chess.Move.from_uci(p['solution']) in b.legal_moves, 'solution 不合法'
+                assert p.get('source'), '缺 source'
+            except AssertionError as ex:
+                bad += 1
+                print('✗ %s %s：%s' % (game, p['id'], ex))
+        print('%s：%d 个，全部合法' % (game, len(rows)))
+    print('检查完：%s' % ('全部通过' if not bad else '%d 个有问题' % bad))
+    return 1 if bad else 0
+
+
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('game', choices=('xiangqi', 'chess'))
+    ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    ap.add_argument('what', choices=('xiangqi', 'chess', 'check'))
     ap.add_argument('--csv', help='国际象棋：解压出的 lichess 谜题 CSV')
     ap.add_argument('--out', default=HERE)
     a = ap.parse_args()
-    if a.game == 'xiangqi':
+    if a.what == 'check':
+        return check()
+    if a.what == 'xiangqi':
         rows = xiangqi()
     else:
         if not a.csv:
             raise SystemExit('国际象棋要 --csv')
         rows = chess_rows(a.csv)
-    path = os.path.join(a.out, '%s.jsonl' % a.game)
+    path = os.path.join(a.out, '%s.jsonl' % a.what)
     write_jsonl(path, rows)
     print('写了 %d 条到 %s' % (len(rows), path))
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

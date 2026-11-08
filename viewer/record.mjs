@@ -231,6 +231,10 @@ export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
     let chromium;
     try {
       ({ chromium } = await import('playwright-core'));
+    } catch (e) {
+      throw new RecordError(`未安装 playwright-core，请先执行：cd viewer && npm ci --ignore-scripts（${e.message.split('\n')[0]}）`);
+    }
+    try {
       const chromiumPath = cfg.explicitChromiumPath || resolveChromium(o.chromium, { chromium });
       browser = await chromium.launch({
         executablePath: chromiumPath, handleSIGINT: false, handleSIGTERM: false, handleSIGHUP: false,

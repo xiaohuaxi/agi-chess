@@ -309,6 +309,18 @@ def cmd_fit(a):
 def export():
     sys.path.insert(0, ROOT)
     from agi_chess import batch, records
+    missing = []
+    for game, dirs in BATCHES.items():
+        for b in dirs:
+            d = os.path.join(ROOT, 'runs', b)
+            if not os.path.isdir(d) or not any(
+                    batch.NAME.match(name) and os.path.isfile(os.path.join(d, name, 'game.jsonl'))
+                    for name in os.listdir(d)):
+                missing.append('runs/' + b)
+    if missing:
+        raise SystemExit('未找到导出所需的本地标定目录或原始 game.jsonl（%s）；export 依赖未入库的引擎标定目录与原始对局记录，'
+                         '公开克隆可直接查看已入库的 analysis/rating/games-*.csv，或运行 `python3 analysis/rating/rate.py report` / `fit` 复算等级分。'
+                         % '、'.join(missing))
     eng_rows, opus_rows = [], []
     for game, dirs in BATCHES.items():
         for b in dirs:

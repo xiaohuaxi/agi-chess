@@ -369,26 +369,6 @@ def deepseek_messages(system, history, user_text):
     return msgs + [{"role": "user", "content": user_text}]
 
 
-def check_choice(resp):
-    choices = resp.get("choices") or []
-    if not choices or not isinstance(choices[0].get("message"), dict):
-        raise ChatError(f"response has no message: {clip(json.dumps(resp, ensure_ascii=False))}")
-    choice = choices[0]
-    message = choice["message"]
-    text = message.get("content") or ""
-    finish = choice.get("finish_reason")
-    if message.get("tool_calls") or finish == "tool_calls":
-        raise ChatError("the model called a tool; plain chat allows none")
-    if message.get("annotations"):
-        raise ChatError("the answer carries annotations (web citations); plain chat allows no web access")
-    if not text.strip():
-        raise ChatError(f"empty answer (finish_reason={finish}); reasoning tokens count toward "
-                        "--max-tokens, raise it or lower --effort")
-    if finish == "length":
-        raise ChatError("answer truncated by the token limit (finish_reason=length); raise --max-tokens")
-    return message, text
-
-
 def server_tool_uses(usage, path=""):
     """Positive counters for server-side tools or search anywhere in a usage object."""
     found = []
@@ -406,6 +386,28 @@ def check_no_tools(usage):
     used = server_tool_uses(usage or {})
     if used:
         raise ChatError("the model used server-side tools (" + ", ".join(used) + "); plain chat allows none")
+
+
+def check_choice(resp):
+    choices = resp.get("choices") or []
+    if not choices or not isinstance(choices[0].get("message"), dict):
+        check_no_tools(resp.get("usage"))
+        raise ChatError(f"response has no message: {clip(json.dumps(resp, ensure_ascii=False))}")
+    choice = choices[0]
+    message = choice["message"]
+    text = message.get("content") or ""
+    finish = choice.get("finish_reason")
+    if message.get("tool_calls") or finish == "tool_calls":
+        raise ChatError("the model called a tool; plain chat allows none")
+    if message.get("annotations"):
+        raise ChatError("the answer carries annotations (web citations); plain chat allows no web access")
+    check_no_tools(resp.get("usage"))
+    if not text.strip():
+        raise ChatError(f"empty answer (finish_reason={finish}); reasoning tokens count toward "
+                        "--max-tokens, raise it or lower --effort")
+    if finish == "length":
+        raise ChatError("answer truncated by the token limit (finish_reason=length); raise --max-tokens")
+    return message, text
 
 
 def call_openrouter(session, user_text, opts):

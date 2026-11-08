@@ -823,6 +823,15 @@ class RealProtocolPrompts(unittest.TestCase):
             with self.assertRaises(mod.ChatError) as ctx:
                 mod.check_choice({'choices': [choice]})
             self.assertIn('the model called a tool; plain chat allows none', str(ctx.exception))
+        for resp in (
+            {'choices': [{'finish_reason': 'stop', 'message': {'role': 'assistant', 'content': ''}}],
+             'usage': {'server_tool_use': {'web_search_requests': 1}}},
+            {'choices': [{'finish_reason': 'length', 'message': {'role': 'assistant', 'content': 'partial'}}],
+             'usage': {'tool_use_tokens': 5}},
+        ):
+            with self.assertRaises(mod.ChatError) as ctx:
+                mod.check_choice(resp)
+            self.assertIn('the model used server-side tools', str(ctx.exception))
         self.assertEqual(mod.AGY_CORE_DIR, chat._REPO_SCRIPT.parent)
         with mock.patch.object(sys, 'path', list(sys.path)), mock.patch.dict(sys.modules):
             sys.modules.pop('agy_core', None)

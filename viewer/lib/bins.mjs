@@ -12,13 +12,17 @@ export function isExecutableFile(p) {
   }
 }
 
-export function findExecutable(names, extraPaths = []) {
+export function findExecutable(names, extraPaths = [], platform = process.platform) {
   const list = Array.isArray(names) ? names : [names];
+  const exts = platform === 'win32' ? ['', '.exe', '.cmd', '.bat'] : [''];
   const dirs = (process.env.PATH || '').split(path.delimiter).filter(Boolean);
   for (const dir of dirs) {
     for (const name of list) {
-      const candidate = path.join(dir, name);
-      if (isExecutableFile(candidate)) return candidate;
+      const hasExt = /\.(exe|cmd|bat|com)$/i.test(name);
+      for (const ext of (hasExt ? [''] : exts)) {
+        const candidate = path.join(dir, name + ext);
+        if (isExecutableFile(candidate)) return candidate;
+      }
     }
   }
   for (const candidate of extraPaths) {
@@ -28,7 +32,7 @@ export function findExecutable(names, extraPaths = []) {
 }
 
 function isBareCommand(s) {
-  return Boolean(s) && !s.includes(path.sep) && !s.includes('/');
+  return Boolean(s) && !s.includes(path.sep) && !s.includes('/') && !s.includes('\\');
 }
 
 const FFMPEG_EXTRAS = ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg'];
@@ -60,8 +64,9 @@ export function resolveFfprobe(ffmpegPath, explicit) {
     if (!found) throw new Error(`找不到可执行的 ffprobe：${pick}`);
     return found;
   }
-  if (ffmpegPath && (ffmpegPath.includes(path.sep) || ffmpegPath.includes('/'))) {
-    const sibling = path.join(path.dirname(ffmpegPath), 'ffprobe');
+  if (ffmpegPath && (ffmpegPath.includes(path.sep) || ffmpegPath.includes('/') || ffmpegPath.includes('\\'))) {
+    const ext = /\.exe$/i.test(ffmpegPath) ? '.exe' : '';
+    const sibling = path.join(path.dirname(ffmpegPath), 'ffprobe' + ext);
     if (isExecutableFile(sibling)) return sibling;
   }
   return findExecutable(['ffprobe'], FFPROBE_EXTRAS) || 'ffprobe';

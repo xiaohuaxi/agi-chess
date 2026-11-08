@@ -59,11 +59,14 @@
 """
 import argparse, collections, concurrent.futures, json, math, os, pathlib, re, statistics, sys, tempfile, threading, uuid
 
-import chess
-import pyffish as sf
+try:
+    import chess
+    import pyffish as sf
+    from . import chess_ as C
+    from . import xiangqi as X
+except ModuleNotFoundError:
+    chess = sf = C = X = None
 
-from . import chess_ as C
-from . import xiangqi as X
 from . import chat, claude_cli, codex_cli, memory, records, runner
 from .claude_cli import Paused, Refused, ToolAttempt
 from .cli import commit
@@ -105,12 +108,19 @@ class QuizChess:
         return self._HEAD.sub('第 %d 回合（已走 %d 个半回合）' % (ply // 2 + 1, ply), C.render(st, sc, fresh), count=1)
 
 
+def _require_rules():
+    if chess is None or sf is None or C is None or X is None:
+        raise SystemExit('缺少规则库依赖（chess / pyffish），请先执行：pip install -r requirements.txt')
+
+
 def game_module(game):
+    _require_rules()
     return X if game == 'xiangqi' else QuizChess()
 
 
 def build_state(pos):
     """题目局面的棋种状态。中国象棋从开局重放全部着法（禁着判定要完整历史）；国际象棋从谜题 FEN 走完对手那步。"""
+    _require_rules()
     if pos['game'] == 'xiangqi':
         st = X.start()
         for m in pos['moves']:
@@ -154,7 +164,10 @@ def parse_sets(G, items):
 # boardpieces（第 4P2 批新增）：只有中国象棋需要，= grid + pieces（all 去掉 fen 那段，逐字相同，因为 ALL_VIEW 顺序
 # 就是 grid,pieces,fen，render 按 sc['view'] 顺序逐段拼接、段间用两个换行分隔，去掉最后一段不影响前面几段的文字）。
 # 国际象棋没有这档的需要：允许传但不生效没意义，也不该悄悄映射成某个已有档造成误解，所以明确报错。
-SHOW_VIEWS = {'xiangqi': X.SHOWS, 'chess': C.SHOWS}
+SHOW_VIEWS = {
+    'xiangqi': X.SHOWS if X is not None else {'all': 'grid,pieces,fen', 'board': 'grid', 'pieces': 'pieces', 'fen': 'fen', 'boardpieces': 'grid,pieces'},
+    'chess': C.SHOWS if C is not None else {'all': 'fen,ascii', 'board': 'ascii', 'pieces': 'pieces', 'fen': 'fen'},
+}
 
 
 def show_views(G, show):
@@ -842,6 +855,7 @@ class ChessRules:
 
 
 def rules_for(game):
+    _require_rules()
     return XqRules() if game == 'xiangqi' else ChessRules()
 
 
@@ -931,6 +945,8 @@ def judge_game(game, batch, out_root, positions=None, arm=None):
             r = result_of(os.path.join(ans_dir, name))
             if r:
                 results.append(r)
+    if not results:
+        raise SystemExit('%s 下未找到单题原始作答记录（*.jsonl，不含 judged.jsonl）；重判依赖未入库的单题作答记录，公开克隆可直接用 quiz report 查看已入库的 judged.jsonl。' % ans_dir)
     R = rules_for(game)
     eng = engine_for(game)
     cache, rows = {}, []

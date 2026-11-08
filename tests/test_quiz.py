@@ -658,6 +658,15 @@ class Threats(unittest.TestCase):
         self.assertIn('| chess | - | xhigh |', text)
         self.assertIn('| chess | base | xhigh |', text)
         self.assertIn('| chess | threats | xhigh | 1 | 1 | 0 | 2 | 1 | 50% | 0 | 0 | 1 | 0 | 1 | 0 | 0 |', text)
+        # 无单题原始 *.jsonl 时，judge 拒绝覆盖已有的 judged.jsonl
+        judged_path = os.path.join(Q.unit_dir(tmp, 'base', 'chess'), 'judged.jsonl')
+        with open(judged_path, encoding='utf-8') as f:
+            before_judged = f.read()
+        with self.assertRaises(SystemExit) as ctx:
+            quiet(Q.main, ['judge', '--out', tmp, '--arm', 'base', '--game', 'chess'])
+        self.assertIn('judged.jsonl', str(ctx.exception))
+        with open(judged_path, encoding='utf-8') as f:
+            self.assertEqual(f.read(), before_judged)
 
 
 class StaticLabels(unittest.TestCase):

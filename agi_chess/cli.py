@@ -282,6 +282,9 @@ def cmd_play(a):
     run_dir = (pathlib.Path(a.out) if a.out else RUNS) / a.tag
     if (run_dir / 'game.jsonl').exists():
         raise SystemExit('%s 已有记录，换个 --tag 或用 resume' % run_dir)
+    if run_dir.exists() and any((run_dir / f).exists() for f in (
+            'game.pgn', 'analysis.jsonl', 'analysis-summary.json', 'summary.json', 'summary.md', 'judged.jsonl')):
+        raise SystemExit('%s 已有已入库或已导出的记录，请换个 --tag' % run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     cfg['claude_version'] = claude_cli.version()
     cfg['commit'] = commit()
@@ -295,7 +298,12 @@ def cmd_play(a):
 
 def cmd_resume(a):
     run_dir = pathlib.Path(a.dir)
-    cfg = records.read(run_dir / 'game.jsonl')[0]['cfg']
+    log_path = run_dir / 'game.jsonl'
+    if not log_path.exists():
+        if (run_dir / 'game.pgn').exists():
+            raise SystemExit('%s 下没有原始对局记录 game.jsonl（公开仓仅入库导出的 game.pgn），无法续跑' % run_dir)
+        raise SystemExit('%s 下没有对局记录 game.jsonl' % run_dir)
+    cfg = records.read(log_path)[0]['cfg']
     G = game_module(cfg['game'])
     ctx = runner.load(G, str(run_dir))
     if ctx['end']:
@@ -324,7 +332,12 @@ def cmd_resume(a):
 def cmd_export(a):
     """已结束的盘按记录重新导出棋谱（带每步元信息），不调模型、不写记录。"""
     run_dir = pathlib.Path(a.dir)
-    cfg = records.read(run_dir / 'game.jsonl')[0]['cfg']
+    log_path = run_dir / 'game.jsonl'
+    if not log_path.exists():
+        if (run_dir / 'game.pgn').exists():
+            raise SystemExit('%s 已有导出的公开棋谱 game.pgn，底层原始记录 game.jsonl 未随仓入库，无需重新 export' % run_dir)
+        raise SystemExit('%s 下没有对局记录 game.jsonl' % run_dir)
+    cfg = records.read(log_path)[0]['cfg']
     ctx = runner.load(game_module(cfg['game']), str(run_dir))
     if not ctx['end']:
         raise SystemExit('%s 还没下完（已走 %d 个半回合），下完再导出' % (run_dir, len(ctx['st']['moves'])))

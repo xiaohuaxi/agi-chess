@@ -249,6 +249,24 @@ class SessionCost(unittest.TestCase):
         self.assertAlmostEqual(A.usage_row(recs, 'w')['cost'], 0.10 + 0.02)    # 最后一条累计变小：用原值
         self.assertAlmostEqual(A.usage_row(recs, 'b')['cost'], 0.04)
 
+    def test_clean_clone_analyse_skips_when_summary_present_and_errors_on_force(self):
+        tmp = tempfile.mkdtemp(prefix='agi-chess-ana-clean-')
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        with open(os.path.join(tmp, 'analysis.jsonl'), 'w', encoding='utf-8') as f:
+            f.write('{}\n')
+        summary = {
+            'plies': 10,
+            'params': {'version': A.VERSION, 'game': 'chess', 'depth': A.DEPTH['chess'], 'hash': A.HASH},
+            'sides': {'w': {'plies': 5, 'undecided': 5, 'blunders': 0, 'mistakes': 0, 'events': 0, 'acpl': 12.0},
+                      'b': {'plies': 5, 'undecided': 5, 'blunders': 0, 'mistakes': 0, 'events': 0, 'acpl': 15.0}},
+        }
+        with open(os.path.join(tmp, 'analysis-summary.json'), 'w', encoding='utf-8') as f:
+            json.dump(summary, f)
+        self.assertEqual(A.analyse_run(tmp, log=QUIET), summary)
+        with self.assertRaises(SystemExit) as ctx:
+            A.analyse_run(tmp, force=True, log=QUIET)
+        self.assertIn('game.jsonl', str(ctx.exception))
+
 
 if __name__ == '__main__':
     unittest.main()

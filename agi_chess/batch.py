@@ -502,6 +502,8 @@ def cmd_summary(a):
                 if NAME.match(name) and game_state(os.path.join(d, name)) == 'done':
                     analyze.analyse_run(os.path.join(d, name), log=lambda *x: None)
     res = summarize(a.dirs)
+    if not res['games']:
+        raise SystemExit('未在 %s 下找到已完成的本地原始对局记录 game.jsonl；重算汇总依赖未入库的 game.jsonl，公开克隆可直接查看已入库的 summary.md / summary.json。' % '、'.join(a.dirs))
     md = markdown(res)
     out = a.out or (os.path.join(a.dirs[0], 'summary') if len(a.dirs) == 1 else None)
     if out is None:
