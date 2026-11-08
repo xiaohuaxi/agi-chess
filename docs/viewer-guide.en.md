@@ -2,7 +2,7 @@
 
 # Viewer & Video Recording Guide
 
-The web viewer reads PGN files directly: standard PGN for International Chess and xqbase PGN for Xiangqi (Chinese Chess). You can browse all 171 official model games checked into `runs/<tag>/game.pgn`, the built-in test fixtures, or your own PGN files without model accounts or chess engines.
+The web viewer reads PGN files directly: standard PGN for International Chess and xqbase PGN for Xiangqi (Chinese Chess). You can browse all 171 official model games checked into `runs/` (58 single-game directories `runs/<tag>/game.pgn` and 7 multi-game batch directories `runs/<batch>/<game>/game.pgn`), the built-in test fixtures, or your own PGN files without model accounts or chess engines.
 
 The viewer defaults to Chinese; append `lang=en` to the URL to switch the UI to English. For environment setup see [Setup & Running](setup.en.md), for viewer architecture and full URL parameter details see [Viewer Design (zh-CN)](viewer.md), and for asset and tool licenses see [Dependencies & Provenance](dependencies.en.md).
 
@@ -12,6 +12,7 @@ Start a local static HTTP server from the repository root:
 
 ```sh
 python3 -m http.server --bind 127.0.0.1 8000
+# Or use the zero-dependency Node server: node viewer/serve.mjs --port 8000 --bind 127.0.0.1
 ```
 
 Open any of the links below in your browser:
@@ -22,11 +23,11 @@ Open any of the links below in your browser:
 - [Xiangqi Test Sample](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en)
 - [Back-to-Back Playback of Both Samples](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1&lang=en)
 
-The repository's `runs/` directory contains `game.pgn` for all 65 official model match directories (171 games in total). Simply replace `files=` in the URL with any `/runs/<tag>/game.pgn` to inspect that match and read the model's move-by-move rationales. The HTTP server must be started from the repository root because paths in `files=` are resolved relative to the site root. Bind only to `127.0.0.1`, and press Ctrl-C in the terminal when finished. If port 8000 is in use, choose another port and update the URL. Because the viewer uses native browser ES modules, it cannot be opened directly via `file://`, and requires neither a build step nor `npm ci` for browsing.
+The repository's `runs/` directory contains `game.pgn` for all 65 official model match directories (171 games in total): **58 single-game directories** (43 model-vs-model + 15 single-game model-vs-engine `b1-ch-*`/`b1-xq-*`) are at `/runs/<tag>/game.pgn`, and **7 multi-game batch directories** (`b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`, 113 games in total) place each game in a second-level subdirectory `/runs/<batch>/<game>/game.pgn` (e.g. `/runs/zc/maia-1900-s1-w/game.pgn`). Replace `files=` in the URL with any of those paths to inspect that match and read the model's move-by-move rationales; if you also pass the accompanying `analysis.jsonl` in the same directory (e.g. `?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl&lang=en`), the viewer validates it and overlays engine blunder/mistake/inaccuracy badges. The HTTP server must be started from the repository root because paths in `files=` are resolved relative to the site root. Bind only to `127.0.0.1`, and press Ctrl-C in the terminal when finished. If port 8000 is in use, choose another port and update the URL. Because the viewer uses native browser ES modules, it cannot be opened directly via `file://`, and requires neither a build step nor `npm ci` for browsing.
 
 ## Browse Your Own PGNs
 
-Open <http://127.0.0.1:8000/viewer/?lang=en> and drag `.pgn` files onto the page. Multiple dropped files play sequentially sorted by filename; prefix filenames with `01-`, `02-` to control playback order.
+Open <http://127.0.0.1:8000/viewer/?lang=en> and drag `.pgn` files (optionally alongside matching `analysis.jsonl` files) onto the page. Multiple dropped files play sequentially sorted by filename; prefix filenames with `01-`, `02-` to control playback order.
 
 | Action | Shortcut |
 | --- | --- |
@@ -68,7 +69,7 @@ Video recording uses a Node.js script to drive headless Chromium frame-by-frame 
    cd ..
    ```
 
-3. **A Chromium browser compatible with Playwright.** `playwright-core` does not download browsers during `npm ci`; point to an existing binary via `--chromium /abs/path/to/Chromium` or `VIEWER_CHROMIUM`. When unspecified, the script checks Playwright's local browser cache (installable for the locked `1.58.2` version from the repository root via `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium`) and then searches `PATH` and standard system paths for `chromium`, `chromium-browser`, `google-chrome-stable`, or `google-chrome`.
+3. **A Chromium browser compatible with Playwright.** `playwright-core` does not download browsers during `npm ci`; point to an existing binary via `--chromium /abs/path/to/Chromium` or `VIEWER_CHROMIUM`. When unspecified, the script checks Playwright's local browser cache (installable for the locked `1.58.2` version from the repository root via `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium`) and then searches `PATH` and standard system paths for `chromium`, `chromium-browser`, `google-chrome-stable`, `google-chrome`, `/snap/bin/chromium`, and macOS `/Applications/Google Chrome.app/...`.
 4. **FFmpeg executable**, specified via `--ffmpeg /abs/path/to/ffmpeg` or `VIEWER_FFMPEG` (otherwise searched automatically in `PATH` and standard paths such as `/usr/bin/ffmpeg`, `/usr/local/bin/ffmpeg`, and `/opt/homebrew/bin/ffmpeg`). Inspecting output streams also uses `ffprobe`.
 5. **CJK fonts on headless Linux servers:** Xiangqi piece glyphs and Chinese UI text render using system fonts. On headless Linux systems, install Chinese fonts before recording or taking screenshots (e.g., on Ubuntu/Debian: `sudo apt install fonts-noto-cjk fonts-arphic-ukai`); otherwise the Chinese characters on Xiangqi pieces will render as missing-glyph tofu boxes.
 
@@ -88,7 +89,7 @@ Default output is 3:4 aspect ratio, 1080×1440 resolution, H.264 at 30 fps, with
 node viewer/record.mjs viewer/test/fixtures/chess-sample.pgn viewer/test/fixtures/xq-sample.pgn -o /tmp/two-samples.mp4 --gap 1.5 --openhold 0.5
 ```
 
-When given a directory, `record.mjs` automatically loads `game.pgn` inside it—so you can record any checked-in official match directly (for example: `node viewer/record.mjs runs/g7-c-opus-astra-1 -o /tmp/g7-c-1.mp4 --gap 1.5 --openhold 0.5`). Common flags: `--no-sound` (mute), `--vol 0.5` (adjust volume), `--anim 0` (disable move animation), `--title` (enable title card), `--resulthold` (final position hold duration), and `--summaryhold` (series scoreboard hold duration). `--aspect 9:16` or `16:9` changes the viewport dimensions without specialized layout tuning, so inspect the output before publishing. View all flags with:
+When given a directory, `record.mjs` automatically loads `game.pgn` directly inside it—so you can record any checked-in single-game directory (`node viewer/record.mjs runs/g7-c-opus-astra-1 -o /tmp/g7-c-1.mp4 --gap 1.5 --openhold 0.5`) or any single-game subdirectory inside a multi-game batch (`node viewer/record.mjs runs/zc/maia-1900-s1-w -o /tmp/zc-s1w.mp4`; note that top-level batch directories like `runs/zc` only contain `summary.*`, so pass the second-level game subdirectory). Common flags: `--no-sound` (mute), `--vol 0.5` (adjust volume), `--anim 0` (disable move animation), `--title` (enable title card), `--resulthold` (final position hold duration), and `--summaryhold` (series scoreboard hold duration). `--aspect 9:16` or `16:9` changes the viewport dimensions without specialized layout tuning, so inspect the output before publishing. View all flags with:
 
 ```sh
 node viewer/record.mjs --help
@@ -104,6 +105,6 @@ ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,profile,pix
 
 Expected defaults are `h264` (High profile), `yuv420p`, `1080x1440`, and `30/1`. Open the video to visually verify the opening frame, piece movement, text rendering, and end-of-game banner.
 
-Checked-in `runs/<tag>/game.pgn` files are already exported and ready to view or record directly (do not run `export` on checked-in directories because bulky raw `game.jsonl` logs are excluded from git). If you record a new game that you ran locally yourself, first confirm the match has finished (the last entry in your local `game.jsonl` has `type=end`), then run `python -m agi_chess export runs/<tag>` to export `game.pgn`.
+Checked-in `runs/<tag>/game.pgn` (for 58 single-game directories) and `runs/<batch>/<game>/game.pgn` (for 7 multi-game batch directories) files are already exported and ready to view or record directly (do not run `export` on checked-in directories because bulky raw `game.jsonl` logs are excluded from git). If you record a new game that you ran locally yourself, first confirm the match has finished (the last entry in your local `game.jsonl` has `type=end`), then run `python -m agi_chess export runs/<tag>` to export `game.pgn`.
 
 To record with the English UI, append `--set lang=en --set "names=opus=Claude Opus,astra=GPT astra"` (optionally combined with `--openhold 0.5`). In English mode, Xiangqi moves are displayed in WXF notation while the input PGN remains in xqbase format.

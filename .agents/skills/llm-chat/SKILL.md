@@ -23,8 +23,8 @@ Options:
 - `-m, --model <id>`: required on every call; see routing below.
 - `--system <text>` or `--system-file <path>`: required on the first turn, pick one. Nothing else is added: no AGENTS.md or other rules are read.
 - `--session <id>`: continue an existing session (the id printed by the first turn).
-- `--effort <level>`: reasoning effort, passed through as-is (e.g. `low`, `medium`, `high`; DeepSeek accepts `low`/`high`/`max`).
-- `--max-tokens <n>`: output cap. Reasoning tokens count toward it on the HTTP routes, so a small cap can leave the answer empty, which is an error. Claude gets it via `CLAUDE_CODE_MAX_OUTPUT_TOKENS`; GPT does not support it and the call fails if it is set.
+- `-e, --effort <level>`: reasoning effort, passed through as-is (e.g. `low`, `medium`, `high`; DeepSeek accepts `low`/`high`/`max`).
+- `--max-tokens <n>`: output cap. Reasoning tokens count toward it on the HTTP routes, so a small cap can leave the answer empty, which is an error. Claude gets it via `CLAUDE_CODE_MAX_OUTPUT_TOKENS`; GPT and agy do not support it and the call fails if it is set.
 - `--timeout <seconds>`: default 600 (xAI is sometimes slow).
 - `--attach <path>`: agy models only, repeatable, on any turn. A file for the model to read: audio (wav, mp3, m4a, flac, ogg, ...), video (mp4, mov, ...), images, PDF, text. See "No tools, no web" for what the model may do with it.
 - `--drop-thinking`: later turns resend the earlier user messages and visible answers but not the model's thinking from those turns. Each turn still thinks as usual. Set it on the first turn; see "Dropping earlier thinking" below.
@@ -41,10 +41,10 @@ On success (exit 0):
 | `session` | session id to pass as `--session` next time |
 | `model` | concrete model that answered (locked for later turns) |
 | `provider` | who served it: OpenRouter's provider display name, `DeepSeek`, `anthropic (claude subscription)`, `openai (codex subscription)`, `google (agy subscription)` |
-| `cache_read`, `cache_write` | prompt tokens read from / written to cache; `null` when the backend does not report it (DeepSeek writes) |
-| `cost_usd`, `cost_basis` | this turn's cost. OpenRouter: real charge (`billed`). Claude: list-price estimate, not charged on a subscription (claude reports a running session total; the script subtracts the previous turn's total). DeepSeek and GPT: `null` |
+| `cache_read`, `cache_write` | prompt tokens read from / written to cache; `null` when the backend does not report it (DeepSeek and agy writes) |
+| `cost_usd`, `cost_basis` | this turn's cost. OpenRouter: real charge (`billed`). Claude: list-price estimate, not charged on a subscription (claude reports a running session total; the script subtracts the previous turn's total). DeepSeek, GPT and agy: `null` |
 | `input_tokens`, `output_tokens`, `reasoning_tokens` | this turn's usage (for GPT, codex reports running totals for the thread; the script subtracts the previous turn's totals) |
-| `attachments` | agy only: files attached on this turn |
+| `attachments` | agy only: number of files attached on this turn (`int`) |
 | `thinking_dropped` | Claude with `--drop-thinking` only: thinking blocks removed from earlier turns just before this turn (0 on the first turn; usually 1 after a turn that thought) |
 
 Other stderr lines may appear before it; parse only the `LLM_CHAT_META ` line.

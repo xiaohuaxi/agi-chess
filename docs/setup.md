@@ -14,8 +14,10 @@
 | 浏览正式对局、样例或自己的棋谱 | 浏览器、本机静态服务；页面无需构建或 npm 安装 | 否 |
 | 跑 Python 离线测试 | Python、`chess`、`pyffish`；部分测试需要本机引擎 | 否 |
 | 跑阅读器 JS 测试 | Node.js；浏览器测试另需 `playwright-core` 与 Chromium，部分往返测试需要 Python 规则库 | 否 |
-| 开模型对弈 | Python 规则库、仓内内置 `llm-chat`（`.agents/skills/llm-chat/`）、本地模型 CLI（`claude`/`codex`/`agy`）或 HTTP API Key（`API_KEY_OPENROUTER` / `API_KEY_DEEPSEEK`）；引擎对手另需引擎 | 是 |
+| 开模型对弈 | macOS / Linux（含 WSL2；`llm_chat.py` 依赖 `fcntl` 与 POSIX 进程组）、Python 规则库、仓内内置 `llm-chat`（`.agents/skills/llm-chat/`）、本地模型 CLI（`claude`/`codex`/`agy`）或 HTTP API Key（`API_KEY_OPENROUTER` / `API_KEY_DEEPSEEK`）；引擎对手另需引擎 | 是 |
 | 把棋谱录成 MP4 | Node.js、`playwright-core`、Chromium、FFmpeg；核对视频另用 FFprobe | 否 |
+
+> **运行环境边界**：静态阅读器（`viewer/`）与评级复算（`analysis/rating/rate.py`）跨平台可用；模型对弈调用层（`.agents/skills/llm-chat/scripts/llm_chat.py` 使用 `fcntl` 文件锁与 POSIX 进程组管理）面向 macOS 与 Linux（含 WSL2），不支持原生 Windows。
 
 ## 免费入门：复算评级
 
@@ -29,12 +31,13 @@ python3 analysis/rating/rate.py report
 python3 analysis/rating/rate.py report --boot 10
 ```
 
-少量抽样只适合检查运行，不用于引用区间；正式复算请保留默认次数。结果的条件和局限见[评级报告](results/opus-max-rating.md)。这些数字基于已有对局，并不代表重新测了一遍模型。`rate.py export` 依赖未入库的纯引擎互弈标定原始目录與底层 `game.jsonl`，新克隆的仓库无需执行它（汇总战绩已入库在 `analysis/rating/games-*.csv`）。
+少量抽样只适合检查运行，不用于引用区间；正式复算请保留默认次数。结果的条件和局限见[评级报告](results/opus-max-rating.md)。这些数字基于已有对局，并不代表重新测了一遍模型。`rate.py export` 依赖未入库的纯引擎互弈标定原始目录与底层 `game.jsonl`，新克隆的仓库无需执行它（汇总战绩已入库在 `analysis/rating/games-*.csv`）。
 
 ## 免费入门：浏览正式对局与样例
 
 ```sh
 python3 -m http.server --bind 127.0.0.1 8000
+# 或用零依赖 Node 服务：node viewer/serve.mjs --port 8000 --bind 127.0.0.1
 ```
 
 保持这个终端运行，在浏览器打开：
@@ -44,7 +47,7 @@ python3 -m http.server --bind 127.0.0.1 8000
 - 国际象棋测试样例：<http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn>
 - 中国象棋测试样例：<http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn>
 
-仓库 `runs/` 已随仓包含全部 65 个正式模型对局目录（共 171 盘）的 `game.pgn`（内含每步完整思考理由批注、耗时与 token 统计），可直接将网址中的 `files=` 替换为任意 `/runs/<tag>/game.pgn` 浏览。按空格播放，左右键逐步看；用完在服务终端按 Ctrl-C。服务只绑定本机；若 8000 端口已占用，换个端口并同步修改网址。页面不能直接用 `file://` 打开。更多操作见[棋谱浏览与视频录制](viewer-guide.md)。
+仓库 `runs/` 已随仓包含全部 65 个正式模型对局目录（共 171 盘）的 `game.pgn`（内含每步完整思考理由批注、耗时与 token 统计）：其中 **58 个单盘目录**（43 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）路径为 `/runs/<tag>/game.pgn`，**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `/runs/<batch>/<game>/game.pgn`（如 `/runs/zc/maia-1900-s1-w/game.pgn`）；可直接替换网址中的 `files=`（也可同时传入同目录的 `analysis.jsonl` 叠加恶手徽章）浏览。按空格播放，左右键逐步看；用完在服务终端按 Ctrl-C。服务只绑定本机；若 8000 端口已占用，换个端口并同步修改网址。页面不能直接用 `file://` 打开。更多操作见[棋谱浏览与视频录制](viewer-guide.md)。
 
 阅读器默认中文；在网址后加 `&lang=en` 切换英文，`names=` 可覆盖棋手显示名。具体写法见[阅读器指南](viewer-guide.md)。
 
@@ -58,17 +61,18 @@ python3 -m venv .venv
 python -m pip install -r requirements.txt
 python -c 'import chess, pyffish; print("规则库可导入")'
 python -m agi_chess --help
+python data/batch1/select_positions.py check
 python data/batch2/select_positions.py check
 python -m unittest discover -s tests -t .
 ```
 
 `chess` 是代码中 `import chess` 对应的包；中国象棋规则由 `pyffish` 提供，中文记谱已改用仓内自研实现（无需 `cchess`）。`pyffish` 含本机扩展，新平台可能需要编译环境；在 Debian/Ubuntu 上若系统缺少 `venv`、编译工具或 Stockfish，可先运行 `sudo apt install python3-venv build-essential python3-dev stockfish`。本文没有核实全新的 Python/操作系统组合能否安装；安装失败时先检查解释器和该包的构建要求。
 
-`python3 data/batch2/select_positions.py check` 仅依赖上述规则库，离线校验已入库的第二批局面题（`data/batch2/{xiangqi,chess}.jsonl` 的 FEN、行棋方与着法合法性），不启动引擎、不读取 `runs/`。
+`python3 data/batch1/select_positions.py check` 与 `python3 data/batch2/select_positions.py check` 仅依赖上述规则库，离线校验已入库的第一批与第二批局面题（`data/batch1/{xiangqi,chess}.jsonl` 与 `data/batch2/{xiangqi,chess}.jsonl` 的 FEN、行棋方与着法合法性），不启动引擎、不读取 `runs/`。
 
 完整测试包含引擎握手与走子，需要能找到 `stockfish` 和 `fairy-stockfish`。缺少引擎时相关引擎测试会跳过；完整验证须安装两种引擎，并同时检查失败和 skipped。引擎是单独安装的程序，不会由上述 pip 命令提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
 
-2026-11-05 本机核实：`/usr/bin/python3` 为 Python 3.9.6，可导入 `chess 1.11.2`、`pyffish 0.0.90`（原 `cchess` 运行时依赖已移除，改用仓内自研记谱）；此前该解释器下离线测试 314 项通过。同机默认 `python3` 为 Homebrew Python 3.15.0，未安装这些规则库，直接导入会报 `ModuleNotFoundError`。安装在哪个解释器下，运行和测试就用哪个解释器；评级复算与静态服务不需要这些包。
+2026-11-08 核实：在安装 `chess 1.11.2`、`pyffish 0.0.90`（原 `cchess` 运行时依赖已移除，改用仓内自研记谱）的解释器下，全套 320 项 Python 测试通过。同机若默认 `python3` 未安装这些规则库，直接导入会报 `ModuleNotFoundError`。安装在哪个解释器下，运行和测试就用哪个解释器；评级复算与静态服务不需要这些包。
 
 ## 模型对弈：内置 `llm-chat`、本地 CLI 订阅与 HTTP API 配置
 
@@ -116,13 +120,18 @@ python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --b
   wire_api = "chat"
   ```
 
-  配套的模型目录最小模板 `~/.codex/deepseek-models.json`：
+  配套的模型目录最小模板 `~/.codex/deepseek-models.json`（须保留 `codex exec` 反序列化 `ModelInfo` 所需的基础字段）：
 
   ```json
   {
     "models": [
       {
         "slug": "deepseek/deepseek-v4-pro",
+        "shell_type": "shell_command",
+        "tool_mode": null,
+        "multi_agent_version": "v2",
+        "experimental_supported_tools": [],
+        "apply_patch_tool_type": "freeform",
         "supported_reasoning_levels": [{"effort": "low"}, {"effort": "medium"}, {"effort": "high"}]
       }
     ]

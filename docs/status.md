@@ -20,20 +20,23 @@
   - 将 `llm-chat`（含 `scripts/llm_chat.py`、`scripts/agy_core.py` 与 `SKILL.md`）收归仓内 `.agents/skills/llm-chat/`，`agi_chess/chat.py` 默认直接调用仓内脚本（支持 `AGI_CHESS_LLM_CHAT` / `AGICHESS_LLM_CHAT` / `LLMCHESS_LLM_CHAT` 覆盖），移除对仓外用户级 `llm-chat` skill 的依赖；
   - 统一驱动两类通道：① 本地 Agent CLI 订阅通道（`claude`、`codex`、`agy`，未安装对应 CLI 时直接报未安装错误）；② HTTP API 通道（支持 `API_KEY_OPENROUTER` / `OPENROUTER_API_KEY` 与 `API_KEY_DEEPSEEK` / `DEEPSEEK_API_KEY`，仅配 OpenRouter Key 时 `deepseek:flash` / `deepseek:v4-pro` 自动走 OpenRouter 映射模型 `deepseek/deepseek-v4.1-flash` / `deepseek/deepseek-v4-pro`）。
 - **`runs/` 正式对局与局面题产出物入库（约 17.6 MiB）**：
-  - 仓库 `runs/` 现随仓包含全部 65 个正式模型对局目录（43 盘模型互弈 + 22 批模型对引擎，共 171 盘）的 `game.pgn`（含每步完整思考理由批注、耗时及 token 统计）、`analysis.jsonl` / `analysis-summary.json`、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的汇总判卷结果 `judged.jsonl` 与 `report.txt`；
-  - 排除体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `analysis/rating/games-engines.csv`）及录屏 `.mp4` 视频；外部用户克隆后可直接用阅读器打开任意正式对局（如 `runs/g7-c-opus-astra-1/game.pgn`）。
+  - 仓库 `runs/` 现随仓包含全部 65 个正式模型对局目录——43 个模型互弈单盘目录 + 22 个模型对引擎目录（15 个单盘目录 `runs/<tag>/game.pgn` + 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`，合计 171 盘）——的 `game.pgn`（含每步完整思考理由批注、耗时及 token 统计）、`analysis.jsonl` / `analysis-summary.json`（170 盘）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的汇总判卷结果 `judged.jsonl` 与 `report.txt`；
+  - 排除体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `analysis/rating/games-engines.csv`）及录屏 `.mp4` 视频；外部用户克隆后可直接用阅读器打开任意正式对局（如单盘目录 `runs/g7-c-opus-astra-1/game.pgn` 或多盘批次子目录 `runs/zc/maia-1900-s1-w/game.pgn`）。
 - **根目录与 `docs/` 5 篇核心入门文档中英双语化**：
   - 按 `coclaw` 规范将根目录 `README.md` 设为英文主文件、新增中文版 `README.zh-CN.md`，首行互链；
   - 保留 `docs/{setup,viewer-guide,research,dependencies,license-review}.md` 中文原名确保仓内既有相对链接不断，新增对应英文版 `docs/*.en.md` 并完成首行中英互链与最新事实口径同步。
 - **全仓更名为 `agi-chess`（Python 包 `agi_chess`）并更新双语 README 开篇**：
   - 按语法与生态惯例，Python 源码包目录与模块更名为 `agi_chess/`、环境变量改为 `AGI_CHESS_*`（兼容 `AGICHESS_*` 与旧 `LLMCHESS_*`）；其余项目名、文档标题、PGN `[Event "agi-chess <tag>"]`（含 171 份入库 `game.pgn` 及 `viewer/test/runs.test.js` 对本机未入库旧 PGN 的兼容）、前端包名 `agi-chess-viewer` 与临时目录前缀统一用连字符 `agi-chess`；
   - 更新 `README.md` 与 `README.zh-CN.md` 开篇导语，并在开篇醒目位置高亮展示零配置即用的交互式棋谱阅读器（`viewer/`）。
-- **Linux (WSL2) 跨平台实测与边角修复**：
+- **Linux (WSL2) 跨平台实测、干净克隆防覆盖加固与双语文档/Skill 对齐**：
   - 修复 `viewer/record.mjs` 在 Ubuntu 22.04 默认 FFmpeg 4.4 下因输出侧 `-frames:v` 提前关闭输出流导致 AAC 音轨末尾被截断约 3 秒的问题，改为在 `-vf` 滤镜链内用 `trim=end_frame` 精确截帧；
-  - `viewer/record.mjs` 改为在 `record()` 内按需动态加载 `playwright-core`，确保未执行 `npm ci` 的干净环境下 `node viewer/record.mjs --help` 及 `viewer/test/` 下的纯 JS 测试正常跑通、浏览器测试按预期 skip；
-  - `viewer/lib/bins.mjs` 在显式指定二进制名称或路径（含环境变量 `VIEWER_FFMPEG`、`VIEWER_FFPROBE`、`VIEWER_CHROMIUM`）不存在时直接报错，不静默回退到系统默认版本；`viewer/test/record.test.js` 与 `viewer/test/wrap.test.js` 仅在缺少依赖时 skip，避免吞掉真实异常；
+  - `viewer/record.mjs` 与 `viewer/shot.mjs` 改为在参数解析后按需动态加载 `playwright-core`（并为 `shot.mjs` 补齐 `-h/--help` 与参数格式校验），确保未执行 `npm ci` 的干净克隆环境下 `node viewer/record.mjs --help`、`node viewer/shot.mjs --help` 及 `viewer/test/` 下的纯 JS 测试正常跑通、浏览器测试按预期 skip；
+  - `viewer/lib/bins.mjs` 在显式指定二进制名称或路径（含环境变量 `VIEWER_FFMPEG`、`VIEWER_FFPROBE`、`VIEWER_CHROMIUM`）不存在时直接报错，不静默回退到系统默认版本，并补 `.exe` 扩展名探测；`viewer/test/record.test.js` 与 `viewer/test/wrap.test.js` 仅在缺少依赖时 skip，避免吞掉真实异常；
+  - 加固干净克隆下 CLI 防覆盖与友好提示：`batch summary` 与 `quiz judge` 在缺少底层原始 `.jsonl` 时直接报错退出、拒绝用空结果覆盖已入库的 `summary.*` 或 `judged.jsonl`；`play --tag` 拒绝复用已有已入库或已导出产物的目录；`export`、`resume`、`analyze`（不带 `--force` 时优先复用已有 `analysis-summary.json`）及 `rate.py export` 在缺少未入库 `game.jsonl` 或标定目录时输出清晰中文提示；`data/batch1/select_positions.py` 补齐离线 `check` 子命令，`quiz.py` 延迟导入规则库使 `quiz report` 仅凭标准库即可运行；`stats.py` 用 `%g` 保留和棋 `.5` 分；
+  - `.agents/skills/llm-chat/scripts/llm_chat.py` 的 HTTP 后端（DeepSeek / OpenRouter）将服务端工具调用计数检查移到空正文与 `finish_reason` 截断判断之前，防止工具事件被当成空回复自动重问；
+  - 重新生成并同步全部 9 份 `runs/quiz-*/report.txt`（含新增 `quiz-6r`、`quiz-6r-sol` 的 `report.txt`），收紧 `.gitignore` 对 `runs/` 的白名单规则，统一 `docs/viewer-survey/record-experiment/package.json` 许可声明为 `MIT`，并对齐中英双语文档、`design.md` 及两份 `SKILL.md` 的细节说明；
   - `tests/test_cap.py` 的 `--dry-run` 用例改用 `engine:stockfish:depth=1` 以免依赖本地未分发的 Maia 权重；`agi_chess/engine.py` 引擎搜索路径纳入 `~/.local/bin`；`.gitignore` 补齐 `/.venv/`、`venv/`、`.env`、`.env.*`、`!.env.example`；
-  - 在 Linux (WSL2, Ubuntu 22.04) 配齐 `.venv`、`viewer/node_modules`、`stockfish` 与 `fairy-stockfish` 后，Python 全套 318 项测试（含 21 项真引擎测试）与阅读器全套 88 项测试（含 Python 往返与 Chromium/FFmpeg 有声录制）均以 0 失败、0 跳过、0 `ResourceWarning` 全绿通过。
+  - 在 Linux (WSL2, Ubuntu 22.04) 配齐 `.venv`、`viewer/node_modules`、`stockfish` 与 `fairy-stockfish` 后，Python 全套 320 项测试（含 21 项真引擎测试）与阅读器全套 89 项测试（含 Python 往返与 Chromium/FFmpeg 有声录制）均以 0 失败、0 跳过、0 `ResourceWarning` 全绿通过。
 
 ## 公开文档整理（2026-11-05）
 
@@ -224,7 +227,7 @@
 ## 已完成
 
 - 设计与前提核实 `design.md`、跨轮思考调研 `thinking-carryover.md`；引擎 Stockfish 19、lc0、Maia 1100–1900（`~/.local/share/maia/`）。
-- 程序 `agi_chess/`：对弈循环、两个棋种模块、事后分析器、局面题（含各提示档与「说明理由」档）、随机开局、批量跑盘、限额等待续跑；着法提取的改口修复已合（a363108）。离线测试 318 个全过。
+- 程序 `agi_chess/`：对弈循环、两个棋种模块、事后分析器、局面题（含各提示档与「说明理由」档）、随机开局、批量跑盘、限额等待续跑；着法提取的改口修复已合（a363108）。离线测试 320 个全过。
 - 第一至四批全部实验和结论文档，第一轮总结论 `results/summary-round1.md`，棋力人群对照 `results/rating-reference.md`。`runs/` 已随仓入库 74 个正式对局/局面题目录的 `game.pgn`、`analysis*.json*`、`summary.*`、`judged.jsonl`、`report.txt`；原始大文件 `game.jsonl`、`record.txt`、`.mp4` 及新跑目录由 `.gitignore` 忽略。
 - 棋谱每步带元信息（2026-09-28）：`game.pgn` / `record.txt` 每步评注里写 `[%emt 用时]`（PGN 标准命令）和自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite]`、非法 / 被拦 / 空回复次数，后端没给的项省掉不补 0（`design.md` 第四节）。含 `game.jsonl` 的本地已结束对局可不用重下直接重导：`python3 -m agi_chess export runs/<tag>`（已入库 `runs/<tag>/` 自带最新 `game.pgn`、不含 `game.jsonl`，无需运行 `export`）。
 - 局面给法开关 `show`（all / board / pieces / fen / boardpieces），整盘和局面题共用，默认按第四批结论。

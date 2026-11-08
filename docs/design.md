@@ -52,8 +52,10 @@
 
 ```
 agi_chess/
-  cli.py         命令行：play / resume / dry-run；公共变量加两方分设；按 --game 选棋种模块
-  claude_cli.py  拼 claude -p 命令（关工具、显式 effort）；调不通重试；撞额度抛暂停；用量展开；安全分类器拦截识别
+  cli.py         命令行：play / resume / export / dry-run；公共变量加两方分设；按 --game 选棋种模块
+  chat.py        整盘棋手（--protocol real）走仓内 llm-chat 脚本的适配层：会话续接、用量与拒答/工具检查
+  claude_cli.py  拼 claude -p 命令（关工具、显式 effort，用于 legacy 与局面题）；调不通重试；撞额度抛暂停；用量展开；安全分类器拦截识别
+  codex_cli.py   拼 codex exec 命令（关工具、模型目录补丁，用于局面题与旧记录）；事件流解析、用量换算、profile 读取
   memory.py      stateless / notes / session：系统提示里那句说明、便条的要求与提取、重试话术
   runner.py      对局循环：轮到谁 → 棋种拼提示 → 调棋手（模型 / 引擎 / 随机，循环里直接分支）→ 棋种解析判合法（含禁着）
                  → 重试 / 判负 → 落子 → 棋种判终局 → 记录；暂停与续跑
@@ -84,8 +86,8 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 状态里固定存起始局面、每步之后的 FEN、全部落定着法和记谱，判重复、续跑都靠完整历史，与给模型看多少历史无关。
 
 - **棋手**在循环里直接分支，不做多态：
-  - `claude:<模型>`：沿用上一轮命令（见 P7），`stdin` 接 `/dev/null`（否则会等 3 秒并打警告），运行目录 `runs/<tag>/cwd`（P17）。
-  - `engine:<名字>[:参数]`：国际象棋 `maia-1100`…`maia-1900`（lc0 加权重，`go nodes 1`）、`stockfish[:elo=N|nodes=N|movetime=毫秒]`；中国象棋 `fsf[:nodes=N|depth=N]`（Fairy-Stockfish，`UCI_Variant xiangqi`）。每步把起始局面和全部着法发给引擎，不只发末尾 FEN；等待有上限；中国象棋出棋时用 `searchmoves` 排除会被判长将 / 长捉的着法（P15）。`boards.Engine` 是单局面分析用的（不带历史、等待没有上限），不拿来当对手；另外 boards.py 实测过 Skill Level 不可复现，弱档一律用节点数或深度。
+  - `claude:<模型>`：默认整盘（`--protocol real`）走 `chat.py` → `llm-chat`（会话状态在 `${XDG_STATE_HOME:-~/.local/state}/llm-chat/`、隔离空工作目录 `empty/`，早期实验脚本曾用 `$TMPDIR/llm-chat-sessions`）；旧协议（`--protocol legacy`）及局面题走 `claude_cli.py` 直调 `claude -p`（见 P7），`stdin` 接 `/dev/null`（否则会等 3 秒并打警告），隔离运行目录为 `$TMPDIR/agi-chess-cwd/<tag>-<uuid>`（P17，取代最早的 `runs/<tag>/cwd`）。
+  - `engine:<名字>[:参数]`：国际象棋 `maia-1100`…`maia-1900`（lc0 加权重，`go nodes 1`）、`stockfish[:elo=N|nodes=N|depth=N|movetime=毫秒]`；中国象棋 `fsf[:nodes=N|depth=N|movetime=毫秒]`（Fairy-Stockfish，`UCI_Variant xiangqi`）。每步把起始局面和全部着法发给引擎，不只发末尾 FEN；等待有上限；中国象棋出棋时用 `searchmoves` 排除会被判长将 / 长捉的着法（P15）。`boards.Engine` 是单局面分析用的（不带历史、等待没有上限），不拿来当对手；另外 boards.py 实测过 Skill Level 不可复现，弱档一律用节点数或深度。
   - `random`：随机走子，按对局种子可复现，当最低参照（LLM CHESS 用它 [5]）。
   - `codex:<模型>` / `deepseek:<模型>`：局面题里走 `codex exec`，只支持无状态（quiz `--model sol|deepseek`，P10）；整盘（`--protocol real`）走 llm-chat，支持连续会话（第九节）。
   - `gemini:<完整 gemini-* slug>`：只支持 real 整盘，经 llm-chat 调 agy 的 Google 订阅；模型名照 `agy models` 的目录给，不解析简称，思考档位包含在 slug 中，`--effort` 仍显式传。会话由 agy 保存并续接，不支持 `drop_thinking`。棋手不提供附件，llm-chat 拒绝读取非附件文件及其他工具调用。
@@ -109,7 +111,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 | `legal` | `none` / `list` | none | 测棋力时可以开，报告里分开写 [5][6] |
 | `selfcheck` | on / off | off | 上一轮开了没见效；作单独变量。两种棋的自查文字各写各的 |
 | `recite` | on / off | off | 先复述局面再走，程序逐格比对。复述格式和打分目前只有中国象棋有 |
-| `retries` | 整数 | 3 | 非法重试上限，用完判负（和 Game Arena 一致 [1]） |
+| `retries` | 整数 | `real` 为 2，`legacy` 为 3 | 非法重试上限，用完判负（`real` 一步最多 3 次尝试，见第九节；`legacy` 一步最多 4 次，和 Game Arena 一致 [1]） |
 | `timeout` | 秒 | 3600 | 单次 `claude -p` 的超时（`--timeout`，整盘记进 config、resume 沿用，`resume --timeout` 只改那一次续跑并记进 resume 记录；局面题同名参数）。第一批写死 1800，max 档撞了 7/120 次 |
 | `on_limit` | `wait` / `pause` | wait | 撞额度时：`wait` 在程序里等到解除接着调（报错里读得出解除时间就等到那时再加 2 分钟，读不出按 10 分钟起翻倍、最多 30 分钟退避；这种等待不占调不通的重试、也不占着法重试）；`pause` 是旧行为，写 pause、退出码 3。整盘 `play` / `resume` 和 `quiz run` 都有 `--on-limit`。等待中 Ctrl-C / SIGTERM：在等的线程马上醒来写 pause、退出码 3，再跑同一条命令（或 resume）接着来；已在跑的调用答完为止，再按一次强退 |
 | `max_plies` | 整数 | 200 | 研究设的上限；和棋规里的限着（中国象棋一百个半回合无吃子、国际象棋五十回合）分开记终局原因。**到上限怎么判**（`--cap-rule`，2026-10-04 用户定）：real 协议下有引擎一方的对局（模型对引擎的棋力评测，也含引擎互下标定）**按引擎评分判**——用事后分析同一口径的裁判引擎（国际象棋 Stockfish 深度 18、中国象棋 Fairy-Stockfish 深度 16，单线程、清哈希、带完整历史，`analyze.adjudicate`）评到上限时的局面，一方领先 ≥300 厘兵（或已算出杀棋）判该方胜，否则判和；这是引擎比赛常用的裁定做法。终局原因写「满 N 个半回合（研究设的上限），到上限按引擎评分判：……」，`end.adjudication` 记引擎、深度、评分、走子方、门槛；config 记 `adjudicate: {margin}`，两方系统提示里那句规则跟着改成按评分判（第九节）。理由：opus max 棋力定位里国际象棋 8 盘到上限判和、其中 7 盘 opus 已落后 ≥3 个兵（限强 Stockfish 兑现不了优势），按规则计和与改判差约 90 刻度分，结论只能给范围（`results/opus-max-rating.md`）。模型对模型、随机走子、legacy 照旧判和；`--cap-rule draw` 回到判和（复现旧批次），`eval` 不满足条件就报错。旧记录 config 里没有 `adjudicate`，续跑照旧判和。批量驱动不传这个参数，按默认走：往已有批次追加对引擎的新盘会按新规则判，和旧盘口径不同，合并统计前要分开看 |
@@ -236,7 +238,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 
 **着法解析**：先找「着法: 」；没有就认英文「Move: 」；再没有就取最后一个非空行（不超过 30 个字符），交给棋种的解析判合不合法。所以只回一行着法、或用英文作答都读得出来。旧协议不变（只认「着法: 」）。
 
-**模型调用走 llm-chat**（`agi_chess/chat.py`）：项目级 skill `.agents/skills/llm-chat` 的脚本，一个入口五种棋手串——`claude:<模型>`（claude -p）、`codex:<模型>`（GPT，短名如 sol 按 `codex debug models` 取最新一代全名，现为 gpt-6-sol）、`deepseek:<模型>`（HTTP 直连 api.deepseek.com，默认 deepseek-v4-pro，思考只有 low / high / max）、`gemini:<完整 slug>`（agy）、`agy:<完整 slug>`（显式 agy 路由，包括其 Claude 型号）。脚本只用不改；它的会话 id 记进每条 attempt，续跑照记录接上同一段对话。思考深度每次 `--effort` 显式传。config 记 `backend: llm-chat`、每方实际模型 `models`、脚本路径和内容摘要 `llm_chat`。agy 后端调用失败立即停，不等待或重发；其余后端调不通重试、撞额度等解除与停止信号沿用 `claude_cli.call`（`run` 钩子把脚本的输出折成原来的样子）。隔离与跨轮思考的实测见 `results/llm-chat-isolation.md`。
+**模型调用走 llm-chat**（`agi_chess/chat.py`）：项目级 skill `.agents/skills/llm-chat` 的脚本，一个入口五种棋手串——`claude:<模型>`（claude -p）、`codex:<模型>`（GPT，短名如 sol 按 `codex debug models` 取最新一代全名，现为 gpt-6-sol）、`deepseek:<模型>`（设 `API_KEY_DEEPSEEK` 时 HTTP 直连 api.deepseek.com，仅设 `API_KEY_OPENROUTER` 时自动回退走 OpenRouter 映射 `deepseek/deepseek-v4.1-flash` 或 `deepseek/deepseek-v4-pro`；默认 deepseek-v4-pro，思考只有 low / high / max）、`gemini:<完整 slug>`（agy）、`agy:<完整 slug>`（显式 agy 路由，包括其 Claude 型号）。脚本只用不改；它的会话 id 记进每条 attempt，续跑照记录接上同一段对话。思考深度每次 `--effort` 显式传。config 记 `backend: llm-chat`、每方实际模型 `models`、脚本路径和内容摘要 `llm_chat`。agy 后端调用失败立即停，不等待或重发；其余后端调不通重试、撞额度等解除与停止信号沿用 `claude_cli.call`（`run` 钩子把脚本的输出折成原来的样子）。隔离与跨轮思考的实测见 `results/llm-chat-isolation.md`。
 - 旧路（`claude -p` 直调、`codex exec` 无状态）原样保留，给旧记录续跑和局面题用，已有数据可以逐字复现。
 
 ## 附：核实用的桩服务

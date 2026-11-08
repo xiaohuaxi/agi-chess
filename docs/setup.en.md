@@ -14,8 +14,10 @@ All commands in this guide run from the repository root. For experimental conclu
 | Browse official games, samples, or your own PGNs | Web browser + local static HTTP server; no build step or `npm` install needed | No |
 | Run Python offline unit tests | Python 3, `chess`, `pyffish`; engine-integration tests also require local chess engines | No |
 | Run Viewer JS tests | Node.js; browser tests also require `playwright-core` + Chromium, and round-trip tests require Python rule libraries | No |
-| Run full-game model matches | Python rule libraries, built-in `llm-chat` (`.agents/skills/llm-chat/`), and either a local model CLI (`claude` / `codex` / `agy`) or an HTTP API key (`API_KEY_OPENROUTER` / `API_KEY_DEEPSEEK`); engine opponents also require engines | Yes |
+| Run full-game model matches | macOS / Linux (including WSL2; `llm_chat.py` relies on `fcntl` and POSIX process groups), Python rule libraries, built-in `llm-chat` (`.agents/skills/llm-chat/`), and either a local model CLI (`claude` / `codex` / `agy`) or an HTTP API key (`API_KEY_OPENROUTER` / `API_KEY_DEEPSEEK`); engine opponents also require engines | Yes |
 | Record PGNs to MP4 video | Node.js, `playwright-core`, Chromium, FFmpeg; video verification also uses FFprobe | No |
+
+> **Platform Boundary:** The static web viewer (`viewer/`) and rating recomputation script (`analysis/rating/rate.py`) work cross-platform; the model match invocation layer (`.agents/skills/llm-chat/scripts/llm_chat.py`, which uses `fcntl` file locks and POSIX process groups) targets macOS and Linux (including WSL2) and does not run on native Windows.
 
 ## Free Quick Start: Recompute Ratings
 
@@ -35,6 +37,7 @@ A small bootstrap count is only for smoke-checking execution, not for citing con
 
 ```sh
 python3 -m http.server --bind 127.0.0.1 8000
+# Or use the zero-dependency Node server: node viewer/serve.mjs --port 8000 --bind 127.0.0.1
 ```
 
 Keep this terminal running and open in your browser:
@@ -44,7 +47,7 @@ Keep this terminal running and open in your browser:
 - Chess Test Sample: <http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en>
 - Xiangqi Test Sample: <http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en>
 
-The repository's `runs/` directory includes `game.pgn` (with full per-move rationales, elapsed time, and token counts) for all 65 official model match directories (171 games in total). You can replace `files=` with any `/runs/<tag>/game.pgn` to inspect any official game. Press Space to play/pause and Left/Right arrow keys to step through moves; press Ctrl-C in the server terminal when done. The server binds only to `127.0.0.1`; if port 8000 is busy, pick another port and update the URL. The viewer uses ES modules and cannot be opened directly via `file://`. For full controls and video recording, see the [Viewer & Video Guide](viewer-guide.en.md).
+The repository's `runs/` directory includes `game.pgn` (with full per-move rationales, elapsed time, and token counts) for all 65 official model match directories (171 games in total): **58 single-game directories** (43 model-vs-model + 15 single-game model-vs-engine `b1-ch-*`/`b1-xq-*`) are at `/runs/<tag>/game.pgn`, and **7 multi-game batch directories** (`b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`, 113 games in total) place each game in a second-level subdirectory `/runs/<batch>/<game>/game.pgn` (e.g. `/runs/zc/maia-1900-s1-w/game.pgn`). Replace `files=` with any of those paths (optionally appending the corresponding `analysis.jsonl` to overlay blunder badges) to inspect any official game. Press Space to play/pause and Left/Right arrow keys to step through moves; press Ctrl-C in the server terminal when done. The server binds only to `127.0.0.1`; if port 8000 is busy, pick another port and update the URL. The viewer uses ES modules and cannot be opened directly via `file://`. For full controls and video recording, see the [Viewer & Video Guide](viewer-guide.en.md).
 
 The viewer defaults to Chinese; append `&lang=en` to switch the UI to English, and use `names=` to override displayed player names. See the [Viewer & Video Guide](viewer-guide.en.md) for syntax details.
 
@@ -58,17 +61,18 @@ python3 -m venv .venv
 python -m pip install -r requirements.txt
 python -c 'import chess, pyffish; print("Rule libraries imported successfully")'
 python -m agi_chess --help
+python data/batch1/select_positions.py check
 python data/batch2/select_positions.py check
 python -m unittest discover -s tests -t .
 ```
 
 `chess` is the PyPI distribution for `import chess` (`python-chess`); Xiangqi rules are provided by `pyffish`, while Chinese move notation uses our in-repo implementation (no `cchess` needed). Because `pyffish` includes a native C++ extension, installing it on a new platform may require a C++ build toolchain; on Debian/Ubuntu, if `venv`, build tools, or Stockfish are missing, install them via `sudo apt install python3-venv build-essential python3-dev stockfish`. If installation fails, check your Python version and native compiler setup.
 
-`python3 data/batch2/select_positions.py check` relies only on the two rule libraries above to validate the checked-in Batch 2 position bank (`data/batch2/{xiangqi,chess}.jsonl` FENs, side to move, and move legality) offline, without launching engines or reading `runs/`.
+`python3 data/batch1/select_positions.py check` and `python3 data/batch2/select_positions.py check` rely only on the two rule libraries above to validate the checked-in Batch 1 and Batch 2 position banks (`data/batch1/{xiangqi,chess}.jsonl` and `data/batch2/{xiangqi,chess}.jsonl` FENs, side to move, and move legality) offline, without launching engines or reading `runs/`.
 
 Running the full test suite without skips also tests engine handshakes and move generation, which requires `stockfish` and `fairy-stockfish` on the machine. When engines are absent, engine-dependent tests are automatically skipped; for complete verification, install both engines and check that both failures and skipped counts are zero. Engines are standalone executables not installed by `pip`; their licenses are documented separately in [Dependencies & Provenance](dependencies.en.md).
 
-Verified on the maintainer's machine (2026-11-05): `/usr/bin/python3` is Python 3.9.6 with `chess 1.11.2` and `pyffish 0.0.90` installed (the legacy `cchess` dependency has been removed in favor of in-repo notation), passing all 314 offline unit tests. Always run commands with the same Python interpreter where you installed the packages.
+Verified (2026-11-08): With `chess 1.11.2` and `pyffish 0.0.90` installed (the legacy `cchess` dependency has been removed in favor of in-repo notation), all 320 Python unit tests pass. Always run commands with the same Python interpreter where you installed the packages.
 
 ## Model Matches: Built-in `llm-chat`, Local CLI Subscriptions & HTTP API Keys
 
@@ -116,13 +120,18 @@ Available model slugs, rate limits, and billing depend on your own accounts and 
   wire_api = "chat"
   ```
 
-  Minimal accompanying model catalog `~/.codex/deepseek-models.json`:
+  Minimal accompanying model catalog `~/.codex/deepseek-models.json` (must include the base `ModelInfo` fields required by `codex exec` deserialization):
 
   ```json
   {
     "models": [
       {
         "slug": "deepseek/deepseek-v4-pro",
+        "shell_type": "shell_command",
+        "tool_mode": null,
+        "multi_agent_version": "v2",
+        "experimental_supported_tools": [],
+        "apply_patch_tool_type": "freeform",
         "supported_reasoning_levels": [{"effort": "low"}, {"effort": "medium"}, {"effort": "high"}]
       }
     ]

@@ -3,7 +3,7 @@
 使用步骤见[棋谱浏览与视频录制](viewer-guide.md)；本文保留实现方案与设计取舍。
 
 > 2026-09-29。需求见 `viewer-brief.md`，调研证据在 `viewer-survey/`（看过哪些项目、为什么不用：`viewer-survey/README.md`）。
-> **状态（2026-09-30）：第 1–6 步都已实施并合回 main（第 6 步走子滑动动画两种棋都做了，默认 0.3 秒、算在每步间隔内，`anim=` 可调）。版式已由用户定稿；标题画面作为选项默认不加（用户 2026-09-30 定；`title=1` / `--title` 开），厂商前缀可用 `vendor=0` 关。随仓入库的 171 盘正式对局 `runs/<tag>/game.pgn` 已用最新代码导出，可直接浏览或录屏（不要对其运行 `export`，底层 `game.jsonl` 未入库）；仅本机新跑、含 `game.jsonl` 的对局按需运行 `export`。怎么用见项目 skill `.agents/skills/replay-video/`。**
+> **状态（2026-09-30）：第 1–6 步都已实施并合回 main（第 6 步走子滑动动画两种棋都做了，默认 0.3 秒、算在每步间隔内，`anim=` 可调）。版式已由用户定稿；标题画面作为选项默认不加（用户 2026-09-30 定；`title=1` / `--title` 开），厂商前缀可用 `vendor=0` 关。随仓入库的 171 盘正式对局（58 个单盘目录 `runs/<tag>/game.pgn` 与 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`）已用最新代码导出，可直接浏览或录屏（不要对其运行 `export`，底层 `game.jsonl` 未入库）；仅本机新跑、含 `game.jsonl` 的对局按需运行 `export`。怎么用见项目 skill `.agents/skills/replay-video/`。**
 > **状态（2026-10-02）：走子音效已做、用户试听后合回 main：录视频默认有声、网页默认静音，见「走子音效」。**
 > **不做成对外 app（2026-10-02 用户定，不立项）**：调研见 `viewer-survey/README.md` 末节。
 > **状态（2026-10-03）：加了英文界面（`lang=en`）和棋手显示名覆盖（`names=`），用于英文讲解与视频展示，见「英文界面」。默认仍是中文、画面不变。**
@@ -30,7 +30,7 @@
 - 评注里的 `[%emt]` 显示成用时；自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite] [%illegal] [%flagged] [%empty] [%dropped]` 显示成带中文标签的数字；不认识的命令原样列出，后面的文字当理由显示。着法后的 `?` `??` `!` 等标注照常显示。
 - 标签里的 `WhiteEffort` / `BlackEffort`（中国象棋 `RedEffort` / `BlackEffort`，本项目自定义，见下文导出）显示为思考深度；别人的棋谱没有就不显示。
 
-**打开方式。** 页面是普通静态文件、不用构建，第三方库放 `viewer/vendor/`（附来源和许可文本）。浏览器不许 `file://` 下加载模块脚本，所以**只支持经本机静态服务打开**：在仓库根目录 `python3 -m http.server --bind 127.0.0.1 8000`（绑本机，不暴露到局域网），打开 `http://127.0.0.1:8000/viewer/`。选棋谱两种方式：网址参数（`?files=/runs/a/game.pgn,/runs/b/game.pgn&gap=1.8&autoplay=1`，路径按站点根解析），或把文件拖进页面。棋谱不出本机。
+**打开方式。** 页面是普通静态文件、不用构建，第三方库放 `viewer/vendor/`（附来源和许可文本）。浏览器不许 `file://` 下加载模块脚本，所以**只支持经本机静态服务打开**：在仓库根目录 `python3 -m http.server --bind 127.0.0.1 8000`（或 `node viewer/serve.mjs --port 8000 --bind 127.0.0.1`，绑本机，不暴露到局域网），打开 `http://127.0.0.1:8000/viewer/`。选棋谱两种方式：网址参数（`?files=/runs/a/game.pgn,/runs/b/game.pgn&gap=1.8&autoplay=1`，路径按站点根解析；若同时传入同目录的 `analysis.jsonl` 会严格校验走子坐标与走前局面并叠加恶手/失误/不精确标注），或把文件拖进页面。棋谱不出本机。
 
 **版式。**
 - 宽版（自己读棋谱用）：左边棋盘，右边着法列表和当前这步的评注、理由、用时、token、非法重选次数。能暂停、前后单步、点着法跳到任意一步，有键盘快捷键。
@@ -251,7 +251,7 @@ node viewer/record.mjs runs/g1-x-opus-sol -o /tmp/g1x-916.mp4 --aspect 9:16
 
 | 参数 | 默认 | 作用 |
 |---|---|---|
-| `<棋谱>` | — | 本机任意路径，可多个，按给出顺序连播；给目录时取其中 `game.pgn` |
+| `<棋谱>` | — | 本机任意路径，可多个，按给出顺序连播；给目录时取其中 `game.pgn`（多盘批次须传二级单盘子目录 `runs/<batch>/<game>`） |
 | `-o` / `--out` | 必填 | 输出 mp4；目录须已存在，默认不覆盖已存在文件（加 `-f` / `--force` 允许覆盖）；先写同目录临时文件，成功再改名 |
 | `-f` / `--force` | 否 | 允许覆盖已存在的输出 mp4 文件 |
 | `--gap` / `--openhold` / `--titlehold` / `--resulthold` / `--summaryhold` | 页面默认（1.8 / 同 gap / 3 / 4 / 5） | 透传给页面同名网址参数；脚本不自己算时长，只照 `next()` 的 `hold` |
@@ -265,19 +265,19 @@ node viewer/record.mjs runs/g1-x-opus-sol -o /tmp/g1x-916.mp4 --aspect 9:16
 | `--chromium` | `VIEWER_CHROMIUM`，再查 playwright-core 配套缓存及 `PATH` / 常见路径中的 Chromium / Chrome | 浏览器可执行文件 |
 | `--ffmpeg` | `VIEWER_FFMPEG`，再从 `PATH` 及常见路径查找 `ffmpeg` | ffmpeg |
 
-成功时打印时长、帧数、截图张数、各类格数和用时；失败打印中文原因、退出码 1；Ctrl-C / SIGTERM 时先杀 ffmpeg、关浏览器和服务、删中间帧和半截输出再退（退出码 130）。开工前先查完棋谱、输出目录、ffmpeg、浏览器路径、画幅，查不过不起浏览器。
+成功时打印时长、帧数、截图张数、各类格数、音效和用时；失败打印中文原因、退出码 1；Ctrl-C / SIGTERM 时先杀 ffmpeg、关浏览器和服务、删中间帧和半截输出再退（退出码 130）。开工前先查完棋谱、输出目录、ffmpeg、浏览器路径、画幅，查不过不起浏览器。
 
 **实测**（2026-09-30，本机）：出片耗时主要花在截图（每格约 0.1–0.15 秒）和编码（按视频长度），当时（没有走子动画）默认时长下约每分钟视频 6 秒（国际象棋 95 步、244.5 秒视频用时 24 秒；象棋 33 步、89.5 秒用时 9.5 秒）。加了走子动画后每步要逐帧截 9 张动画画面，2026-10-02 实测约每分钟视频 25–35 秒（83 秒的国际象棋片 32 秒、89 秒的象棋片 48 秒）。9:16 每张图大、稍慢。测试 `viewer/test/record.test.js`：自带样例、停留时长调小，ffprobe 核对编码、帧率、分辨率、faststart、时长；没有浏览器或 ffmpeg / ffprobe（`VIEWER_FFPROBE`，默认先查与 ffmpeg 同目录再查 `PATH`）时跳过。
 
-**开发期依赖。** `viewer/package.json` 只放 playwright-core，**锁精确版本 1.58.2**。脚本（`viewer/lib/bins.mjs` 的 `resolveChromium`）优先读 `--chromium` 或 `VIEWER_CHROMIUM`，其次尝试 `playwright-core` 配套的缓存浏览器（可在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本配套的浏览器），若无缓存则自动从 `PATH` 和常见系统路径查找 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`。`.gitignore` 加 `node_modules/`。
+**开发期依赖。** `viewer/package.json` 只放 playwright-core，**锁精确版本 1.58.2**。脚本（`viewer/lib/bins.mjs` 的 `resolveChromium`）优先读 `--chromium` 或 `VIEWER_CHROMIUM`（显式指定不存在时直接报错），其次尝试 `playwright-core` 配套的缓存浏览器（可在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本配套的浏览器），若无缓存则自动从 `PATH` 和常见系统路径查找 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`、`/snap/bin/chromium` 及 macOS `/Applications/Google Chrome.app/...`。`.gitignore` 加 `node_modules/`。
 
 ## 仓库里的配套改动（`agi_chess/`）
 
 - **PGN 标签补思考深度**：国际象棋加 `[WhiteEffort "xhigh"]` / `[BlackEffort …]`，取自 `game.jsonl` 的 `config`（双方用的深度）；非模型方（引擎、随机）不写。
 - **中国象棋导出 PGN**（`game.pgn`，和 `record.txt` 并存）：标签 `Game`（第一个）、`Event`、`Red`、`Black`、`RedEffort`、`BlackEffort`、`Result`、`Termination`（沿用现在的中文结束原因）；评注写法和国际象棋一致。
-  - **着法文字**：早期使用的第三方 `cchess` 库（现已移除）在多路兵、同线三个以上同种子等少见局面写不准，会在后面补「（坐标）」，出异常时直接写坐标；这种写法进 PGN 就没法解析。现统一由 `agi_chess/xiangqi.py` 内置的 `pgn_move()` 按 xqbase 规则生成标准中文四字记谱（从局面和坐标算，只是记谱格式，不涉及棋规）；已入库的 171 盘正式对局 `runs/<tag>/game.pgn` 均已用该实现导出。
+  - **着法文字**：早期使用的第三方 `cchess` 库（现已移除）在多路兵、同线三个以上同种子等少见局面写不准，会在后面补「（坐标）」，出异常时直接写坐标；这种写法进 PGN 就没法解析。现统一由 `agi_chess/xiangqi.py` 内置的 `pgn_move()` 按 xqbase 规则生成标准中文四字记谱（从局面和坐标算，只是记谱格式，不涉及棋规）；已入库的 171 盘正式对局（58 个单盘目录 `runs/<tag>/game.pgn` 与 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`）均已用该实现导出。
 - **中文折行**：现在导出会在中文字中间断行，任何阅读器读回来断开处都多一个空格。改法：优先在空格或中文标点后断行，实在没有才硬切；阅读器读的时候，两边都是中文的断行不补空格。（已实施：中文串里只在两个全角字符之间断，「中文」按 Unicode 东亚宽度 W / F 判；阅读器照同一判法。断点优先级：中文标点后 > 其余空格 > 两个中文字之间硬切；「中文 空格 中文」里的空格永不作断点，否则按上面的读法会少一个空格，第一版漏了这条，本机 424 步中招，已修并重导。全角标点后断行同样要求标点本身是 W / F：「…」「—」东亚宽度是 A，阅读器不当全角，在「……」后断行读回来多一个空格（2026-10-02 本机 `zx/fsf-nodes100-s2-w` 一步中招），导出端的标点断点集合因此按同一判法过滤、不收这两个，已修并重导受影响的盘。取舍：硬切在两个中文字之间时，我们的阅读器读回正好，别家 PGN 阅读器会多一个空格，可以接受——修之前本来如此，且只在没有标点可断的长串出现。往返由 `viewer/test/wrap.test.js` 和读 runs 的回归逐字核对。）国际象棋不走 `meta_comment`，要改的是评注拆词和折行那两处（`meta_tokens`、`wrap`），两种棋共用。
-- 本机新跑且已结束的盘（含 `game.jsonl` 且末行是 `end`）可用 `python3 -m agi_chess export runs/<tag>` 重导（只重写导出文件，不动 `game.jsonl`）；已随仓入库的 `runs/<tag>/` 已有完整 `game.pgn`、不含 `game.jsonl`，无需也不能对其运行 `export`。别碰正在下的对局。
+- 本机新跑且已结束的盘（含 `game.jsonl` 且末行是 `end`）可用 `python3 -m agi_chess export runs/<tag>` 重导（只重写导出文件，不动 `game.jsonl`）；已随仓入库的 58 个单盘目录 `runs/<tag>/` 与 7 个多盘批次子目录 `runs/<batch>/<game>/` 已有完整 `game.pgn`、不含 `game.jsonl`，无需也不能对其运行 `export`。别碰正在下的对局。
 
 ## 工作量（估计）
 

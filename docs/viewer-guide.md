@@ -2,7 +2,7 @@
 
 # 棋谱浏览与视频录制
 
-阅读器直接读取 PGN：国际象棋用标准 PGN，中国象棋用 xqbase PGN。可以直接浏览随仓入库的 171 盘正式模型对局（`runs/<tag>/game.pgn`）、测试样例和自己的棋谱，不需要模型账号或棋类引擎。
+阅读器直接读取 PGN：国际象棋用标准 PGN，中国象棋用 xqbase PGN。可以直接浏览随仓入库的 171 盘正式模型对局（58 个单盘目录 `runs/<tag>/game.pgn` 与 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`）、测试样例和自己的棋谱，不需要模型账号或棋类引擎。
 
 阅读器默认中文，网址加 `lang=en` 可切换英文。安装总览见[安装与运行](setup.md)，实现与完整参数说明见[阅读器设计](viewer.md)，素材与工具许可见[依赖说明](dependencies.md)。
 
@@ -12,6 +12,7 @@
 
 ```sh
 python3 -m http.server --bind 127.0.0.1 8000
+# 或用零依赖 Node 服务：node viewer/serve.mjs --port 8000 --bind 127.0.0.1
 ```
 
 打开下面任一网址：
@@ -22,11 +23,11 @@ python3 -m http.server --bind 127.0.0.1 8000
 - [中国象棋测试样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
 - [两种棋样例连播](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1)
 
-仓库 `runs/` 目录已包含全部 65 个正式模型对局目录（共 171 盘）的 `game.pgn`，只需将网址中的 `files=` 改为任意 `/runs/<tag>/game.pgn` 即可查看对应对局与每步思考理由。服务必须从仓库根目录启动，URL 中的路径相对站点根目录。只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8000 被占用时换一个端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
+仓库 `runs/` 目录已包含全部 65 个正式模型对局目录（共 171 盘）的 `game.pgn`：其中 **58 个单盘目录**（43 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）路径为 `/runs/<tag>/game.pgn`，**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `/runs/<batch>/<game>/game.pgn`（如 `/runs/zc/maia-1900-s1-w/game.pgn`）。只需将网址中的 `files=` 改为对应路径即可查看对局与每步思考理由；若同时传入同目录的 `analysis.jsonl`（如 `?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl`），阅读器还会严格校验并叠加引擎恶手/失误/不精确徽章。服务必须从仓库根目录启动，URL 中的路径相对站点根目录。只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8000 被占用时换一个端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
 
 ## 浏览自己的棋谱
 
-打开 <http://127.0.0.1:8000/viewer/>，把 `.pgn` 文件拖进页面。多个文件按文件名排序连播；若想控制顺序，可以在文件名前加 `01-`、`02-`。
+打开 <http://127.0.0.1:8000/viewer/>，把 `.pgn` 文件（可连带对应的 `analysis.jsonl`）拖进页面。多个文件按文件名排序连播；若想控制顺序，可以在文件名前加 `01-`、`02-`。
 
 | 操作 | 快捷键 |
 | --- | --- |
@@ -49,7 +50,7 @@ python3 -m http.server --bind 127.0.0.1 8000
 | `summary=1` | 多盘的总比分画面 |
 | `layout=wide` / `layout=compact` | 强制宽版 / 窄版 |
 | `sound=1&vol=0.5` | 打开音效并调轻；打开后先点页面或按键以允许浏览器发声 |
-| `lang=en` | 英文界面；评注原文与象棋汉字棋子保留 |
+| `lang=en` | 英文界面；评注原文与象棋汉字棋子保留，象棋着法改显 WXF 记法 |
 | `names=opus=Claude Opus,astra=GPT astra` | 覆盖显示名，比分仍按棋谱中的原名归属 |
 | `title=1` | 每盘前加标题画面；默认不开 |
 
@@ -68,7 +69,7 @@ python3 -m http.server --bind 127.0.0.1 8000
    cd ..
    ```
 
-3. 可被 Playwright 驱动的 Chromium。`playwright-core` 不会在 `npm ci` 时自动下载浏览器；可通过 `--chromium /绝对路径/Chromium` 或设置 `VIEWER_CHROMIUM` 指定，未指定时脚本依次查找 Playwright 配套的缓存 Chromium（可在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本 `1.58.2` 配套的浏览器）以及系统 `PATH` 和常见路径中的 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`。
+3. 可被 Playwright 驱动的 Chromium。`playwright-core` 不会在 `npm ci` 时自动下载浏览器；可通过 `--chromium /绝对路径/Chromium` 或设置 `VIEWER_CHROMIUM` 指定，未指定时脚本依次查找 Playwright 配套的缓存 Chromium（可在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本 `1.58.2` 配套的浏览器）以及系统 `PATH` 和常见路径中的 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`、`/snap/bin/chromium` 与 macOS `/Applications/Google Chrome.app/...`。
 4. FFmpeg 可执行文件；用 `--ffmpeg /绝对路径/ffmpeg` 或 `VIEWER_FFMPEG` 指定，未指定时自动从 `PATH` 及常见系统路径（`/usr/bin/ffmpeg`、`/usr/local/bin/ffmpeg`、`/opt/homebrew/bin/ffmpeg`）查找。核对视频还需 `ffprobe`。
 5. **Linux 服务器 / 无桌面环境的中文字体**：中国象棋棋盘上的汉字棋子与中文界面使用系统字体渲染；在无桌面 Linux 环境录屏或截图前，请先安装中文字体（如 Ubuntu/Debian：`sudo apt install fonts-noto-cjk fonts-arphic-ukai`），否则中国象棋棋盘上的汉字棋子会显示为方块（tofu）。
 
@@ -88,7 +89,7 @@ node viewer/record.mjs viewer/test/fixtures/chess-sample.pgn -o /tmp/chess-sampl
 node viewer/record.mjs viewer/test/fixtures/chess-sample.pgn viewer/test/fixtures/xq-sample.pgn -o /tmp/two-samples.mp4 --gap 1.5 --openhold 0.5
 ```
 
-给目录时自动读取其中的 `game.pgn`（例如直接录制已入库正式对局：`node viewer/record.mjs runs/g7-c-opus-astra-1 -o /tmp/g7-c-1.mp4 --gap 1.5 --openhold 0.5`），也支持仓库外的绝对路径。常用选项：`--no-sound` 无声、`--vol 0.5` 调轻、`--anim 0` 关动画、`--title` 加标题；`--resulthold` 调终局停留，`--summaryhold` 调多盘总比分停留。默认不加标题。`--aspect 9:16` 或 `16:9` 只改变视口，没有专门排版，使用前先检查画面。完整选项：
+给目录时自动读取其中的 `game.pgn`（例如直接录制单盘目录 `node viewer/record.mjs runs/g7-c-opus-astra-1 -o /tmp/g7-c-1.mp4 --gap 1.5 --openhold 0.5`，或多盘批次下的单盘子目录 `node viewer/record.mjs runs/zc/maia-1900-s1-w -o /tmp/zc-s1w.mp4`；多盘批次顶层如 `runs/zc` 只含 `summary.*`，须传具体单盘子目录），也支持仓库外的绝对路径。常用选项：`--no-sound` 无声、`--vol 0.5` 调轻、`--anim 0` 关动画、`--title` 加标题；`--resulthold` 调终局停留，`--summaryhold` 调多盘总比分停留。默认不加标题。`--aspect 9:16` 或 `16:9` 只改变视口，没有专门排版，使用前先检查画面。完整选项：
 
 ```sh
 node viewer/record.mjs --help
@@ -104,6 +105,6 @@ ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,profile,pix
 
 默认应为 H.264 High、yuv420p、1080×1440、30/1。再实际打开视频，检查开头、几步走子、中文和终局横幅；中国象棋使用系统字体，不同机器的中文字形可能不同。
 
-已入库 `runs/<tag>/game.pgn` 已是最新导出的完整棋谱，可直接浏览或录制（无需也不可对其运行 `export`，因为体积庞大的底层 `game.jsonl` 未入库）。若录制自己新跑的模型对局，先确认对局已结束（本机 `game.jsonl` 最后一条为 `type=end`），再用 `python -m agi_chess export runs/<tag>` 导出或更新棋谱。
+已入库的 58 个单盘目录 `runs/<tag>/game.pgn` 与 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn` 已是最新导出的完整棋谱，可直接浏览或录制（无需也不可对其运行 `export`，因为体积庞大的底层 `game.jsonl` 未入库）。若录制自己新跑的模型对局，先确认对局已结束（本机 `game.jsonl` 最后一条为 `type=end`），再用 `python -m agi_chess export runs/<tag>` 导出或更新棋谱。
 
 英文录制在原命令后加 `--set lang=en --set "names=opus=Claude Opus,astra=GPT astra"`，也可同时用 `--openhold 0.5`。象棋英文着法为 WXF 显示，输入棋谱仍用 xqbase 格式。

@@ -8,7 +8,7 @@
 
 > **棋谱阅读器（[`viewer/`](viewer/)）——零配置直接回放 171 盘对局**
 >
-> 无需安装引擎或配置 API Key，在仓库根目录运行 `node viewer/serve.mjs --port 8765 --bind 127.0.0.1`（或 `python3 -m http.server 8765 --bind 127.0.0.1`），直接点开示例对局 [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl) 即可看到棋盘、每步模型思考理由、引擎复盘恶手标注、耗时与 token 统计。也可不带参数打开 [`http://127.0.0.1:8765/viewer/`](http://127.0.0.1:8765/viewer/) 并把任意 `runs/<tag>/game.pgn` 拖入页面查看；导出 MP4 复盘视频需先在 `viewer/` 下执行 `npm ci` 并具备 Chromium 与 `ffmpeg`（详见[棋谱阅读器指南](docs/viewer-guide.md)）。
+> 无需安装引擎或配置 API Key，在仓库根目录运行 `node viewer/serve.mjs --port 8765 --bind 127.0.0.1`（或 `python3 -m http.server 8765 --bind 127.0.0.1`），直接点开示例对局 [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl) 即可看到棋盘、每步模型思考理由、引擎复盘恶手标注、耗时与 token 统计。也可不带参数打开 [`http://127.0.0.1:8765/viewer/`](http://127.0.0.1:8765/viewer/) 并把任意单盘目录 `runs/<tag>/game.pgn` 或多盘批次子目录 `runs/<batch>/<game>/game.pgn`（可连带同目录 `analysis.jsonl`）拖入页面查看；导出 MP4 复盘视频需先在 `viewer/` 下执行 `npm ci` 并具备 Chromium 与 `ffmpeg`（详见[棋谱阅读器指南](docs/viewer-guide.md)）。
 
 ## 从这里开始
 
@@ -32,10 +32,11 @@
 ```sh
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
+python3 data/batch1/select_positions.py check
 python3 data/batch2/select_positions.py check
 ```
 
-`select_positions.py check` 离线校验已入库的第二批局面题（`data/batch2/`），无需引擎或模型账号。完整环境配置与引擎对手安装详见[安装与运行](docs/setup.md)。
+`select_positions.py check` 离线校验已入库的第一批与第二批局面题（`data/batch1/` 与 `data/batch2/`），无需引擎或模型账号。完整环境配置与引擎对手安装详见[安装与运行](docs/setup.md)。
 
 ### 复算已有评级
 
@@ -62,7 +63,7 @@ python3 -m http.server 8000 --bind 127.0.0.1
 - [国际象棋测试样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn)
 - [中国象棋测试样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
 
-用左右方向键逐步看棋，空格播放或暂停；也可以打开 [空白阅读器](http://127.0.0.1:8000/viewer/) 后拖入 PGN 文件，或将网址中的 `files=` 替换为 `runs/<tag>/game.pgn` 浏览任意已入库正式对局。结束后在服务终端按 Ctrl-C 停止。若端口被占用，换一个端口，并同步修改链接。
+用左右方向键逐步看棋，空格播放或暂停；也可以打开 [空白阅读器](http://127.0.0.1:8000/viewer/) 后拖入 PGN 文件（及对应 `analysis.jsonl`），或将网址中的 `files=` 替换为 `/runs/<tag>/game.pgn`（58 个单盘目录）或 `/runs/<batch>/<game>/game.pgn`（7 个多盘批次目录 `b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，如 `/runs/zc/maia-1900-s1-w/game.pgn`）浏览任意已入库正式对局。结束后在服务终端按 Ctrl-C 停止。若端口被占用，换一个端口，并同步修改链接。
 
 浏览页面不需要 npm 安装。`runs/` 已随仓包含全部 171 盘正式模型对局的 `game.pgn`（内含每步完整思考理由批注、耗时及 token 统计）。视频录制另需浏览器自动化与 ffmpeg，见[指南](docs/viewer-guide.md)。
 
@@ -84,7 +85,7 @@ python3 -m http.server 8000 --bind 127.0.0.1
 
 ## 运行与数据边界
 
-- **正式对局与判卷产物已入库：** `runs/` 目录已随仓入库全部 65 个正式模型对局目录（43 盘模型互弈 + 22 批模型对引擎，共 171 盘）的 `game.pgn`（含每步思考理由批注、耗时及 token 统计）、`analysis.jsonl` / `analysis-summary.json`（引擎逐着评分与恶手判定）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`）的汇总判卷结果 `judged.jsonl` 与 `report.txt`。仅排除了体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `analysis/rating/games-engines.csv`）及录屏 `.mp4` 视频。
+- **正式对局与判卷产物已入库：** `runs/` 目录已随仓入库全部 65 个正式模型对局目录——43 个模型互弈单盘目录 + 22 个模型对引擎目录（15 个单盘 + 7 个多盘批次，合计 171 盘）——的 `game.pgn`（含每步思考理由批注、耗时及 token 统计）、`analysis.jsonl` / `analysis-summary.json`（170 盘的引擎逐着评分与恶手判定）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的汇总判卷结果 `judged.jsonl` 与 `report.txt`。仅排除了体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `analysis/rating/games-engines.csv`）及录屏 `.mp4` 视频。
 - **内置 `llm-chat` 双通道调用层：** 仓库已在 `.agents/skills/llm-chat/` 内置 `llm-chat`（含 `llm_chat.py` 与 `agy_core.py`），`agi_chess/chat.py` 默认直接调用仓内脚本，无需额外安装外部 `llm-chat` skill。整盘对弈统一驱动两类通道（详见[安装与运行](docs/setup.md)）：
   - **本地 Agent CLI 订阅通道**（主力实验通道）：Claude（通过 `claude` CLI）、GPT（通过 `codex` CLI）、Gemini（通过 `agy` CLI），直接使用本机已安装并登录的 CLI 订阅额度；若未安装对应 CLI，`llm-chat` 会直接返回未安装错误提示。
   - **HTTP API 通道**（DeepSeek 及 OpenRouter）：支持设置环境变量 `API_KEY_OPENROUTER`（或 `OPENROUTER_API_KEY`）和 `API_KEY_DEEPSEEK`（或 `DEEPSEEK_API_KEY`）。运行 `deepseek:flash`（`deepseek-flash`）或 `deepseek:v4-pro`（`deepseek-v4-pro`）时，若仅配置了 `API_KEY_OPENROUTER` 而未设置 `API_KEY_DEEPSEEK`，`llm-chat` 会自动通过 OpenRouter 访问 DeepSeek 模型（`deepseek-flash` → `deepseek/deepseek-v4.1-flash`、`deepseek-v4-pro` → `deepseek/deepseek-v4-pro`），无需单独申请 DeepSeek 官方 Key。

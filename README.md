@@ -8,7 +8,7 @@ This project puts untuned general-purpose models at the board like human players
 
 > **Interactive Game Viewer ([`viewer/`](viewer/)) — Browse All 171 Games Zero-Config**
 >
-> Without installing any chess engine or configuring API keys, run `node viewer/serve.mjs --port 8765 --bind 127.0.0.1` (or `python3 -m http.server 8765 --bind 127.0.0.1`) in the repository root and open [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl&lang=en`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl&lang=en) to immediately see the board, per-move model rationales, engine blunder/mistake annotations, elapsed time, and token stats. You can also open [`http://127.0.0.1:8765/viewer/?lang=en`](http://127.0.0.1:8765/viewer/?lang=en) without query parameters and drag any `runs/<tag>/game.pgn` onto the page; exporting MP4 replay videos requires running `npm ci` in `viewer/` with Chromium and `ffmpeg` available (see [Viewer & Video Guide](docs/viewer-guide.en.md)).
+> Without installing any chess engine or configuring API keys, run `node viewer/serve.mjs --port 8765 --bind 127.0.0.1` (or `python3 -m http.server 8765 --bind 127.0.0.1`) in the repository root and open [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl&lang=en`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl&lang=en) to immediately see the board, per-move model rationales, engine blunder/mistake annotations, elapsed time, and token stats. You can also open [`http://127.0.0.1:8765/viewer/?lang=en`](http://127.0.0.1:8765/viewer/?lang=en) without query parameters and drag any single-game `runs/<tag>/game.pgn` or multi-game batch `runs/<batch>/<game>/game.pgn` (optionally alongside its `analysis.jsonl`) onto the page; exporting MP4 replay videos requires running `npm ci` in `viewer/` with Chromium and `ffmpeg` available (see [Viewer & Video Guide](docs/viewer-guide.en.md)).
 
 ## Start Here
 
@@ -32,10 +32,11 @@ If you want to run command-line matches, re-export game records, verify checked-
 ```sh
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
+python3 data/batch1/select_positions.py check
 python3 data/batch2/select_positions.py check
 ```
 
-`select_positions.py check` verifies the checked-in Batch 2 position bank (`data/batch2/`) offline without engines or model accounts. For full environment setup and engine opponent installation, see [Setup & Running](docs/setup.en.md).
+`select_positions.py check` verifies the checked-in Batch 1 and Batch 2 position banks (`data/batch1/` and `data/batch2/`) offline without engines or model accounts. For full environment setup and engine opponent installation, see [Setup & Running](docs/setup.en.md).
 
 ### Recompute Published Ratings
 
@@ -62,7 +63,7 @@ Open in your browser (with `&lang=en` for the English UI):
 - [Chess Test Sample](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en)
 - [Xiangqi Test Sample](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en)
 
-Use the Left/Right arrow keys to step through moves and Space to play or pause; you can also open the [Blank Viewer](http://127.0.0.1:8000/viewer/?lang=en) and drag in any `.pgn` file, or point `files=` to any checked-in `/runs/<tag>/game.pgn`. Press Ctrl-C in the terminal when finished. If port 8000 is busy, choose another port and update the URLs accordingly.
+Use the Left/Right arrow keys to step through moves and Space to play or pause; you can also open the [Blank Viewer](http://127.0.0.1:8000/viewer/?lang=en) and drag in any `.pgn` file (plus its `analysis.jsonl`), or point `files=` to any checked-in `/runs/<tag>/game.pgn` (for the 58 single-game directories) or `/runs/<batch>/<game>/game.pgn` (for the 7 multi-game batch directories `b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`, e.g. `/runs/zc/maia-1900-s1-w/game.pgn`). Press Ctrl-C in the terminal when finished. If port 8000 is busy, choose another port and update the URLs accordingly.
 
 Viewing in a browser requires no `npm` installation. `runs/` includes `game.pgn` (with full per-move rationale annotations, elapsed time, and token counts) for all 171 official model games. Recording MP4 videos requires headless Chromium automation and FFmpeg; see the [Viewer & Video Guide](docs/viewer-guide.en.md).
 
@@ -84,7 +85,7 @@ If a model invokes or attempts a tool call, the match pauses immediately; if a s
 
 ## Runtime & Data Boundaries
 
-- **Official Games & Judged Quizzes Included:** `runs/` now ships with all 65 official model match directories (43 model-vs-model games + 22 model-vs-engine batches, 171 games in total), including `game.pgn` (with per-move rationales, timing, and token metadata), `analysis.jsonl` / `analysis-summary.json` (per-move engine evaluations and blunder flags), `summary.json` / `summary.md`, and 9 official position-quiz batches (`quiz-*`) with `judged.jsonl` and `report.txt`. Only bulky low-level event logs (`game.jsonl`), duplicate `record.txt` files, raw engine-vs-engine calibration games (whose outcomes are in `analysis/rating/games-engines.csv`), and `.mp4` video recordings are excluded.
+- **Official Games & Judged Quizzes Included:** `runs/` now ships with all 65 official model match directories—43 model-vs-model single-game directories + 22 model-vs-engine directories (15 single-game directories + 7 multi-game batch directories, 171 games in total)—including `game.pgn` (with per-move rationales, timing, and token metadata), `analysis.jsonl` / `analysis-summary.json` (per-move engine evaluations and blunder flags for 170 games), `summary.json` / `summary.md`, and 9 official position-quiz batches (`quiz-*`, 50 `judged.jsonl` files) with `judged.jsonl` and `report.txt`. Only bulky low-level event logs (`game.jsonl`), duplicate `record.txt` files, raw engine-vs-engine calibration games (whose outcomes are in `analysis/rating/games-engines.csv`), and `.mp4` video recordings are excluded.
 - **Built-in `llm-chat` Dual-Channel Driver:** The repository bundles `llm-chat` (`llm_chat.py` and `agy_core.py`) under `.agents/skills/llm-chat/`, and `agi_chess/chat.py` invokes this in-repo script by default—no external `llm-chat` skill installation is required. Full-game matches drive two categories of model channels (see [Setup & Running](docs/setup.en.md)):
   - **Local Agent CLI Subscription Channel** (primary experimental channel): Claude (via `claude` CLI), GPT (via `codex` CLI), and Gemini (via `agy` CLI), using the subscription quota of the locally installed and authenticated CLI; if the required CLI is not installed, `llm-chat` immediately returns a clear "not installed" error.
   - **HTTP API Channel** (DeepSeek & OpenRouter): Configured via environment variables `API_KEY_OPENROUTER` (or `OPENROUTER_API_KEY`) and `API_KEY_DEEPSEEK` (or `DEEPSEEK_API_KEY`). When running `deepseek:flash` (`deepseek-flash`) or `deepseek:v4-pro` (`deepseek-v4-pro`), if `API_KEY_OPENROUTER` is set without `API_KEY_DEEPSEEK`, `llm-chat` automatically routes DeepSeek requests through OpenRouter (`deepseek-flash` → `deepseek/deepseek-v4.1-flash`, `deepseek-v4-pro` → `deepseek/deepseek-v4-pro`), so a separate official DeepSeek API key is not required.

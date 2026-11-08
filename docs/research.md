@@ -99,10 +99,10 @@
 | 入库材料 | 能做什么 | 缺什么 |
 |---|---|---|
 | [31篇结果报告](results/) | 阅读条件、汇总数字、关键案例及限制 | 正式批次的棋谱、引擎分析与判卷汇总已入库 `runs/`；早期临时目录或截断分叉实验的底层事件流不在库 |
-| [正式对局与局面题判卷产物](../runs/) | 直接浏览全部 65 个正式模型对局目录（43 盘模型互弈 + 22 批模型对引擎，共 171 盘）的 `game.pgn`（含每步思考理由、耗时与 token 统计）、`analysis.jsonl` / `analysis-summary.json`、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`）的判卷结果 `judged.jsonl` 与 `report.txt` | 不含体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `games-engines.csv`）及 `.mp4` 录屏 |
+| [正式对局与局面题判卷产物](../runs/) | 直接浏览全部 65 个正式模型对局目录——43 个模型互弈单盘目录 + 22 个模型对引擎目录（15 个单盘目录 `runs/<tag>/game.pgn` + 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`，合计 171 盘）——的 `game.pgn`（含每步思考理由、耗时与 token 统计）、`analysis.jsonl` / `analysis-summary.json`（170 盘）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的判卷结果 `judged.jsonl` 与 `report.txt` | 不含体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `games-engines.csv`）及 `.mp4` 录屏 |
 | [第一批题库](../data/batch1/)与[第二批题库](../data/batch2/) | 查看选定局面与选题脚本；配合 `runs/quiz-*/judged.jsonl` 核对 9 个正式局面题批次的逐题判卷记录 | 早期未归入 `quiz-*` 正式目录的临时作答不在库；后续报告按各批剔除条件使用题库 |
 | [评级战绩与脚本](../analysis/rating/) | 从 `games-engines.csv`、`games-opus.csv`、`human-scale.json` 离线复算评级刻度（`rate.py report`），或直接查看已入库的批次汇总 `runs/zc/summary.md`、`runs/zx/summary.md` | `rate.py export` 重导 CSV 所需的纯引擎标定原始目录不在库（导出后的 CSV 已入库）；`stats.py` 统计每盘花费与墙钟需读取未入库的本机 `game.jsonl` |
-| [阅读器 fixtures](../viewer/test/fixtures/) | 测试、演示解析和显示 | 仅供测试演示；查看真实实验对局请直接打开 `runs/<tag>/game.pgn` |
+| [阅读器 fixtures](../viewer/test/fixtures/) | 测试、演示解析和显示 | 仅供测试演示；查看真实实验对局请直接打开单盘目录 `runs/<tag>/game.pgn` 或多盘批次子目录 `runs/<batch>/<game>/game.pgn` |
 
 评级复算在仓库根运行 `python3 analysis/rating/rate.py report`，不调用模型或引擎；它复算已有战绩和历史人类锚，不获取最新在线评级。`runs/` 现已随仓入库全部 171 盘正式模型对局的 `game.pgn`、引擎逐着复盘 `analysis.jsonl` 以及 9 批正式局面题判卷结果 `judged.jsonl`；仅体积庞大的底层事件流 `game.jsonl`、纯引擎互弈标定原始目录及录屏 `.mp4` 视频保持被 Git 忽略。
 
