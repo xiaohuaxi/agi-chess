@@ -1,3 +1,5 @@
+[English](license-review.en.md) | [简体中文](license-review.md)
+
 # 公开与发行的许可复核
 
 2026-11-05 初版，2026-11-08 许可方案落定；事实清单见 [dependencies.md](dependencies.md)。本文区分许可原文、FSF 解释与本仓推断；不代替权利人授权或适用法下的法律判断。
@@ -30,7 +32,7 @@ FSF 解释：[库链接与语言绑定](https://www.gnu.org/licenses/gpl-faq.htm
 
 维护者已拍板选定并落地以下方案：
 
-- **仓内自有代码与材料**：根目录提供标准 MIT [LICENSE](../LICENSE)，覆盖仓内自有 Python 代码、文档与研究报告、题库及 `viewer/` 棋谱阅读器。
+- **仓内自有代码与材料**：根目录提供标准 MIT [LICENSE](../LICENSE)，覆盖仓内自有 Python 代码、内置 `.agents/skills/llm-chat/`、文档与研究报告、题库、已入库 `runs/` 对局与判卷产物，以及 `viewer/` 棋谱阅读器。
 - **第三方前端与素材**：`viewer/vendor/` 保留各自原有宽松许可证（BSD-2-Clause、MIT、BSD-3-Clause、CC0 1.0）。
 - **Python 规则依赖与组合边界**：
   - 存在元数据与源文件声明冲突的 `cchess` 运行时依赖已彻底移除，改用仓内自研记谱；

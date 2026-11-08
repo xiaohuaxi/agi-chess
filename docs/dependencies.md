@@ -1,3 +1,5 @@
+[English](dependencies.en.md) | [简体中文](dependencies.md)
+
 # 依赖与第三方材料
 
 核对日期：2026-11-05，2026-11-08 许可方案落定；发布影响与组合边界见 [许可复核](license-review.md)。
@@ -25,12 +27,13 @@
 | el_boss 三个 MP3 | vendored；[SOURCE](../viewer/vendor/sounds/SOURCE.md) 有逐音来源、哈希 | CC0 1.0；本轮沿用仓库既有逐项来源核验 |
 | playwright-core 1.58.2 | 本体不入库；`viewer/package-lock.json` 固定版本 | Apache-2.0，录制/测试开发依赖；旧实验目录另声明 `^1.61.1`，不是正式阅读器版本 |
 | Chromium、FFmpeg | 外部录制工具，不入库；FFmpeg 本机 9.0.2 | Chromium 含多方许可；FFmpeg 依构建选项可能 LGPL/GPL。当前调用工具不等于分发工具；将来随包附带须另核构建与声明 |
-| llm-chat、agy、模型 CLI | 外部脚本/进程，不入库 | 安装与服务使用条件独立核对；本清单不授予其再分发权 |
+| `.agents/skills/llm-chat/` | 仓内自研脚本（`llm_chat.py`、`agy_core.py`），已随仓入库 | MIT（属本仓自有代码） |
+| agy、模型 CLI（`claude`、`codex`） | 外部进程，不入库 | 安装与服务使用条件独立核对；本清单不授予其再分发权 |
 
 ## 研究数据
 
 - [第一批国际象棋题库](../data/batch1/chess.jsonl)选自 [Lichess 公开谜题库](https://database.lichess.org/#puzzles)，上游按 CC0 提供。选取日期为 2026-09-25，筛选与抽样规则见[第一批选题脚本](../data/batch1/select_positions.py)；数据库会更新，已入库 JSONL 才是本批固定题目。第二批继承的 Lichess 谜题也保留该来源，筛选依据见[第二批选题脚本](../data/batch2/select_positions.py)。
-- 两批中国象棋题及第二批新增的国际象棋整盘局面来自本研究及其前序研究的历史对局，来源与选取条件记在对应 JSONL 和选题脚本中；所需原始对局、旧判分记录未入库。这里说明来源，不把这些材料一并宣称为 CC0；证据边界见[研究索引](research.md)。
+- 两批中国象棋题及第二批新增的国际象棋整盘局面来自本研究及其前序研究的历史对局，来源与选取条件记在对应 JSONL 和选题脚本中。`runs/` 已随仓入库全部 65 个正式模型对局目录（180 盘 `game.pgn` 与引擎分析）及 9 批局面题判卷结果（`judged.jsonl`）；仅底层过程事件流 `game.jsonl`、纯引擎互弈标定原始对局及录屏 `.mp4` 未入库。这里说明来源，不把 Lichess 之外的材料一并宣称为 CC0；本仓自有研究数据采用根目录 MIT 许可，证据边界见[研究索引](research.md)。
 - [人类评级刻度数据](../analysis/rating/human-scale.json)含带出处的第三方统计数据；引用来源不等于获得任意再许可权，研究引用与重新打包数据分别判断。
 
 本清单不是完整二进制 SBOM，不覆盖未来容器基础镜像及传递依赖。

@@ -1,10 +1,12 @@
+[English](viewer-guide.en.md) | [简体中文](viewer-guide.md)
+
 # 棋谱浏览与视频录制
 
-阅读器直接读取 PGN：国际象棋用标准 PGN，中国象棋用 xqbase PGN。可以浏览仓内样例和自己的棋谱，不需要模型账号，也不需要作者本机的原始实验记录。
+阅读器直接读取 PGN：国际象棋用标准 PGN，中国象棋用 xqbase PGN。可以直接浏览随仓入库的 180 盘正式模型对局（`runs/<tag>/game.pgn`）、测试样例和自己的棋谱，不需要模型账号或棋类引擎。
 
 阅读器默认中文，网址加 `lang=en` 可切换英文。安装总览见[安装与运行](setup.md)，实现与完整参数说明见[阅读器设计](viewer.md)，素材与工具许可见[依赖说明](dependencies.md)。
 
-## 打开仓内样例
+## 打开正式对局与仓内样例
 
 在仓库根目录运行本机静态服务：
 
@@ -14,11 +16,13 @@ python3 -m http.server --bind 127.0.0.1 8000
 
 打开下面任一网址：
 
-- [国际象棋样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn)
-- [中国象棋样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
-- [两种棋连播](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1)
+- [国际象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8000/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn)
+- [中国象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8000/viewer/?files=/runs/g7-x-opus-astra-1/game.pgn)
+- [国际象棋测试样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn)
+- [中国象棋测试样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
+- [两种棋样例连播](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1)
 
-服务必须从仓库根目录启动，URL 中的路径相对站点根目录。只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8000 被占用时换一个端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
+仓库 `runs/` 目录已包含全部 65 个正式模型对局目录（共 180 盘）的 `game.pgn`，只需将网址中的 `files=` 改为任意 `/runs/<tag>/game.pgn` 即可查看对应对局与每步思考理由。服务必须从仓库根目录启动，URL 中的路径相对站点根目录。只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8000 被占用时换一个端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
 
 ## 浏览自己的棋谱
 
@@ -83,7 +87,7 @@ node viewer/record.mjs viewer/test/fixtures/chess-sample.pgn -o /tmp/chess-sampl
 node viewer/record.mjs viewer/test/fixtures/chess-sample.pgn viewer/test/fixtures/xq-sample.pgn -o /tmp/two-samples.mp4 --gap 1.5 --openhold 0.5
 ```
 
-给目录时读取其中的 `game.pgn`，也支持仓库外的绝对路径。常用选项：`--no-sound` 无声、`--vol 0.5` 调轻、`--anim 0` 关动画、`--title` 加标题；`--resulthold` 调终局停留，`--summaryhold` 调多盘总比分停留。默认不加标题。`--aspect 9:16` 或 `16:9` 只改变视口，没有专门排版，使用前先检查画面。完整选项：
+给目录时自动读取其中的 `game.pgn`（例如直接录制已入库正式对局：`node viewer/record.mjs runs/g7-c-opus-astra-1 -o /tmp/g7-c-1.mp4 --gap 1.5 --openhold 0.5`），也支持仓库外的绝对路径。常用选项：`--no-sound` 无声、`--vol 0.5` 调轻、`--anim 0` 关动画、`--title` 加标题；`--resulthold` 调终局停留，`--summaryhold` 调多盘总比分停留。默认不加标题。`--aspect 9:16` 或 `16:9` 只改变视口，没有专门排版，使用前先检查画面。完整选项：
 
 ```sh
 node viewer/record.mjs --help
@@ -99,6 +103,6 @@ ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,profile,pix
 
 默认应为 H.264 High、yuv420p、1080×1440、30/1。再实际打开视频，检查开头、几步走子、中文和终局横幅；中国象棋使用系统字体，不同机器的中文字形可能不同。
 
-若录自己的模型对局，先确认对局已结束，再用 `python -m llmchess export runs/<tag>` 重导棋谱；该操作会重写导出文件，应只针对自己要处理的已结束记录。`game.jsonl` 最后一条为 `type=end` 才算结束，正在运行的目录不要处理。新克隆没有作者本机的 `runs/`，直接用上面的仓内样例即可。
+已入库 `runs/<tag>/game.pgn` 已是最新导出的完整棋谱，可直接浏览或录制（无需也不可对其运行 `export`，因为体积庞大的底层 `game.jsonl` 未入库）。若录制自己新跑的模型对局，先确认对局已结束（本机 `game.jsonl` 最后一条为 `type=end`），再用 `python -m llmchess export runs/<tag>` 导出或更新棋谱。
 
 英文录制在原命令后加 `--set lang=en --set "names=opus=Claude Opus,astra=GPT astra"`，也可同时用 `--openhold 0.5`。象棋英文着法为 WXF 显示，输入棋谱仍用 xqbase 格式。

@@ -1,3 +1,5 @@
+[English](research.en.md) | [简体中文](research.md)
+
 # 研究索引
 
 这里导航 `docs/results/` 的全部 31 篇报告，覆盖 2026-09-25 至 10-25 的实验、复盘和历史数据复算。它们研究的是特定模型、提示和会话条件下的表现，不能合成一个跨棋种、跨档位的总排行榜。
@@ -76,7 +78,7 @@
 
 ## 对引擎的评级（2026-10-01—10-04）
 
-- [Opus Max 棋力定位](results/opus-max-rating.md)（10-01—03对局，10-04补新规回看；两种棋）。`claude-opus-5-5`、max、llm-chat、连续会话带思考、plain 理由、real；随机代走国际象棋 8 / 中国象棋 6 半回合。国际象棋对 Maia-1900 和 Stockfish 19 限强三档，共 30 盘；中国象棋对 Fairy-Stockfish 14.0.1 节点阶梯，共 37 盘，另有引擎互下标定。国际象棋旧到上限计和版约 lichess Blitz 1910 / Rapid 2020，新规事后回看约 1800 / 1920；这是两种口径的点估计，不是一个置信区间，且原盘没有按新提示重下。中国象棋只给引擎相对位置，不给人类段位。评级刻度可用入库CSV离线复算；逐步用量仍需本机原始记录。
+- [Opus Max 棋力定位](results/opus-max-rating.md)（10-01—03对局，10-04补新规回看；两种棋）。`claude-opus-5-5`、max、llm-chat、连续会话带思考、plain 理由、real；随机代走国际象棋 8 / 中国象棋 6 半回合。国际象棋对 Maia-1900 和 Stockfish 19 限强三档，共 30 盘；中国象棋对 Fairy-Stockfish 14.0.1 节点阶梯，共 37 盘，另有引擎互下标定。国际象棋旧到上限计和版约 lichess Blitz 1910 / Rapid 2020，新规事后回看约 1800 / 1920；这是两种口径的点估计，不是一个置信区间，且原盘没有按新提示重下。中国象棋只给引擎相对位置，不给人类段位。评级刻度可用入库CSV离线复算；全部对局的 `game.pgn`（含每步思考理由、耗时与 token 统计）及引擎复盘 `analysis.jsonl` 已随 `runs/` 入库。
 
 ## Argon 与后续离线比较（2026-10-19—10-31）
 
@@ -96,12 +98,13 @@
 
 | 入库材料 | 能做什么 | 缺什么 |
 |---|---|---|
-| [31篇结果报告](results/) | 阅读条件、汇总数字、关键案例及限制 | 大多不能仅凭报告重建逐次作答 |
-| [第一批题库](../data/batch1/)与[第二批题库](../data/batch2/) | 查看选定局面与选题脚本 | 模型原始作答、完整判定记录不在库；后续报告按各批剔除条件使用题库 |
-| [评级战绩与脚本](../analysis/rating/) | 从 `games-engines.csv`、`games-opus.csv`、`human-scale.json` 离线复算评级刻度 | 不含完整棋谱、逐步理由和用量；`stats.py`仍需本机 `runs/` |
-| [阅读器 fixtures](../viewer/test/fixtures/) | 测试、演示解析和显示 | 不是研究证据，不能替代实验样本 |
+| [31篇结果报告](results/) | 阅读条件、汇总数字、关键案例及限制 | 正式批次的棋谱、引擎分析与判卷汇总已入库 `runs/`；早期临时目录或截断分叉实验的底层事件流不在库 |
+| [正式对局与局面题判卷产物](../runs/) | 直接浏览全部 65 个正式模型对局目录（43 盘模型互弈 + 22 批模型对引擎，共 180 盘）的 `game.pgn`（含每步思考理由、耗时与 token 统计）、`analysis.jsonl` / `analysis-summary.json`、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`）的判卷结果 `judged.jsonl` 与 `report.txt` | 不含体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `games-engines.csv`）及 `.mp4` 录屏 |
+| [第一批题库](../data/batch1/)与[第二批题库](../data/batch2/) | 查看选定局面与选题脚本；配合 `runs/quiz-*/judged.jsonl` 核对 9 个正式局面题批次的逐题判卷记录 | 早期未归入 `quiz-*` 正式目录的临时作答不在库；后续报告按各批剔除条件使用题库 |
+| [评级战绩与脚本](../analysis/rating/) | 从 `games-engines.csv`、`games-opus.csv`、`human-scale.json` 离线复算评级刻度；`stats.py` 可汇总已入库 `runs/` 的对局统计 | `rate.py export` 重导 CSV 所需的纯引擎标定原始目录不在库（导出后的 CSV 已入库） |
+| [阅读器 fixtures](../viewer/test/fixtures/) | 测试、演示解析和显示 | 仅供测试演示；查看真实实验对局请直接打开 `runs/<tag>/game.pgn` |
 
-评级复算在仓库根运行 `python3 analysis/rating/rate.py report`，无需 `runs/`，不调用模型或引擎；它复算已有战绩和历史人类锚，不获取最新在线评级。原始对局、作答、绝大多数逐步引擎分析、诊断脚本与视频都在被忽略的 `runs/` 或当时临时目录，不随仓库分发。Argon比较与token报告所列派生JSON和复算脚本也仅在本机；不要把它们的本地路径当成仓库可下载附件。
+评级复算在仓库根运行 `python3 analysis/rating/rate.py report`，不调用模型或引擎；它复算已有战绩和历史人类锚，不获取最新在线评级。`runs/` 现已随仓入库全部 180 盘正式模型对局的 `game.pgn`、引擎逐着复盘 `analysis.jsonl` 以及 9 批正式局面题判卷结果 `judged.jsonl`；仅体积庞大的底层事件流 `game.jsonl`、纯引擎互弈标定原始目录及录屏 `.mp4` 视频保持被 Git 忽略。
 
 使用程序见[安装与运行](setup.md)，看棋谱和出视频见[阅读器指南](viewer-guide.md)；当前工作状态与后续待办见[项目状态](status.md)。本索引只导航已有材料，没有追加模型调用、引擎分析或棋力重估。
 

@@ -16,6 +16,15 @@
   - 修复 `tests/test_move_meta.py` 未关闭文件句柄导致的 `ResourceWarning`，全套 314 项测试在 `-W default` 下零告警通过；
   - 修复 `analysis/rating/stats.py` 缺少未入库 `runs/` 目录时的未捕获 `FileNotFoundError`，改为输出友好提示引导使用 `python3 analysis/rating/rate.py report` 并干净退出；
   - `llmchess/codex_cli.py` 支持通过 `LLMCHESS_DEEPSEEK_CONFIG` 环境变量覆盖 DeepSeek 局面题配置文件路径；`README.md` 与 `docs/setup.md` 补充 `python3 data/batch2/select_positions.py check` 离线题库校验说明；`.agents/skills/replay-video/SKILL.md` 改为仓库根目录相对路径说明。
+- **内置 `.agents/skills/llm-chat/` 双通道调用层**：
+  - 将 `llm-chat`（含 `scripts/llm_chat.py`、`scripts/agy_core.py` 与 `SKILL.md`）收归仓内 `.agents/skills/llm-chat/`，`llmchess/chat.py` 默认直接调用仓内脚本，移除对仓外用户级 `llm-chat` skill 的依赖；
+  - 统一驱动两类通道：① 本地 Agent CLI 订阅通道（`claude`、`codex`、`agy`，未安装对应 CLI 时直接报未安装错误）；② HTTP API 通道（支持 `API_KEY_OPENROUTER` / `OPENROUTER_API_KEY` 与 `API_KEY_DEEPSEEK` / `DEEPSEEK_API_KEY`，仅配 OpenRouter Key 时 `deepseek:flash` / `deepseek:v4-pro` 自动走 OpenRouter 映射模型 `deepseek/deepseek-v4.1-flash` / `deepseek/deepseek-v4-pro`）。
+- **`runs/` 正式对局与局面题产出物入库（约 17.6 MiB）**：
+  - 仓库 `runs/` 现随仓包含全部 65 个正式模型对局目录（43 盘模型互弈 + 22 批模型对引擎，共 180 盘）的 `game.pgn`（含每步完整思考理由批注、耗时及 token 统计）、`analysis.jsonl` / `analysis-summary.json`、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`）的汇总判卷结果 `judged.jsonl` 与 `report.txt`；
+  - 排除体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `analysis/rating/games-engines.csv`）及录屏 `.mp4` 视频；外部用户克隆后可直接用阅读器打开任意正式对局（如 `runs/g7-c-opus-astra-1/game.pgn`）。
+- **根目录与 `docs/` 5 篇核心入门文档中英双语化**：
+  - 按 `coclaw` 规范将根目录 `README.md` 设为英文主文件、新增中文版 `README.zh-CN.md`，首行互链；
+  - 保留 `docs/{setup,viewer-guide,research,dependencies,license-review}.md` 中文原名确保仓内既有相对链接不断，新增对应英文版 `docs/*.en.md` 并完成首行中英互链与最新事实口径同步。
 
 ## 公开文档整理（2026-11-05）
 

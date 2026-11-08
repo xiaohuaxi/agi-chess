@@ -1,99 +1,106 @@
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 # llm-chess
 
-研究通用 AI 模型如何下国际象棋与中国象棋：它们在哪里犯错，思考深度、局面表示和会话组织会怎样影响下法，以及怎样搭建不替棋手决策的实验流程。
+Investigating how general-purpose AI models play International Chess and Xiangqi (Chinese Chess): where they blunder, how reasoning effort, board representation, and session continuity shape their play, and how to build an evaluation harness that never makes decisions on a player's behalf.
 
-仓库包含命令行对弈与局面题程序、事后引擎分析、实验报告、评级复算脚本，以及能显示着法理由和用量的棋谱阅读器。它是一个持续积累的研究项目；不同批次的模型、提示、赛制和分析口径并不完全相同，不宜把结果直接拼成统一排行榜。
+This repository includes a command-line match and position-quiz runner, a built-in multi-model session driver (`.agents/skills/llm-chat/`), post-game engine analysis, experimental reports, 180 official model games and 9 judged position-quiz batches checked into `runs/`, rating recomputation scripts, and a game viewer that displays per-move reasoning and token usage. Because this is an ongoing research project whose models, prompts, tournament rules, and analysis criteria evolved across batches, results from different phases should not be merged into a single leaderboard.
 
-## 从这里开始
+## Start Here
 
-| 想做什么 | 入口 |
+| What you want to do | Entry point |
 | --- | --- |
-| 了解做过哪些实验、哪些结论有公开数据 | [研究索引](docs/research.md) |
-| 看两种棋的样例、逐步读理由或录成视频 | [棋谱阅读器指南](docs/viewer-guide.md) |
-| 复算评级、配置环境、跑测试或对弈 | [安装与运行](docs/setup.md) |
-| 查看依赖用途、版本来源和许可 | [依赖与来源](docs/dependencies.md) |
-| 理解提示、赛制、记录格式和异常处理 | [程序设计](docs/design.md) |
-| 跟进维护工作与尚未决定的事项 | [项目进度](docs/status.md) |
+| Browse all experiments, findings, and available public evidence | [Research Index](docs/research.en.md) |
+| Replay real model games or samples, read per-move rationales, or record MP4 videos | [Viewer & Video Guide](docs/viewer-guide.en.md) |
+| Recompute ratings, set up the environment, run tests, or launch matches | [Setup & Running](docs/setup.en.md) |
+| Check dependency roles, upstream provenance, and licenses | [Dependencies & Provenance](docs/dependencies.en.md) |
+| Understand prompts, match protocols, record formats, and failure handling | [System Design (zh-CN)](docs/design.md) |
+| Track maintenance logs and open decisions | [Project Status (zh-CN)](docs/status.md) |
 
-## 两条不调用模型的快速开始
+## Two Model-Free Quick Starts
 
-以下命令均在仓库根目录执行，不需要模型账号、私有对局目录或棋类引擎。仅复算评级（`analysis/rating`）与浏览棋谱（`viewer/`）无需安装额外的 Python 规则库。
+All commands below run from the repository root and require neither model credentials nor chess engines. Recomputing ratings (`analysis/rating`) and browsing games (`viewer/`) do not require installing additional Python rule libraries.
 
-### 安装 Python 规则依赖（可选）
+### Install Python Rule Libraries (Optional)
 
-若需运行命令行对弈、导出棋谱、离线校验已入库题库或执行 Python 离线测试，可通过仓库提供的 `requirements.txt` 安装规则库：
+If you want to run command-line matches, re-export game records, verify checked-in quiz banks offline, or run the Python offline test suite, install the rule libraries from `requirements.txt`:
 
 ```sh
 python3 -m pip install -r requirements.txt
 python3 data/batch2/select_positions.py check
 ```
 
-`select_positions.py check` 离线校验已入库的第二批局面题（`data/batch2/`），无需引擎或模型账号。完整环境配置与引擎对手安装详见[安装与运行](docs/setup.md)。
+`select_positions.py check` verifies the checked-in Batch 2 position bank (`data/batch2/`) offline without engines or model accounts. For full environment setup and engine opponent installation, see [Setup & Running](docs/setup.en.md).
 
-### 复算已有评级
+### Recompute Published Ratings
 
-只需要 Python 3 标准库：
+Requires only the Python 3 standard library:
 
 ```sh
 python3 analysis/rating/rate.py report
 ```
 
-脚本读取已入库的战绩与人类刻度数据，执行 1,000 次自助抽样，通常需要几分钟。输出对应 [Opus max 棋力定位报告](docs/results/opus-max-rating.md) 中的刻度与区间。它复算统计结果，不重新生成原始对局，也不等于核验了每一步引擎分析。
+The script reads checked-in match scores and human-scale anchor data and runs 1,000 bootstrap resamples (taking a few minutes). Its output reproduces the scales and intervals in the [Opus Max Rating Report](docs/results/opus-max-rating.md). It recomputes the statistical fit rather than re-playing raw games or re-running per-move engine evaluations.
 
-### 播放样例棋谱
+### Replay Official Model Games and Sample PGNs
 
-用 Python 3 在本机启动静态服务：
+Start a local static HTTP server with Python 3:
 
 ```sh
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-浏览器打开：
+Open in your browser (with `&lang=en` for the English UI):
 
-- [国际象棋样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn)
-- [中国象棋样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
+- [Chess Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8000/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn&lang=en)
+- [Xiangqi Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8000/viewer/?files=/runs/g7-x-opus-astra-1/game.pgn&lang=en)
+- [Chess Test Sample](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en)
+- [Xiangqi Test Sample](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en)
 
-用左右方向键逐步看棋，空格播放或暂停；也可以打开 [空白阅读器](http://127.0.0.1:8000/viewer/) 后拖入 PGN 文件。结束后在服务终端按 Ctrl-C 停止。若端口被占用，换一个端口，并同步修改链接。
+Use the Left/Right arrow keys to step through moves and Space to play or pause; you can also open the [Blank Viewer](http://127.0.0.1:8000/viewer/?lang=en) and drag in any `.pgn` file, or point `files=` to any checked-in `/runs/<tag>/game.pgn`. Press Ctrl-C in the terminal when finished. If port 8000 is busy, choose another port and update the URLs accordingly.
 
-浏览页面不需要 npm 安装。这里使用的是仓内测试样例，供了解播放器与记录格式，不代表整项实验的完整证据包。视频录制另需浏览器自动化与 ffmpeg，见[指南](docs/viewer-guide.md)。
+Viewing in a browser requires no `npm` installation. `runs/` includes `game.pgn` (with full per-move rationale annotations, elapsed time, and token counts) for all 180 official model games. Recording MP4 videos requires headless Chromium automation and FFmpeg; see the [Viewer & Video Guide](docs/viewer-guide.en.md).
 
-阅读器默认中文；在样例网址后加 `&lang=en` 切换英文，`names=` 可覆盖棋手显示名。具体写法见[阅读器指南](docs/viewer-guide.md)。
+The viewer defaults to Chinese (`lang=zh`); append `&lang=en` to switch the interface to English, and use `names=` to override displayed player names. See the [Viewer & Video Guide](docs/viewer-guide.en.md) for full URL parameters.
 
-## 研究内容
+## Research Themes
 
-- **思考深度与会话组织：** 局面题与整盘实验分别观察 effort、会话延续及此前思考保留的影响，不能假设同名 effort 在不同服务商之间代表相同计算预算。
-- **局面表示与错误类型：** 比较棋盘、FEN、子力清单等输入，并用事后分析和模型可见理由定位错误。理由是可检查的回答正文，不等于模型的内部思考。
-- **模型对弈与棋力定位：** 包含模型互弈、固定配置引擎对手和引擎标定。跨模型对局多为小样本；人类等级分类比还有锚点与换算误差。
+- **Reasoning Depth & Session Continuity:** Position quizzes and full-game experiments separately test the impact of reasoning effort, multi-turn session continuation, and retaining vs. dropping prior thinking blocks. Identically named effort levels across providers do not imply equal compute budgets.
+- **Board Representation & Blunder Taxonomy:** We compare ASCII boards, FEN strings, and piece lists, combining post-game engine analysis with visible model rationales to diagnose errors. Visible rationales are inspectable response text, not the model's hidden chain-of-thought.
+- **Model-vs-Model Play & Rating Calibration:** Covers head-to-head model matches, fixed-strength engine opponents, and engine ladder calibration. Cross-model matches are mostly small-sample directional tests, and analogies to human rating pools carry anchor and conversion uncertainties.
 
-[第一轮总结](docs/results/summary-round1.md) 只概括当时的研究阶段；后续模型对弈、评级及 Gemini 实验见[研究索引](docs/research.md)。各篇报告保留当时的条件和结论。
+The [Round 1 Summary](docs/results/summary-round1.md) summarizes only the initial phase of experiments; subsequent head-to-head matches, rating calibrations, and Gemini evaluations are cataloged in the [Research Index](docs/research.en.md). Each report preserves the conditions and conclusions of its time.
 
-## 当前对弈原则
+## Match Principles
 
-整盘默认采用「模型就是真实棋手」协议：每方一个连续会话，依据局面选择着法并给出可见理由。程序验证走法、记录对局，不向模型提供引擎建议或合法着法列表；引擎用于对手和事后裁判。同一步连续三次非法判负，是本项目自定的赛制。
+Full games default to the **"Model as Real Player" (`real`) protocol**: each side plays inside one continuous session, chooses moves from the board state, and writes a visible rationale before its move. The harness validates legality and logs the game without offering engine hints, check warnings, threat lists, or legal-move enumerations; engines act strictly as opponents or post-game arbiters. Three consecutive illegal attempts on the same turn forfeit the game—a custom tournament rule defined by this project.
 
-发现工具调用或尝试时暂停；出现防思维链泄露类拒答时终止并保留证据，不自动换措辞或续跑。上游工具事件存在观察盲区，因此“未观察到工具调用”不等于已经证明完全隔离。具体协议、历史差异与限制见[程序设计](docs/design.md)。
+If a model invokes or attempts a tool call, the match pauses immediately; if a safety/anti-CoT-extraction refusal occurs, the match halts and preserves raw evidence without rephrasing or auto-resuming. Because upstream CLIs do not expose every internal tool event, "no observed tool event" is not a formal proof of zero tool attempts. See [System Design](docs/design.md) for protocol history and boundaries.
 
-## 运行与数据边界
+## Runtime & Data Boundaries
 
-- 评级复算和样例阅读可直接使用仓内材料；大多数实验的完整原始作答、逐步分析和会话记录仍在未入库的 `runs/`，不能仅凭 checkout 完整重做所有统计。
-- 整盘模型调用依赖外部 `llm-chat` skill。维护者计划后续单独公开 skills；目前本仓不包含该实现，也未提供公开安装入口。模型 CLI、账号和适配器配置另行准备，详见[安装与运行](docs/setup.md)。
-- 模型可用性、CLI 行为和会话处理会变化。报告中的型号与版本是实验记录，不是对当前服务可用性的保证。
-- 不加 `--dry-run` 的 `play` 可以实际调用模型并消耗额度；首次使用请先走上面的离线路径。
+- **Official Games & Judged Quizzes Included:** `runs/` now ships with all 65 official model match directories (43 model-vs-model games + 22 model-vs-engine batches, 180 games in total), including `game.pgn` (with per-move rationales, timing, and token metadata), `analysis.jsonl` / `analysis-summary.json` (per-move engine evaluations and blunder flags), `summary.json` / `summary.md`, and 9 official position-quiz batches (`quiz-*`) with `judged.jsonl` and `report.txt`. Only bulky low-level event logs (`game.jsonl`), duplicate `record.txt` files, raw engine-vs-engine calibration games (whose outcomes are in `analysis/rating/games-engines.csv`), and `.mp4` video recordings are excluded.
+- **Built-in `llm-chat` Dual-Channel Driver:** The repository bundles `llm-chat` (`llm_chat.py` and `agy_core.py`) under `.agents/skills/llm-chat/`, and `llmchess/chat.py` invokes this in-repo script by default—no external `llm-chat` skill installation is required. Full-game matches drive two categories of model channels (see [Setup & Running](docs/setup.en.md)):
+  - **Local Agent CLI Subscription Channel** (primary experimental channel): Claude (via `claude` CLI), GPT (via `codex` CLI), and Gemini (via `agy` CLI), using the subscription quota of the locally installed and authenticated CLI; if the required CLI is not installed, `llm-chat` immediately returns a clear "not installed" error.
+  - **HTTP API Channel** (DeepSeek & OpenRouter): Configured via environment variables `API_KEY_OPENROUTER` (or `OPENROUTER_API_KEY`) and `API_KEY_DEEPSEEK` (or `DEEPSEEK_API_KEY`). When running `deepseek:flash` (`deepseek-flash`) or `deepseek:v4-pro` (`deepseek-v4-pro`), if `API_KEY_OPENROUTER` is set without `API_KEY_DEEPSEEK`, `llm-chat` automatically routes DeepSeek requests through OpenRouter (`deepseek-flash` → `deepseek/deepseek-v4.1-flash`, `deepseek-v4-pro` → `deepseek/deepseek-v4-pro`), so a separate official DeepSeek API key is not required.
+- Model availability, CLI behavior, and session handling change over time. Model names and versions in reports document historical experiments rather than guaranteeing current service availability.
+- Running `play` without `--dry-run` makes live model calls and consumes quota; start with the offline quick starts above.
 
-## 目录
+## Repository Layout
 
-| 路径 | 内容 |
+| Path | Contents |
 | --- | --- |
-| `llmchess/` | 对弈、局面题、记录导出与事后分析 |
-| `tests/` | Python 离线测试 |
-| `data/` | 已入库局面题与选题脚本；部分选题来源只在维护者本机 |
-| `analysis/rating/` | 评级脚本及其输入数据 |
-| `viewer/` | 阅读器、录制工具、测试样例与第三方素材 |
-| `docs/results/` | 分批研究报告 |
-| `runs/` | 本地运行输出，被 Git 忽略 |
+| `llmchess/` | Match loop, position quizzes, PGN/record export, and post-game engine analyzer |
+| `.agents/skills/` | Built-in `llm-chat` (multi-model session driver) and `replay-video` (viewer & video recording skill) |
+| `tests/` | Python offline unit tests |
+| `data/` | Checked-in position banks and selection scripts; some raw selection sources reside only on the maintainer's machine |
+| `analysis/rating/` | Rating fitting scripts, match stats scripts, and input datasets |
+| `viewer/` | Web PGN viewer, MP4 recorder, test fixtures, and vendored third-party assets |
+| `docs/results/` | Batch-by-batch research reports |
+| `runs/` | Checked-in outputs for 65 official model match directories (180 `game.pgn` files + engine analyses) and 9 judged quiz batches; raw `game.jsonl` streams and `.mp4` videos are git-ignored |
 
-## 许可说明
+## Licensing
 
-- 仓内自有源码、研究报告、题库与 `viewer/` 阅读器采用 MIT 许可证（见根目录 [LICENSE](LICENSE)）；
-- `viewer/vendor/` 下的第三方前端组件与素材保留各自的原有宽松许可证（BSD-2-Clause、MIT、BSD-3-Clause、CC0 1.0），详见[依赖与来源](docs/dependencies.md)；
-- `llmchess/` 规则判定在运行时同进程依赖 `chess`（python-chess）与 `pyffish`（均为 GPL-3.0-or-later，不随仓分发，由用户通过 `python3 -m pip install -r requirements.txt` 自行安装）；同进程组合运行或将其打包再分发时须遵守 GPL-3.0-or-later。关于许可边界与接入分析，详见[许可复核](docs/license-review.md)。
+- Original source code, research reports, position banks, and the `viewer/` web application in this repository are licensed under the MIT License (see root [LICENSE](LICENSE));
+- Third-party frontend components and media under `viewer/vendor/` retain their respective permissive licenses (BSD-2-Clause, MIT, BSD-3-Clause, CC0 1.0); see [Dependencies & Provenance](docs/dependencies.en.md);
+- Rule validation in `llmchess/` imports `chess` (`python-chess`) and `pyffish` in-process at runtime (both GPL-3.0-or-later, not distributed in this repo, installed locally via `python3 -m pip install -r requirements.txt`); running the combined Python program or redistributing a bundle containing them is subject to GPL-3.0-or-later. See [License Review](docs/license-review.en.md) for full details.
