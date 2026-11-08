@@ -187,15 +187,19 @@ class ExportCommand(unittest.TestCase):
         run_dir = os.path.join(out, 'c1')
         log = os.path.join(run_dir, 'game.jsonl')
         # 把第 1 个半回合改成「模型下的」：补一条带用量的 attempt（真实记录里模型的每次调用都有这条）
-        lines = open(log, encoding='utf-8').read().splitlines()
+        with open(log, encoding='utf-8') as f:
+            lines = f.read().splitlines()
         i = next(k for k, l in enumerate(lines) if json.loads(l)['type'] == 'move')
         lines.insert(i, json.dumps(chat_attempt(1, 'w', CLAUDE_META, CLAUDE_U, 9.0)))
         with open(log, 'w', encoding='utf-8') as f:
             f.write('\n'.join(lines) + '\n')
-        before = open(log, 'rb').read()
+        with open(log, 'rb') as f:
+            before = f.read()
         self.assertEqual(self.quiet(['export', run_dir]), 0)
-        self.assertEqual(open(log, 'rb').read(), before)        # 重新导出不写记录
-        pgn = open(os.path.join(run_dir, 'game.pgn'), encoding='utf-8').read()
+        with open(log, 'rb') as f:
+            self.assertEqual(f.read(), before)                  # 重新导出不写记录
+        with open(os.path.join(run_dir, 'game.pgn'), encoding='utf-8') as f:
+            pgn = f.read()
         self.assertIn('[%emt 0:00:09] [%think 280] [%out 300]', pgn)
         self.assertEqual(pgn.count('[%emt'), 1)                   # 随机走子的半回合不带
 

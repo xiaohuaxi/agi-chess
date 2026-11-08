@@ -10,6 +10,9 @@ import chess
 from llmchess import claude_cli, quiz as Q, records, runner, xiangqi as X
 from llmchess.claude_cli import Paused
 
+FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
+STOCKFISH_MISSING = shutil.which('stockfish') is None and not os.path.exists('/opt/homebrew/bin/stockfish')
+
 
 def fake_reply(text, think=50):
     return {'result': text, 'stop_reason': 'end_turn', 'total_cost_usd': 0.01, 'session_id': 'x', 'duration_ms': 10,
@@ -527,6 +530,7 @@ class Excluded(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.run_ids('x2-25')
 
+    @unittest.skipIf(FSF_MISSING, '本机没有 fairy-stockfish')
     def test_old_answer_to_excluded_still_judged(self):
         d = Q.unit_dir(self.out, 'base', 'xiangqi')
         os.makedirs(d)
@@ -698,6 +702,7 @@ class LichessJudgement(unittest.TestCase):
         self.assertIsNone(Q.lichess_judgement({'mate': 1}, {'mate': 0}))              # 将死了
 
 
+@unittest.skipIf(STOCKFISH_MISSING, '本机没有 stockfish')
 class JudgeWithEngine(unittest.TestCase):
     """真起 Stockfish（浅层）判两条假作答，看 judged.jsonl 的字段通不通。"""
 

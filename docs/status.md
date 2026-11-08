@@ -11,6 +11,11 @@
   - 更新 `README.md` 与 `docs/setup.md`：补充 `python3 -m pip install -r requirements.txt` 一键安装指引，并说明仅复算评级（`analysis/rating`）与浏览棋谱（`viewer/`）无需安装 Python 规则库；
   - 更新 `docs/license-review.md` 与 `docs/dependencies.md`：记录已定案方案，明确说明自有代码 MIT 与规则库 `chess`/`pyffish`（GPL-3.0-or-later）同进程运行的组合边界；
   - 更新 `AGENTS.md`：在硬约束中就地注明 `pyffish` 与 `python-chess` 属于对通用规范「禁强 copyleft」的刻意例外及理由（仅由用户 pip 安装、不随仓分发，冗余的 `cchess` 已移除）。
+- **外部复现体验与测试细节修复**：
+  - 补齐 `tests/test_cap.py`、`tests/test_runner.py`、`tests/test_quiz.py` 中起引擎用例的 `STOCKFISH_MISSING` / `FSF_MISSING` 跳过装饰器，无本机引擎时均优雅 skip；
+  - 修复 `tests/test_move_meta.py` 未关闭文件句柄导致的 `ResourceWarning`，全套 314 项测试在 `-W default` 下零告警通过；
+  - 修复 `analysis/rating/stats.py` 缺少未入库 `runs/` 目录时的未捕获 `FileNotFoundError`，改为输出友好提示引导使用 `python3 analysis/rating/rate.py report` 并干净退出；
+  - `llmchess/codex_cli.py` 支持通过 `LLMCHESS_DEEPSEEK_CONFIG` 环境变量覆盖 DeepSeek 局面题配置文件路径；`README.md` 与 `docs/setup.md` 补充 `python3 data/batch2/select_positions.py check` 离线题库校验说明；`.agents/skills/replay-video/SKILL.md` 改为仓库根目录相对路径说明。
 
 ## 公开文档整理（2026-11-05）
 

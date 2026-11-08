@@ -21,13 +21,14 @@
 
 ### 安装 Python 规则依赖（可选）
 
-若需运行命令行对弈、导出棋谱或执行 Python 离线测试，可通过仓库提供的 `requirements.txt` 安装规则库：
+若需运行命令行对弈、导出棋谱、离线校验已入库题库或执行 Python 离线测试，可通过仓库提供的 `requirements.txt` 安装规则库：
 
 ```sh
 python3 -m pip install -r requirements.txt
+python3 data/batch2/select_positions.py check
 ```
 
-完整环境配置与引擎对手安装详见[安装与运行](docs/setup.md)。
+`select_positions.py check` 离线校验已入库的第二批局面题（`data/batch2/`），无需引擎或模型账号。完整环境配置与引擎对手安装详见[安装与运行](docs/setup.md)。
 
 ### 复算已有评级
 

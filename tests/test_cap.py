@@ -9,6 +9,9 @@ import unittest
 
 from llmchess import analyze, cli, records, runner
 
+FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
+STOCKFISH_MISSING = shutil.which('stockfish') is None and not os.path.exists('/opt/homebrew/bin/stockfish')
+
 
 def run_quiet(argv):
     buf = io.StringIO()
@@ -58,6 +61,7 @@ class CapRuleInGames(unittest.TestCase):
             self.assertIn('仍未分胜负时由裁判评估局面：一方领先至少 300 厘兵判该方胜，否则判和。', cfg['system'][s])
             self.assertNotIn('引擎', cfg['system'][s])
 
+    @unittest.skipIf(STOCKFISH_MISSING, 'stockfish not installed')
     def test_chess_engine_far_ahead_wins_at_cap(self):
         cfg, end, run_dir = self.play('c1', '--game', 'chess', '--white', 'engine:stockfish:depth=4', '--black', 'random',
                                       '--seed', '3', '--max-plies', '12')
@@ -68,6 +72,7 @@ class CapRuleInGames(unittest.TestCase):
         self.assertIn('[Result "1-0"]', pgn)
         self.assertIn('到上限按引擎评分判', pgn)
 
+    @unittest.skipIf(STOCKFISH_MISSING, 'stockfish not installed')
     def test_chess_balanced_is_draw_at_cap(self):
         cfg, end, run_dir = self.play('c2', '--game', 'chess', '--white', 'engine:stockfish:depth=8',
                                       '--black', 'engine:stockfish:depth=8', '--max-plies', '2')
@@ -75,11 +80,13 @@ class CapRuleInGames(unittest.TestCase):
         self.assertIsNone(end['winner'])
         self.assertIn('差距不到 300，判和', end['reason'])
 
+    @unittest.skipIf(FSF_MISSING, 'fairy-stockfish not installed')
     def test_xiangqi_engine_vs_random(self):
         cfg, end, run_dir = self.play('x1', '--game', 'xiangqi', '--red', 'engine:fsf:nodes=100', '--black', 'random',
                                       '--seed', '5', '--max-plies', '10')
         self.check_adjudicated(cfg, end, run_dir, 10, analyze.DEPTH['xiangqi'])
 
+    @unittest.skipIf(STOCKFISH_MISSING, 'stockfish not installed')
     def test_draw_rule_and_no_engine_keep_old_behaviour(self):
         old = '满 %d 个半回合（研究设的上限），判和'
         cfg, end, _ = self.play('d1', '--game', 'chess', '--white', 'random', '--black', 'random', '--seed', '7',

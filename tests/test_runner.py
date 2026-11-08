@@ -14,6 +14,8 @@ from llmchess import chess_ as C, claude_cli, cli, codex_cli, quiz, records, run
 from llmchess import xiangqi as X
 from llmchess.claude_cli import Paused
 
+FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
+
 
 def run_quiet(argv):
     """跑 cli.main，把它往 stdout 打的棋谱、进度都吞掉，只要返回码。"""
@@ -65,6 +67,7 @@ class WholeGameOffline(unittest.TestCase):
                 self.assertEqual(run_quiet(['resume', path]), 3)
             call.assert_not_called()
 
+    @unittest.skipIf(FSF_MISSING, '本机没有 fairy-stockfish')
     def test_xiangqi_random_vs_engine(self):
         out = os.path.join(self.tmp, 'runs')
         rc = run_quiet(['play', '--game', 'xiangqi', '--tag', 'x1', '--out', out,

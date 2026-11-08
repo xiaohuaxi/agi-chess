@@ -11,14 +11,14 @@ description: 用本仓库的棋谱阅读器（viewer/）把对局录成 mp4，�
 
 - **只录下完的棋**：`runs/<tag>/game.jsonl` 最后一行是 `{"type": "end", …}` 才算下完。没有这一行的可能正在下，别碰它的目录。
 - **用当前代码重导一遍**：`python3 -m llmchess export runs/<tag>`。只重写导出文件（`game.pgn`、`record.txt` 这类），不动 `game.jsonl`。旧代码导出的棋谱可能少思考深度标签，或者中文评注在字中间断行，读回来会多出空格。
-- `runs/` 被 git 忽略，只在主检出（`~/repos/llm-chess/runs/`）里有，worktree 里没有。录制脚本认本机任意路径，直接给绝对路径就行。
+- `runs/` 被 git 忽略，只在主检出根目录下的 `runs/` 里有，worktree 里没有。录制脚本认相对仓库根目录的路径或本机任意绝对路径。
 - 开发依赖：先在 `viewer/` 下跑一次 `npm ci`（只装 playwright-core，版本锁死，配套本机缓存里的 Chromium）。
 
 ## 一条命令出片
 
 ```
 node viewer/record.mjs <棋谱或 runs 目录> [更多…] -o <输出.mp4> [选项]
-node viewer/record.mjs ~/repos/llm-chess/runs/g1-c-opus-sol -o /tmp/g1.mp4
+node viewer/record.mjs runs/g1-c-opus-sol -o /tmp/g1.mp4
 node viewer/record.mjs runs/a runs/b -o /tmp/ab.mp4 --gap 1.5 --title   # 连播，每盘前加标题画面，最后一格是总比分
 ```
 
@@ -59,10 +59,10 @@ ffmpeg -v error -y -ss 5 -i /tmp/g1.mp4 -frames:v 1 /tmp/g1-5s.png
 
 ## 手工看棋谱
 
-页面是纯静态文件，但不能用 `file://` 打开，要经本机服务：
+页面是纯静态文件，但不能用 `file://` 打开，要在仓库根目录下起本机服务：
 
 ```
-cd ~/repos/llm-chess && python3 -m http.server --bind 127.0.0.1 8000
+python3 -m http.server --bind 127.0.0.1 8000
 ```
 
 一定要绑 127.0.0.1，别暴露到局域网。然后打开 `http://127.0.0.1:8000/viewer/`：

@@ -54,12 +54,15 @@ python3 -m venv .venv
 python -m pip install -r requirements.txt
 python -c 'import chess, pyffish; print("规则库可导入")'
 python -m llmchess --help
+python data/batch2/select_positions.py check
 python -m unittest discover -s tests -t .
 ```
 
 `chess` 是代码中 `import chess` 对应的包；中国象棋规则由 `pyffish` 提供，中文记谱已改用仓内自研实现（无需 `cchess`）。`pyffish` 含本机扩展，新平台可能需要编译环境。本文没有核实全新的 Python/操作系统组合能否安装；安装失败时先检查解释器和该包的构建要求。
 
-完整测试包含引擎握手与走子，需要能找到 `stockfish` 和 `fairy-stockfish`。缺少引擎时部分测试会跳过，另有直接调用引擎的测试会失败；完整验证须安装两种引擎，并同时检查失败和 skipped。引擎是单独安装的程序，不会由上述 pip 命令提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
+`python3 data/batch2/select_positions.py check` 仅依赖上述规则库，离线校验已入库的第二批局面题（`data/batch2/{xiangqi,chess}.jsonl` 的 FEN、行棋方与着法合法性），不启动引擎、不读取 `runs/`。
+
+完整测试包含引擎握手与走子，需要能找到 `stockfish` 和 `fairy-stockfish`。缺少引擎时相关引擎测试会跳过；完整验证须安装两种引擎，并同时检查失败和 skipped。引擎是单独安装的程序，不会由上述 pip 命令提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
 
 2026-11-05 本机核实：`/usr/bin/python3` 为 Python 3.9.6，可导入 `chess 1.11.2`、`pyffish 0.0.90`（原 `cchess` 运行时依赖已移除，改用仓内自研记谱）；此前该解释器下离线测试 314 项通过。同机默认 `python3` 为 Homebrew Python 3.15.0，未安装这些规则库，直接导入会报 `ModuleNotFoundError`。安装在哪个解释器下，运行和测试就用哪个解释器；评级复算与静态服务不需要这些包。
 
@@ -67,7 +70,7 @@ python -m unittest discover -s tests -t .
 
 整盘对弈默认走 `llmchess/chat.py` 调用的用户级 `llm-chat` 脚本。**该脚本没有随本仓库提供，计划随后随 skills 独立公开；目前不能只克隆本仓库就完整复现模型对弈。**
 
-已有该组件的使用者需自行准备对应 CLI 与登录/凭据。代码的默认脚本位置是 `~/.claude/skills/llm-chat/scripts/llm_chat.py`，可用环境变量 `LLMCHESS_LLM_CHAT` 指向自己的副本。Claude、GPT 使用各自本机 CLI，Gemini/agy 使用 agy，DeepSeek 使用其 HTTP 服务；可用型号、额度与收费由账号和服务决定。本仓库不提供账号、凭据或额度。
+已有该组件的使用者需自行准备对应 CLI 与登录/凭据。代码的默认脚本位置是 `~/.claude/skills/llm-chat/scripts/llm_chat.py`，可用环境变量 `LLMCHESS_LLM_CHAT` 指向自己的副本。Claude、GPT 使用各自本机 CLI，Gemini/agy 使用 agy，DeepSeek 使用其 HTTP 服务；可用型号、额度与收费由账号和服务决定。本仓库不提供账号、凭据或额度。无状态局面题（`python3 -m llmchess.quiz`）仍按原路径直调 `claude` 或 `codex exec`；其中 `deepseek` 局面题默认读取 `~/.codex/deepseek.config.toml` 还原供应商与模型目录配置，可通过环境变量 `LLMCHESS_DEEPSEEK_CONFIG` 覆盖配置文件路径。
 
 先看 CLI 帮助与[对弈协议](design.md)第九节。所有组件准备好后，才运行真正的对弈命令；例如下面会调用模型，消耗其额度：
 

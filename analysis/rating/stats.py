@@ -92,7 +92,7 @@ def list_game_dirs(bdir):
 
 # ---------------------------------------------------------------- 第 1 节：按对手汇总（含执先/执后分拆）+ 未下完盘
 def section_overview(game, bdir):
-    res = batch.summarize([bdir])
+    res = batch.summarize([bdir]) if os.path.isdir(bdir) else {'groups': [], 'games': []}
     games = res['games']
     lines = ['### %s（%s）' % (GAME_ZH[game], os.path.basename(bdir)), '',
              '| 对手 | 下完/共 | 胜-和-负 | 得分率 | 95% 区间 | 执先 | 执后 | 大失误（率，分母） | ACPL |',
@@ -227,6 +227,12 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description='opus max 棋力定位的对局汇总（读本机 runs/）')
     ap.add_argument('--out', help='写到这个文件（原子替换）；不给就打到标准输出')
     a = ap.parse_args(argv)
+    missing = [os.path.relpath(d, ROOT) for d in (os.path.join(RUNS, 'zc'), os.path.join(RUNS, 'zx'))
+               if not os.path.isdir(d)]
+    if missing:
+        raise SystemExit('未找到本地原始对局目录（%s）。本脚本依赖本地 runs/ 原始对局目录；'
+                         '若仅使用公开导出数据，可运行 `python3 analysis/rating/rate.py report` '
+                         '查看基于 analysis/rating/games-*.csv 的等级分结果。' % '、'.join(missing))
     t_start = datetime.datetime.now()
     parts = ['# opus max 棋力评测汇总', '', '生成时间：%s（仅依赖当前盘上数据）' % t_start.isoformat(timespec='seconds'), '']
 

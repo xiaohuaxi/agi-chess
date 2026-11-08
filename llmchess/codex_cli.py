@@ -25,7 +25,7 @@ import hashlib, json, os, pathlib, re, subprocess, threading
 
 KINDS = ('codex', 'deepseek')
 ALIASES = {'sol': 'codex:gpt-6-sol'}          # quiz --model 的简写；deepseek 单写时取 profile 里的默认模型
-PROFILE = pathlib.Path(os.environ.get('CODEX_HOME') or pathlib.Path.home() / '.codex') / 'deepseek.config.toml'
+PROFILE = os.path.expanduser(os.environ.get('LLMCHESS_DEEPSEEK_CONFIG') or '~/.codex/deepseek.config.toml')
 DISABLED_FEATURES = ('shell_tool', 'unified_exec', 'code_mode_host', 'sleep_tool', 'multi_agent', 'multi_agent_v2',
                      'view_image', 'image_generation', 'apps', 'plugins', 'browser_use', 'browser_use_external',
                      'computer_use', 'in_app_browser', 'goals', 'tool_suggest', 'skill_search', 'memories', 'hooks')
@@ -90,7 +90,8 @@ def parse_profile(text):
 
 
 def profile(path=None):
-    p = parse_profile(pathlib.Path(path or PROFILE).read_text(encoding='utf-8'))
+    cfg = path or os.path.expanduser(os.environ.get('LLMCHESS_DEEPSEEK_CONFIG') or PROFILE)
+    p = parse_profile(pathlib.Path(cfg).read_text(encoding='utf-8'))
     prov = p['model_provider']
     return {'model': p['model'], 'provider': prov, 'provider_table': p['model_providers.' + prov],
             'catalog': os.path.expanduser(p['model_catalog_json'])}
