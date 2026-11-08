@@ -1,6 +1,7 @@
-"""整盘棋手的模型调用走用户级 skill llm-chat 的脚本（Claude / GPT / DeepSeek / Gemini / agy 一个入口，会话能续接）。
+"""整盘棋手的模型调用走仓内 skill llm-chat 的脚本（Claude / GPT / DeepSeek / Gemini / agy 一个入口，会话能续接）。
 
-脚本默认在 ~/.claude/skills/llm-chat/scripts/llm_chat.py，环境变量 LLMCHESS_LLM_CHAT 可以改。它是别处维护的，这里只调用、
+脚本默认在仓内 .agents/skills/llm-chat/scripts/llm_chat.py（不存在则回退 ~/.claude/skills/llm-chat/scripts/llm_chat.py），
+环境变量 LLMCHESS_LLM_CHAT 可以改。这里只调用、
 不改：用户提示走 stdin，回答在 stdout，stderr 最后一行是 `LLM_CHAT_META {json}`；失败时 stderr 写 `llm-chat: error: …`、
 退出码 1（信号取消 130）。第一次调用给 --system，之后 --session <id> 续接同一段对话（Claude 是 claude -p --resume，
 GPT 是 codex exec resume，DeepSeek 是脚本自己回放历史正文，Gemini / agy 是 agy 续接）。隔离与跨轮思考的实测见 docs/results/llm-chat-isolation.md。
@@ -16,8 +17,15 @@ import hashlib, json, os, pathlib, re, subprocess, sys, tempfile
 
 from . import claude_cli
 
-SCRIPT = os.environ.get('LLMCHESS_LLM_CHAT') or str(
-    pathlib.Path.home() / '.claude' / 'skills' / 'llm-chat' / 'scripts' / 'llm_chat.py')
+_REPO_SCRIPT = pathlib.Path(__file__).resolve().parents[1] / '.agents' / 'skills' / 'llm-chat' / 'scripts' / 'llm_chat.py'
+_USER_SCRIPT = pathlib.Path.home() / '.claude' / 'skills' / 'llm-chat' / 'scripts' / 'llm_chat.py'
+
+
+def _default_script():
+    return os.environ.get('LLMCHESS_LLM_CHAT') or str(_REPO_SCRIPT if _REPO_SCRIPT.is_file() else _USER_SCRIPT)
+
+
+SCRIPT = _default_script()
 META = 'LLM_CHAT_META '
 KINDS = ('claude', 'codex', 'deepseek', 'gemini', 'agy')
 AGY_KINDS = ('gemini', 'agy')
@@ -58,7 +66,9 @@ def model_id(kind, model, slugs=None):
     if kind == 'claude':
         return model
     if kind == 'deepseek':
-        return model if model and model != 'deepseek' else DEEPSEEK_DEFAULT
+        if not model or model == 'deepseek':
+            return DEEPSEEK_DEFAULT
+        return model if model.startswith(('deepseek-', 'deepseek/')) else 'deepseek-' + model
     if kind == 'gemini':
         if not re.fullmatch(r'gemini-[A-Za-z0-9][A-Za-z0-9._-]*', model):
             raise SystemExit('Gemini 要写 agy models 中的完整 gemini-* slug，收到 %r' % model)
@@ -70,8 +80,16 @@ def model_id(kind, model, slugs=None):
     if model.startswith('gpt-'):
         return model
     if slugs is None:
-        p = subprocess.run(['codex', 'debug', 'models'], capture_output=True, text=True, timeout=120)
-        slugs = [m['slug'] for m in json.loads(p.stdout)['models']]
+        try:
+            p = subprocess.run(['codex', 'debug', 'models'], capture_output=True, text=True, timeout=120)
+        except FileNotFoundError:
+            raise SystemExit('codex CLI not found in PATH（请先安装并登录 Codex CLI，或写完整模型名如 codex:gpt-6-sol）')
+        if p.returncode != 0:
+            raise SystemExit('codex debug models 失败（exit %d）：%s' % (p.returncode, (p.stderr or p.stdout).strip()))
+        try:
+            slugs = [m['slug'] for m in json.loads(p.stdout)['models']]
+        except (ValueError, KeyError, TypeError) as e:
+            raise SystemExit('codex debug models 输出解析失败：%s' % e)
     full = _latest(slugs, model)
     if not full:
         raise SystemExit('codex 模型目录里找不到 %r（有：%s）' % (model, ', '.join(slugs)))
@@ -96,7 +114,10 @@ def shown(model, effort, drop_thinking=False):
 
 def run(cmd, prompt, cwd, env, timeout):
     """claude_cli.call 的 run 钩子：用户提示走 stdin，把脚本的输出折成一个 JSON 串交回（见模块说明）。"""
-    p = subprocess.run(cmd, input=prompt, cwd=cwd, env=env, capture_output=True, text=True, timeout=timeout + MARGIN)
+    try:
+        p = subprocess.run(cmd, input=prompt, cwd=cwd, env=env, capture_output=True, text=True, timeout=timeout + MARGIN)
+    except FileNotFoundError as e:
+        return '', 'llm-chat: error: %s\n' % e, 1
     out, err, rc = p.stdout, p.stderr, p.returncode
     if claude_cli.refusal_text(err) or claude_cli.refusal_text(out):
         return json.dumps({'result': out or err, 'stop_reason': 'refusal', 'is_error': True,

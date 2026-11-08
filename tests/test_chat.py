@@ -103,6 +103,9 @@ class FakeChat(unittest.TestCase):
         self.assertEqual(chat.model_id('codex', 'sol', slugs), 'gpt-6-sol')
         self.assertEqual(chat.model_id('codex', 'gpt-5.6-sol', slugs), 'gpt-5.6-sol')
         self.assertEqual(chat.model_id('deepseek', 'deepseek'), chat.DEEPSEEK_DEFAULT)
+        self.assertEqual(chat.model_id('deepseek', 'v4-pro'), 'deepseek-v4-pro')
+        self.assertEqual(chat.model_id('deepseek', 'flash'), 'deepseek-flash')
+        self.assertEqual(chat.model_id('deepseek', 'deepseek-flash'), 'deepseek-flash')
         self.assertEqual(chat.model_id('claude', 'opus'), 'opus')
         self.assertEqual(chat.model_id('agy', 'claude-opus-5-5-high'), 'agy/claude-opus-5-5-high')
         self.assertEqual(chat.model_id('agy', 'gemini-4-argon-high'), 'agy/gemini-4-argon-high')
@@ -797,6 +800,106 @@ class RealProtocolPrompts(unittest.TestCase):
         with self.assertRaises(SystemExit):
             with contextlib.redirect_stdout(io.StringIO()):
                 cli.main(['play', '--game', 'chess', '--legal', 'list', '--dry-run'])
+
+    def test_repo_bundled_llm_chat_and_agy_core(self):
+        import importlib.util
+        self.assertTrue(chat._REPO_SCRIPT.is_file())
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop('LLMCHESS_LLM_CHAT', None)
+            self.assertEqual(chat._default_script(), str(chat._REPO_SCRIPT))
+            with mock.patch.object(chat, '_REPO_SCRIPT', chat._REPO_SCRIPT.parent / 'missing.py'):
+                self.assertEqual(chat._default_script(), str(chat._USER_SCRIPT))
+        with mock.patch.dict(os.environ, {'LLMCHESS_LLM_CHAT': '/custom/llm_chat.py'}):
+            self.assertEqual(chat._default_script(), '/custom/llm_chat.py')
+        spec = importlib.util.spec_from_file_location('repo_llm_chat', chat._REPO_SCRIPT)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.assertEqual(mod.AGY_CORE_DIR, chat._REPO_SCRIPT.parent)
+        with mock.patch.object(sys, 'path', list(sys.path)), mock.patch.dict(sys.modules):
+            sys.modules.pop('agy_core', None)
+            core = mod.agy_core()
+            self.assertEqual(os.path.realpath(core.__file__), os.path.realpath(str(chat._REPO_SCRIPT.parent / 'agy_core.py')))
+
+    def test_llm_chat_deepseek_openrouter_fallback_and_env_aliases(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('repo_llm_chat', chat._REPO_SCRIPT)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        class FakeIn(io.StringIO):
+            def isatty(self):
+                return False
+
+        with tempfile.TemporaryDirectory(prefix='llm-chat-fallback-') as tmp:
+            # 1) DeepSeek key present (via DEEPSEEK_API_KEY alias) -> official DeepSeek API
+            with mock.patch.dict(os.environ, {'XDG_STATE_HOME': tmp, 'DEEPSEEK_API_KEY': 'ds-secret-12345678'}, clear=True):
+                self.assertEqual(mod.route('deepseek-flash'), ('deepseek', 'deepseek-flash'))
+                self.assertEqual(mod.route('deepseek-v4-pro'), ('deepseek', 'deepseek-v4-pro'))
+                self.assertEqual(mod.route('deepseek'), ('deepseek', 'deepseek-v4-pro'))
+                self.assertEqual(mod.api_key('deepseek'), 'ds-secret-12345678')
+
+            # 2) No DeepSeek key, OPENROUTER_API_KEY set -> auto-fallback to OpenRouter
+            with mock.patch.dict(os.environ, {'XDG_STATE_HOME': tmp, 'OPENROUTER_API_KEY': 'or-secret-12345678'}, clear=True):
+                self.assertEqual(mod.route('deepseek'), ('openrouter', 'deepseek/deepseek-v4-pro'))
+                self.assertEqual(mod.route('deepseek-v4-pro'), ('openrouter', 'deepseek/deepseek-v4-pro'))
+                self.assertEqual(mod.route('deepseek-reasoner'), ('openrouter', 'deepseek/deepseek-v4-pro'))
+                self.assertEqual(mod.route('deepseek-flash'), ('openrouter', 'deepseek/deepseek-v4.1-flash'))
+                self.assertEqual(mod.route('deepseek-chat'), ('openrouter', 'deepseek/deepseek-v4.1-flash'))
+                calls = []
+
+                def fake_http(url, key, body=None, timeout=None):
+                    calls.append((url, key, body))
+                    return {'model': body['model'], 'provider': 'Wafer',
+                            'choices': [{'finish_reason': 'stop', 'message': {'role': 'assistant', 'content': 'OK'}}],
+                            'usage': {'prompt_tokens': 10, 'completion_tokens': 5, 'cost': 0.0001,
+                                      'prompt_tokens_details': {'cached_tokens': 0, 'cache_write_tokens': 0},
+                                      'completion_tokens_details': {'reasoning_tokens': 3}}}
+
+                with mock.patch.object(mod, 'http_request', side_effect=fake_http):
+                    out, err = io.StringIO(), io.StringIO()
+                    rc = mod.main(['-m', 'deepseek-flash', '--effort', 'low', '--system', 'sys'], FakeIn('hi'), out, err)
+                    self.assertEqual((rc, out.getvalue()), (0, 'OK\n'))
+                    meta = json.loads(err.getvalue().strip().splitlines()[-1][len(mod.META_PREFIX):])
+                    self.assertEqual(meta['model'], 'deepseek/deepseek-v4.1-flash')
+                    self.assertEqual(calls[0][0], mod.OPENROUTER_CHAT_URL)
+                    self.assertEqual(calls[0][1], 'or-secret-12345678')
+                    out2, err2 = io.StringIO(), io.StringIO()
+                    rc2 = mod.main(['-m', 'deepseek-flash', '--effort', 'low', '--session', meta['session']], FakeIn('next'), out2, err2)
+                    self.assertEqual((rc2, out2.getvalue()), (0, 'OK\n'))
+
+            # 3) Neither DeepSeek key nor OpenRouter key set -> clear error mentioning both
+            with mock.patch.dict(os.environ, {'XDG_STATE_HOME': tmp}, clear=True):
+                out, err = io.StringIO(), io.StringIO()
+                rc = mod.main(['-m', 'deepseek-flash', '--system', 'sys'], FakeIn('hi'), out, err)
+                self.assertEqual(rc, 1)
+                self.assertIn('missing API key: set API_KEY_DEEPSEEK (or API_KEY_OPENROUTER to route DeepSeek via OpenRouter)',
+                              err.getvalue())
+
+    def test_missing_local_clis_report_clean_error(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('repo_llm_chat', chat._REPO_SCRIPT)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        class FakeIn(io.StringIO):
+            def isatty(self):
+                return False
+
+        with tempfile.TemporaryDirectory(prefix='llm-chat-nocli-') as tmp:
+            with mock.patch.dict(os.environ, {'XDG_STATE_HOME': tmp, 'HOME': tmp, 'PATH': tmp}, clear=True), \
+                    mock.patch.object(sys, 'path', list(sys.path)), mock.patch.dict(sys.modules):
+                sys.modules.pop('agy_core', None)
+                for model, cli_name in (('opus', 'claude'), ('gpt-6-sol', 'codex'), ('gemini-3.8-flash-low', 'agy')):
+                    out, err = io.StringIO(), io.StringIO()
+                    rc = mod.main(['-m', model, '--system', 'sys'], FakeIn('hi'), out, err)
+                    self.assertEqual(rc, 1)
+                    self.assertIn(f'{cli_name} CLI not found in PATH', err.getvalue())
+                    self.assertNotIn('Traceback', err.getvalue())
+        with mock.patch.object(chat.subprocess, 'run', side_effect=FileNotFoundError('codex')):
+            with self.assertRaises(SystemExit) as ctx:
+                chat.model_id('codex', 'sol')
+            self.assertIn('codex CLI not found in PATH', str(ctx.exception))
+
 
 
 if __name__ == '__main__':
