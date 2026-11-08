@@ -1,6 +1,6 @@
 # 公开与发行的许可复核
 
-2026-11-05；事实清单见 [dependencies.md](dependencies.md)。本文区分许可原文、FSF 解释与本仓推断；不代替权利人授权或适用法下的法律判断，未选择项目 LICENSE，也未改变仓库依赖政策。
+2026-11-05 初版，2026-11-08 许可方案落定；事实清单见 [dependencies.md](dependencies.md)。本文区分许可原文、FSF 解释与本仓推断；不代替权利人授权或适用法下的法律判断。
 
 **GPL 不禁止公开源码；但“只公开源码，所以只放 MIT/Apache 就够了”不成立。二进制发行也不是免交源码的办法。** 作者可对自己有权授权的独立代码采用 MIT/Apache-2.0；第三方授权仍保留，组合程序若落入 GPL 范围，还须满足 GPL。
 
@@ -10,7 +10,7 @@
 
 FSF 解释：[库链接与语言绑定](https://www.gnu.org/licenses/gpl-faq.html#IfLibraryIsGPL) 通常形成组合程序；[独立进程](https://www.gnu.org/licenses/gpl-faq.html#MereAggregation) 要看通信机制和语义，不能仅凭进程不同就保证独立。它是许可作者的解释，不是“任何 import 在所有法域必然构成派生作品”的司法结论。
 
-本仓推断：`chess`、`pyffish` 被规则层直接 import，尤其后者是同进程本机扩展，应认真按组合使用处理；Stockfish/Fairy-Stockfish/lc0 经可替换的 UCI 文本接口作为独立进程，更支持独立作品解释。把引擎装在同一压缩包/容器里可构成单纯集合，但不能因此免除引擎自己的发行义务。`cchess` 另有 LGPL 元数据与 GPL 源文件冲突，不能拿它作为已确认的弱 copyleft 示例。
+本仓推断：`chess`、`pyffish` 被规则层直接 import，尤其后者是同进程本机扩展，应认真按组合使用处理；Stockfish/Fairy-Stockfish/lc0 经可替换的 UCI 文本接口作为独立进程，更支持独立作品解释。把引擎装在同一压缩包/容器里可构成单纯集合，但不能因此免除引擎自己的发行义务。（注：原 `cchess` 曾有 LGPL 元数据与 GPL 源文件冲突，现已彻底移除运行时依赖，改用仓内自研记谱）。
 
 ## 场景与义务
 
@@ -26,14 +26,14 @@ FSF 解释：[库链接与语言绑定](https://www.gnu.org/licenses/gpl-faq.htm
 
 普通 GPL 的动态链接并无普遍免责；[LGPLv3 §4](https://www.gnu.org/licenses/lgpl-3.0.html#section4) 才为应用保留不同许可提供条件，包括库的声明、许可文本、允许修改库和为调试修改而逆向，以及可替换/重新链接机制等。随包提供库仍须处理库源码义务；静态链接也不是绝对禁用，但不能只给不可重新链接的最终二进制。
 
-## MIT、Apache 与下一步选择
+## 许可定案与落地方案（2026-11-08）
 
-[FSF 对兼容许可模块的解释](https://www.gnu.org/licenses/gpl-faq.html#GPLModuleLicense) 允许自有模块保留更宽松的兼容许可，同时组合整体按 GPL 发行。这不是 GPL 库被重新许可为 MIT。MIT 通常兼容 GPLv2/v3；[Apache 官方兼容说明](https://www.apache.org/licenses/GPL-compatibility.html) 明确 Apache-2.0 与 GPLv3 兼容，与 GPLv2 不兼容：GPL-2.0-only 不能直接升级解决，GPL-2.0-or-later 才可在授权范围内选 v3。当前明确的强 copyleft 核心库是 v3 系列，不应虚构 v2-only 冲突。
+维护者已拍板选定并落地以下方案：
 
-当前可行路径待维护者选择：
-
-- 接受完整组合的 GPL 合规发布，同时让有权授权的自有模块保留 MIT/Apache；需明确范围、附齐文本与声明，并处理内部禁 GPL 政策。
-- 若目标是完整发行物仅承担宽松许可条件，需替换直接依赖、取得额外授权，或在实际架构上建立经核实的独立边界；不能只改 LICENSE 或把 import 换成包装进程就宣告解决。
-- 暂只发布明确独立的研究文字/阅读器材料，也要保留资源各自许可；并不自动解决后端未来发行问题。
-
-前提已核实：实际 import/UCI 边界、版本元数据、vendored 声明；待验证：cchess 权利人对该版授权的澄清、Maia 权重的独立授权与来源、最终发行清单和构建、组合边界在适用法下的判断。最小下一步是决定“仅公开源码还是也分发可运行包，以及是否接受 GPL 组合条件”，再落实许可证与政策；不是立即删库或仅放一份 MIT 文本。
+- **仓内自有代码与材料**：根目录提供标准 MIT [LICENSE](../LICENSE)，覆盖仓内自有 Python 代码、文档与研究报告、题库及 `viewer/` 棋谱阅读器。
+- **第三方前端与素材**：`viewer/vendor/` 保留各自原有宽松许可证（BSD-2-Clause、MIT、BSD-3-Clause、CC0 1.0）。
+- **Python 规则依赖与组合边界**：
+  - 存在元数据与源文件声明冲突的 `cchess` 运行时依赖已彻底移除，改用仓内自研记谱；
+  - 核心规则库 `chess` 与 `pyffish`（均为 GPL-3.0-or-later）不随仓库分发，通过根目录 `requirements.txt` 由用户在本地按需安装；
+  - 在运行时同进程导入 `chess` 与 `pyffish` 构成的组合程序，或将其整包打包分发时，须遵守 GPL-3.0-or-later 许可条件；
+  - 仅复算评级（`analysis/rating`）或浏览棋谱（`viewer/`）为独立自有组件，不受规则库 copyleft 约束。

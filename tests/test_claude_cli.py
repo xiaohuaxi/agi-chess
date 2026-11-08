@@ -79,9 +79,9 @@ class Command(unittest.TestCase):
 
 class TranscriptPath(unittest.TestCase):
     def test_directory_encoding(self):
-        cwd = '/Users/xhx/repos/llm-chess/runs/x1/cwd'
+        cwd = '/workspace/llm-chess/runs/x1/cwd'
         p = CL.transcript_path(cwd, 'sess-123')
-        expected_dir = '-Users-xhx-repos-llm-chess-runs-x1-cwd'
+        expected_dir = '-workspace-llm-chess-runs-x1-cwd'
         self.assertEqual(p, pathlib.Path.home() / '.claude' / 'projects' / expected_dir / 'sess-123.jsonl')
 
     def test_non_alnum_all_become_dashes(self):

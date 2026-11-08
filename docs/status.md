@@ -1,5 +1,17 @@
 # 进度与待办
 
+## 公开前清理、依赖收敛与许可定案（2026-11-08）
+
+- **彻底移除 cchess 依赖**：核实 `llmchess/xiangqi.py` 自研 `pgn_move` 与原 `notation`（cchess）行为在标准局面完全一致、少见多兵局面更准确（遵照 xqbase 规范无歧义），已将 `notation` 改用仓内自研实现并彻底移除 `import cchess`。同步更新安装与依赖许可文档；全量 Python 测试在无 cchess 环境下验证通过。
+- **清理硬编码个人绝对路径**：清理 `tests/test_claude_cli.py` 与 `docs/viewer-survey/` 中的硬编码本机绝对路径，全仓无个人用户名或路径残留。
+- **分支清理**：核实 `x-viewer-en` 提交均已并入 `main`，已删除本地及远端分支。
+- **新增 LICENSE 与 requirements.txt**：
+  - 根目录新增标准 MIT [LICENSE](../LICENSE)（Copyright (c) 2026 xiaohuaxi），明确仓内自有源码、研究报告、题库与 `viewer/` 阅读器均采用 MIT 许可证；
+  - 根目录新增 [requirements.txt](../requirements.txt)，固定规则库依赖版本（`chess==1.11.2`、`pyffish==0.0.90`）；
+  - 更新 `README.md` 与 `docs/setup.md`：补充 `python3 -m pip install -r requirements.txt` 一键安装指引，并说明仅复算评级（`analysis/rating`）与浏览棋谱（`viewer/`）无需安装 Python 规则库；
+  - 更新 `docs/license-review.md` 与 `docs/dependencies.md`：记录已定案方案，明确说明自有代码 MIT 与规则库 `chess`/`pyffish`（GPL-3.0-or-later）同进程运行的组合边界；
+  - 更新 `AGENTS.md`：在硬约束中就地注明 `pyffish` 与 `python-chess` 属于对通用规范「禁强 copyleft」的刻意例外及理由（仅由用户 pip 安装、不随仓分发，冗余的 `cchess` 已移除）。
+
 ## 公开文档整理（2026-11-05）
 
 - 三份内部发帖交接底稿已从版本管理内容移出，按维护者约定保存在被忽略的 `.local/archives/`，逐字及 SHA-256 核对一致；原本机仓外副本已在迁移验证后移除。实验结论沿用既有报告；独有的评级局限、费用复核和 Argon 1600 类比边界补回对应研究报告，研究索引同步导航。历史录屏经验保留技术比较与数字，注明私人本机材料的证据边界。

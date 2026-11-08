@@ -11,7 +11,6 @@
 """
 import json, os, re, shutil
 
-import cchess
 import pyffish as sf
 
 from . import memory, records
@@ -134,58 +133,9 @@ _RED_NUM = '零一二三四五六七八九'
 _BLACK_NUM = '０１２３４５６７８９'
 
 
-def cn_notation(fen, mv):
-    """cchess 的中文记谱（如 '炮二平五'；黑方用全角数字 '炮８平５'）。"""
-    m = cchess.ChessBoard(fen).move(xy(mv[:2]), xy(mv[2:4]))
-    assert m is not None, ('cchess 不认这步', fen, mv)
-    return m.to_text()
-
-
-def cn_text(fen, mv):
-    """不经 cchess、按规范独立写出的中文记谱，只用来交叉核对 cn_notation()；写不了的局面返回 None。"""
-    board, _ = board_of(fen)
-    fr, to = mv[:2], mv[2:4]
-    p = board[fr]
-    red, kind = is_red(p), p.lower()
-    (x1, y1), (x2, y2) = xy(fr), xy(to)
-    num = _RED_NUM if red else _BLACK_NUM
-    fnum = (lambda x: 9 - x) if red else (lambda x: x + 1)
-    name = CN_NAME[p]
-    head = name + num[fnum(x1)]
-    if kind in 'rncp':
-        same = [s for s, q in board.items() if q == p and s[0] == fr[0]]
-        if len(same) >= 3:
-            return None
-        if kind == 'p':
-            per_file = {}
-            for s, q in board.items():
-                if q == p:
-                    per_file[s[0]] = per_file.get(s[0], 0) + 1
-            if sum(v >= 2 for v in per_file.values()) >= 2:
-                return None
-        if len(same) == 2:
-            oy = xy([s for s in same if s != fr][0])[1]
-            head = ('前' if (y1 > oy if red else y1 < oy) else '后') + name
-    dy = (y2 - y1) * (1 if red else -1)
-    op = '平' if dy == 0 else ('进' if dy > 0 else '退')
-    dest = abs(dy) if (kind in 'rcpk' and dy != 0) else fnum(x2)
-    return head + op + num[dest]
-
-
-def notation(fen, mv):
-    """中文记谱（cchess）。它写不准的局面（多路兵、同一纵线三个同种子）在后面补上坐标。"""
-    try:
-        t = cn_notation(fen, mv)
-        if cn_text(fen, mv) != t:
-            t += '（%s）' % mv
-        return t
-    except Exception:
-        return mv
-
-
 def pgn_move(fen, mv):
     """PGN 用的中文纵线记谱，照 xqbase《中国象棋电脑应用规范(二)：着法表示》第四节（www.xqbase.com/protocol/cchess_move.htm），
-    任何局面都写得出、且无歧义。只是记谱格式，不涉及棋规（着法合法与否由 pyffish 判）。record.txt 仍用 notation()，旧记录不变。
+    任何局面都写得出、且无歧义。只是记谱格式，不涉及棋规（着法合法与否由 pyffish 判）。
       - 数字：红方纵线从红方右手起「一」到「九」，黑方从黑方右手起全角「１」到「９」；进退格数同样红汉字、黑全角。
       - 车马炮同一纵线两个：「前」「后」代替纵线号（前车进一）；仕相同线不写前后，照常写纵线号（能退的在前、能进的在后，不会混）。
       - 兵卒（前 = 朝对方底线的方向）：
@@ -225,6 +175,24 @@ def pgn_move(fen, mv):
     op = '平' if dy == 0 else ('进' if dy > 0 else '退')
     dest = abs(dy) if (kind in 'rcpk' and dy != 0) else fnum(x2)
     return head + op + num[dest]
+
+
+def notation(fen, mv):
+    """中文记谱。采用仓内自研的 xqbase 规范中文纵线记谱（pgn_move），任何局面都写得出且无歧义。"""
+    try:
+        return pgn_move(fen, mv)
+    except Exception:
+        return mv
+
+
+def cn_notation(fen, mv):
+    """兼容旧别名，使用自研 pgn_move 实现。"""
+    return pgn_move(fen, mv)
+
+
+def cn_text(fen, mv):
+    """兼容旧别名，使用自研 pgn_move 实现。"""
+    return pgn_move(fen, mv)
 
 
 # ---------------------------------------------------------------- 违规分类（boards.violation 的中国象棋分支）

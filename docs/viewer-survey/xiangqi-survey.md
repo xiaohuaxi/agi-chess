@@ -1,6 +1,6 @@
 # 中国象棋棋谱回放 + 录屏：候选方案调研
 
-> 2026-09-29。只调研、未实施，未改任何仓库文件。需求依据 `/Users/xhx/repos/llm-chess/docs/viewer-brief.md`。
+> 2026-09-29。只调研、未实施，未改任何仓库文件。需求依据 `docs/viewer-brief.md`。
 > 本文是汇总。两份分报告有逐项证据（链接、源码行号、LICENSE 路径）：
 > - 现成网站/平台：`xiangqi-platforms.md`（下载的网页原件在同目录 `web/`）
 > - 开源项目：`xiangqi-opensource.md`

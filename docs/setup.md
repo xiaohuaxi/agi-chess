@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | 复算已入库的评级数字 | Python 标准库；`analysis/rating/` 的 CSV、JSON | 否 |
 | 浏览样例或自己的棋谱 | 浏览器、本机静态服务；页面无需构建或 npm 安装 | 否 |
-| 跑 Python 离线测试 | Python、`chess`、`cchess`、`pyffish`；部分测试需要本机引擎 | 否 |
+| 跑 Python 离线测试 | Python、`chess`、`pyffish`；部分测试需要本机引擎 | 否 |
 | 跑阅读器 JS 测试 | Node.js；浏览器测试另需 `playwright-core` 与 Chromium，部分往返测试需要 Python 规则库 | 否 |
 | 开模型对弈 | Python 规则库、仓外 `llm-chat`、对应模型 CLI/账号；引擎对手另需引擎 | 是 |
 | 把棋谱录成 MP4 | Node.js、`playwright-core`、Chromium、FFmpeg；核对视频另用 FFprobe | 否 |
@@ -46,22 +46,22 @@ python3 -m http.server --bind 127.0.0.1 8000
 
 ## Python 程序与离线测试
 
-仓库目前没有统一的 Python 安装包或依赖锁文件。若要运行对弈程序、导出棋谱或跑 Python 测试，应先在自己选择的 Python 虚拟环境安装规则库。下面的版本只是一次已核实环境的复现参考，**不是支持版本范围或跨平台保证**：
+仓库提供 `requirements.txt` 用于安装规则库依赖。若要运行对弈程序、导出棋谱或跑 Python 测试，应先在自己选择的 Python 虚拟环境安装规则库（仅复算评级 `analysis/rating` 与本地静态浏览 `viewer/` 无需安装这两个库）：
 
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install chess==1.11.2 cchess==1.25.5 pyffish==0.0.90
-python -c 'import chess, cchess, pyffish; print("规则库可导入")'
+python -m pip install -r requirements.txt
+python -c 'import chess, pyffish; print("规则库可导入")'
 python -m llmchess --help
 python -m unittest discover -s tests -t .
 ```
 
-`chess` 是代码中 `import chess` 对应的包；中国象棋还用 `cchess` 和 `pyffish`。`pyffish` 含本机扩展，新平台可能需要编译环境。本文没有核实全新的 Python/操作系统组合能否安装；安装失败时先检查解释器和该包的构建要求。
+`chess` 是代码中 `import chess` 对应的包；中国象棋规则由 `pyffish` 提供，中文记谱已改用仓内自研实现（无需 `cchess`）。`pyffish` 含本机扩展，新平台可能需要编译环境。本文没有核实全新的 Python/操作系统组合能否安装；安装失败时先检查解释器和该包的构建要求。
 
 完整测试包含引擎握手与走子，需要能找到 `stockfish` 和 `fairy-stockfish`。缺少引擎时部分测试会跳过，另有直接调用引擎的测试会失败；完整验证须安装两种引擎，并同时检查失败和 skipped。引擎是单独安装的程序，不会由上述 pip 命令提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
 
-2026-11-05 本机核实：`/usr/bin/python3` 为 Python 3.9.6，可导入 `chess 1.11.2`、`cchess 1.25.5`、`pyffish 0.0.90`；此前该解释器下离线测试 314 项通过。同机默认 `python3` 为 Homebrew Python 3.15.0，未安装这些规则库，直接导入会报 `ModuleNotFoundError`。安装在哪个解释器下，运行和测试就用哪个解释器；评级复算与静态服务不需要这些包。
+2026-11-05 本机核实：`/usr/bin/python3` 为 Python 3.9.6，可导入 `chess 1.11.2`、`pyffish 0.0.90`（原 `cchess` 运行时依赖已移除，改用仓内自研记谱）；此前该解释器下离线测试 314 项通过。同机默认 `python3` 为 Homebrew Python 3.15.0，未安装这些规则库，直接导入会报 `ModuleNotFoundError`。安装在哪个解释器下，运行和测试就用哪个解释器；评级复算与静态服务不需要这些包。
 
 ## 模型对弈：还需要仓外组件
 

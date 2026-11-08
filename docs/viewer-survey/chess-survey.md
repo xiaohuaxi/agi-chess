@@ -1,6 +1,6 @@
 # 国际象棋棋谱回放与录屏：候选方案调研
 
-> 2026-09-29。只调研、未实施，没改 llm-chess 仓库。需求取自 `/Users/xhx/repos/llm-chess/docs/viewer-brief.md`。
+> 2026-09-29。只调研、未实施，没改 llm-chess 仓库。需求取自 `docs/viewer-brief.md`。
 > 本文是汇总。三份分报告有全部证据、源码位置和实测细节，都在同一目录：
 > - 现成平台：`chess-platforms.md`
 > - web 开源播放器与棋盘库：`chess-oss-web.md`

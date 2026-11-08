@@ -17,7 +17,17 @@
 
 ## 两条不调用模型的快速开始
 
-以下命令均在仓库根目录执行，不需要模型账号、私有对局目录或棋类引擎。
+以下命令均在仓库根目录执行，不需要模型账号、私有对局目录或棋类引擎。仅复算评级（`analysis/rating`）与浏览棋谱（`viewer/`）无需安装额外的 Python 规则库。
+
+### 安装 Python 规则依赖（可选）
+
+若需运行命令行对弈、导出棋谱或执行 Python 离线测试，可通过仓库提供的 `requirements.txt` 安装规则库：
+
+```sh
+python3 -m pip install -r requirements.txt
+```
+
+完整环境配置与引擎对手安装详见[安装与运行](docs/setup.md)。
 
 ### 复算已有评级
 
@@ -81,6 +91,8 @@ python3 -m http.server 8000 --bind 127.0.0.1
 | `docs/results/` | 分批研究报告 |
 | `runs/` | 本地运行输出，被 Git 忽略 |
 
-## 许可状态
+## 许可说明
 
-项目自身的开源许可证尚未选定，当前没有项目级 `LICENSE`；不能把仓库内容整体视为已按 MIT 或 Apache-2.0 授权。第三方代码与素材分别遵循其原许可，清单见[依赖与来源](docs/dependencies.md)。关于现有依赖对公开源码和未来分发的影响，另见[许可研究](docs/license-review.md)。
+- 仓内自有源码、研究报告、题库与 `viewer/` 阅读器采用 MIT 许可证（见根目录 [LICENSE](LICENSE)）；
+- `viewer/vendor/` 下的第三方前端组件与素材保留各自的原有宽松许可证（BSD-2-Clause、MIT、BSD-3-Clause、CC0 1.0），详见[依赖与来源](docs/dependencies.md)；
+- `llmchess/` 规则判定在运行时同进程依赖 `chess`（python-chess）与 `pyffish`（均为 GPL-3.0-or-later，不随仓分发，由用户通过 `python3 -m pip install -r requirements.txt` 自行安装）；同进程组合运行或将其打包再分发时须遵守 GPL-3.0-or-later。关于许可边界与接入分析，详见[许可复核](docs/license-review.md)。

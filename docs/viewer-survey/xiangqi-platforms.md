@@ -1,6 +1,6 @@
 # 中国象棋棋谱回放：现成网站/平台调研
 
-> 调研日期 2026-09-29。只调研、未改任何仓库文件。需求依据 `/Users/xhx/repos/llm-chess/docs/viewer-brief.md`。
+> 调研日期 2026-09-29。只调研、未改任何仓库文件。需求依据 `docs/viewer-brief.md`。
 > 证据来源：网页实际抓取（WebFetch/curl）与 pychess-variants 源码（`~/repos/pychess-variants`，HEAD `0d06f16`，2026-09-29；该检出是已存在的稀疏检出，只用 `git show` 读，未改动）。下载的网页原件在 `web/`。
 > 约 33 次网页访问。
 
