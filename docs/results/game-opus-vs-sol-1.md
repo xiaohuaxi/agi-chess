@@ -11,7 +11,7 @@
 | 棋手 | 先手 `claude:opus`（服务端 claude-opus-5-5），后手 `codex:sol`（gpt-6-sol）；都走 llm-chat，双方都显式传 `--effort xhigh` |
 | 协议 | `--protocol real`（默认，`design.md` 第九节）；memory=session，每方整盘一个会话；默认给法（中国象棋只给子力清单，国际象棋 FEN + 字母棋盘）；非法每步最多 4 次、用完判负；上限 200 个半回合 |
 | 开局 | 标准初始局面，不用随机开局 |
-| 命令 | `python3 -m llmchess play --game xiangqi --red claude:opus --black codex:sol --effort xhigh --tag g1-x-opus-sol`；国际象棋同理（`--white`，`--tag g1-c-opus-sol`） |
+| 命令 | `python3 -m agi_chess play --game xiangqi --red claude:opus --black codex:sol --effort xhigh --tag g1-x-opus-sol`；国际象棋同理（`--white`，`--tag g1-c-opus-sol`） |
 | 程序 | 下棋用 commit 7e9f0e6；棋谱用 9e0c875 的 `export` 重新导出（带每步元信息） |
 | 事后裁判 | 国际象棋 Stockfish 19 深度 18（大失误按 lichess 口径），中国象棋 Fairy-Stockfish 深度 16（单步亏 ≥250 厘兵算大失误，100–250 算失误）；只数未分胜负的步 |
 | 原始数据 | `runs/g1-x-opus-sol/`、`runs/g1-c-opus-sol/`（被 git 忽略，只在本机）；棋谱 `runs/g1-x-opus-sol/record.txt`、`runs/g1-c-opus-sol/game.pgn` 和 `record.txt` |

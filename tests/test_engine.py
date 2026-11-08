@@ -1,13 +1,13 @@
-"""离线单元测试：engine.py 的很薄的 UCI 收发（llmchess/engine.py），用本机真引擎但把强度压到最低（nodes=1），
+"""离线单元测试：engine.py 的很薄的 UCI 收发（agi_chess/engine.py），用本机真引擎但把强度压到最低（nodes=1），
 保证每个用例都很快。不判定"棋力"，只判定"收发协议和进程生命周期работает"。
 """
 import os
 import shutil
 import unittest
 
-from llmchess import chess_ as C
-from llmchess import xiangqi as X
-from llmchess.engine import Engine
+from agi_chess import chess_ as C
+from agi_chess import xiangqi as X
+from agi_chess.engine import Engine
 
 FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
 STOCKFISH_MISSING = shutil.which('stockfish') is None and not os.path.exists('/opt/homebrew/bin/stockfish')

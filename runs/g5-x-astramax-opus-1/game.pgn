@@ -1,5 +1,5 @@
 [Game "Chinese Chess"]
-[Event "llm-chess g5-x-astramax-opus-1"]
+[Event "agi-chess g5-x-astramax-opus-1"]
 [Red "codex:astra"]
 [Black "claude:opus"]
 [RedEffort "max"]

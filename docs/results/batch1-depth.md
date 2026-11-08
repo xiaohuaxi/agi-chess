@@ -1,6 +1,6 @@
 # 第一批 A 块：思考深度对单步质量的影响（局面题）
 
-- 日期：2026-09-26。条件：opus（服务端 `claude-opus-5-5`，Claude Code 2.1.282，`claude -p` 走订阅），stateless，每题只走一步，提示和整盘对局用的一样（默认视图、不给着法历史）。程序是 `llmchess/quiz.py`（6f6ed45），判定口径写在它开头的注释里。
+- 日期：2026-09-26。条件：opus（服务端 `claude-opus-5-5`，Claude Code 2.1.282，`claude -p` 走订阅），stateless，每题只走一步，提示和整盘对局用的一样（默认视图、不给着法历史）。程序是 `agi_chess/quiz.py`（6f6ed45），判定口径写在它开头的注释里。
 - 样本：两种棋各 30 个局面，medium / high / xhigh / max 四档，每档每局面答 2 遍，所以**每格 60 次作答**，一共 480 次。每格只有 30 个局面，下面的数字只能看方向，靠得住的只有配对检验单独点名的那几处。
 - 原始数据都在 `runs/` 下，这个目录被 git 忽略、只在本机：总表 `runs/quiz-batch1/report.txt`，逐题判定 `runs/quiz-batch1/{xiangqi,chess}/judged.jsonl`，每次作答一个文件（提示、回复原文、用量）在同一目录。局面在 `data/batch1/{xiangqi,chess}.jsonl`（入库）。本文的补充统计用的是一次性脚本，没入库。
 

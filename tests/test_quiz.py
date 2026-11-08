@@ -7,8 +7,8 @@ from unittest import mock
 
 import chess
 
-from llmchess import claude_cli, quiz as Q, records, runner, xiangqi as X
-from llmchess.claude_cli import Paused
+from agi_chess import claude_cli, quiz as Q, records, runner, xiangqi as X
+from agi_chess.claude_cli import Paused
 
 FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
 STOCKFISH_MISSING = shutil.which('stockfish') is None and not os.path.exists('/opt/homebrew/bin/stockfish')
@@ -111,7 +111,7 @@ class Prompts(unittest.TestCase):
 
 class Answering(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-quiz-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.cwd = os.path.join(self.tmp, 'cwd')
         os.makedirs(self.cwd)
@@ -240,7 +240,7 @@ class Arms(unittest.TestCase):
     """分档：路径、--set 冲突、局面冲突、旧布局兼容、attackmap 开关、超时记录带题号。"""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-quiz-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.out = os.path.join(self.tmp, 'batch')
 
@@ -498,7 +498,7 @@ class Excluded(unittest.TestCase):
     """剔除的局面（x2-25）：run 不再出，旧记录照样能判。"""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-quiz-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.out = os.path.join(self.tmp, 'batch')
         self.pos = {p['id']: p for p in Q.load_positions(Q.positions_path('batch2', 'xiangqi'))}
@@ -550,7 +550,7 @@ class StopWhileWaiting(unittest.TestCase):
     """局面题多线程：两题都在等额度时收到停止信号，都醒来写 pause，退出码 3；再跑同一条接着答。"""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-quiz-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.addCleanup(claude_cli.STOP.clear)
 
@@ -621,7 +621,7 @@ class Threats(unittest.TestCase):
         self.assertEqual((none['none'], none['true'], none['wrong']), (True, [], 0))
 
     def test_answer_scores_final_attempt_only(self):
-        tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        tmp = tempfile.mkdtemp(prefix='agi-chess-quiz-test-')
         self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
         p = positions('chess')[0]
         replies = iter([fake_reply('走后威胁:\n- a1a2\n着法: a1a1'),
@@ -640,7 +640,7 @@ class Threats(unittest.TestCase):
         self.assertEqual(Q.threat_class({'threats': th, 'refute': 'b'}), 'unlisted')
         self.assertEqual(Q.threat_class({'threats': th, 'refute': 'c'}), 'quiet')
         self.assertEqual(Q.threat_class({'threats': dict(th, found=False), 'refute': 'a'}), 'no_list')
-        tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        tmp = tempfile.mkdtemp(prefix='agi-chess-quiz-test-')
         self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
         base = {'game': 'chess', 'effort': 'xhigh', 'move': 'e2e4', 'first_legal': True, 'loss': 400, 'blunder': True,
                 'mistake': False, 'best_match': False, 'solved': False, 'hang': True, 'missed_capture': False,
@@ -707,7 +707,7 @@ class JudgeWithEngine(unittest.TestCase):
     """真起 Stockfish（浅层）判两条假作答，看 judged.jsonl 的字段通不通。"""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-quiz-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-quiz-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     def test_judge_and_report(self):

@@ -8,7 +8,7 @@ from unittest import mock
 
 import chess
 
-from llmchess import claude_cli, codex_cli as X, quiz as Q, records, runner
+from agi_chess import claude_cli, codex_cli as X, quiz as Q, records, runner
 
 
 def events(text='着法: e2e4', usage=None, extra=()):
@@ -143,7 +143,7 @@ class Profile(unittest.TestCase):
                 X.parse_profile(bad)
 
     def test_profile_file(self):
-        tmp = tempfile.mkdtemp(prefix='llmchess-codex-test-')
+        tmp = tempfile.mkdtemp(prefix='agi-chess-codex-test-')
         self.addCleanup(shutil.rmtree, tmp)
         path = os.path.join(tmp, 'deepseek.config.toml')
         with open(path, 'w', encoding='utf-8') as f:
@@ -154,6 +154,15 @@ class Profile(unittest.TestCase):
         self.assertEqual(X.inline_table(p['provider_table']),
                          '{name="DeepSeek",base_url="https://api.deepseek.com",wire_api="responses",'
                          'env_key="API_KEY_DEEPSEEK",requires_openai_auth=false}')
+        with mock.patch.dict(os.environ, {}, clear=False):
+            for var in ('AGI_CHESS_DEEPSEEK_CONFIG', 'AGICHESS_DEEPSEEK_CONFIG', 'LLMCHESS_DEEPSEEK_CONFIG', 'CODEX_HOME'):
+                os.environ.pop(var, None)
+            self.assertEqual(X._default_profile(), os.path.expanduser('~/.codex/deepseek.config.toml'))
+            with mock.patch.dict(os.environ, {'CODEX_HOME': '/custom/codex'}):
+                self.assertEqual(X._default_profile(), '/custom/codex/deepseek.config.toml')
+            for var in ('AGI_CHESS_DEEPSEEK_CONFIG', 'AGICHESS_DEEPSEEK_CONFIG', 'LLMCHESS_DEEPSEEK_CONFIG'):
+                with mock.patch.dict(os.environ, {var: f'/custom/{var}.toml', 'CODEX_HOME': '/custom/codex'}):
+                    self.assertEqual(X._default_profile(), f'/custom/{var}.toml')
 
     def test_spec_of(self):
         self.assertEqual(X.spec_of('opus'), 'claude:opus')
@@ -201,7 +210,7 @@ class Command(unittest.TestCase):
 
 class Prepare(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-codex-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-codex-test-')
         self.addCleanup(shutil.rmtree, self.tmp)
         self.cwd = os.path.join(self.tmp, 'cwd')
         os.makedirs(self.cwd)
@@ -297,7 +306,7 @@ class QuizPath(unittest.TestCase):
     """quiz.answer_one 用 sol / deepseek 作答：命令是 codex exec、用量落进记录；session 档直接拒绝。"""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-codex-quiz-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-codex-quiz-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.cwd = os.path.join(self.tmp, 'cwd')
         os.makedirs(self.cwd)

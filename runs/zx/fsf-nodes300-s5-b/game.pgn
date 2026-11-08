@@ -1,5 +1,5 @@
 [Game "Chinese Chess"]
-[Event "llm-chess fsf-nodes300-s5-b"]
+[Event "agi-chess fsf-nodes300-s5-b"]
 [Red "engine:fsf:nodes=300"]
 [Black "claude:opus"]
 [BlackEffort "max"]

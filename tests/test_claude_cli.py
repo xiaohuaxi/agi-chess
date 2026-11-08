@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from llmchess import claude_cli as CL
+from agi_chess import claude_cli as CL
 
 
 class Usage(unittest.TestCase):
@@ -79,14 +79,14 @@ class Command(unittest.TestCase):
 
 class TranscriptPath(unittest.TestCase):
     def test_directory_encoding(self):
-        cwd = '/workspace/llm-chess/runs/x1/cwd'
+        cwd = '/workspace/agi-chess/runs/x1/cwd'
         p = CL.transcript_path(cwd, 'sess-123')
-        expected_dir = '-workspace-llm-chess-runs-x1-cwd'
+        expected_dir = '-workspace-agi-chess-runs-x1-cwd'
         self.assertEqual(p, pathlib.Path.home() / '.claude' / 'projects' / expected_dir / 'sess-123.jsonl')
 
     def test_non_alnum_all_become_dashes(self):
         # 用一个带各种非字母数字字符、但确定不是符号链接的临时目录，核实“非字母数字都换成 -”这条规则本身
-        tmp = tempfile.mkdtemp(prefix='llmchess.test_')
+        tmp = tempfile.mkdtemp(prefix='agi-chess.test_')
         try:
             real = os.path.realpath(tmp)
             p = CL.transcript_path(tmp, 's1')
@@ -99,7 +99,7 @@ class TranscriptPath(unittest.TestCase):
 
 class TranscriptFlags(unittest.TestCase):
     def test_finds_safeguard_mentions_in_user_messages_only(self):
-        tmp = tempfile.mkdtemp(prefix='llmchess.test_')
+        tmp = tempfile.mkdtemp(prefix='agi-chess.test_')
         try:
             cwd = os.path.join(tmp, 'cwd')
             os.makedirs(cwd)
@@ -121,7 +121,7 @@ class TranscriptFlags(unittest.TestCase):
             shutil.rmtree(tmp)
 
     def test_missing_transcript_returns_none(self):
-        tmp = tempfile.mkdtemp(prefix='llmchess.test_')
+        tmp = tempfile.mkdtemp(prefix='agi-chess.test_')
         try:
             cwd = os.path.join(tmp, 'cwd')
             os.makedirs(cwd)

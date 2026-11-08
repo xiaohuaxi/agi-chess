@@ -1,7 +1,7 @@
 // 中国象棋：局面、中文纵线记谱解析（xqbase《着法表示》第四节）、将军判断。只为显示，不校验合法性——
 // 着法合法与否由对局程序（pyffish）判过；这里只要认出记谱指的是哪个子、走到哪。这是 docs/viewer.md「棋盘」一节写明的
 // 有意例外（项目规定规则判定照搬旧实现，那是对局程序的事；阅读器只画「将军」提示），正确性靠与 game.jsonl 逐步对照。
-// 导出端的记谱生成在 llmchess/xiangqi.py 的 pgn_move，两边规则要一致。
+// 导出端的记谱生成在 agi_chess/xiangqi.py 的 pgn_move，两边规则要一致。
 //
 // 坐标同 ICCS：纵线 a–i 从红方左手起（x = 0–8），横线 0–9 从红方底线起（y）。棋子用 FEN 字母，大写红、小写黑：
 // k 帅将、a 仕士、b 相象、n 马、r 车、c 炮、p 兵卒。
@@ -154,7 +154,7 @@ function destOf(pos, x, y, kind, red, op, num) {
 
 // 中文记谱 → { iccs, from, to, piece, capture }。认不出抛 Error（消息是中文，可直接显示）。
 // 写法：「炮二平五」（子 + 纵线）、「前车进一」「中兵平四」（前中后）、「一兵平五」（同线四五兵或两条多兵纵线的编号，
-// 见 llmchess/xiangqi.py pgn_move 的注释）。仕相同线不写前后，靠进退和落点分辨。容错繁体、半角数字、汉字 / 全角数字混用。
+// 见 agi_chess/xiangqi.py pgn_move 的注释）。仕相同线不写前后，靠进退和落点分辨。容错繁体、半角数字、汉字 / 全角数字混用。
 export function parseMove(pos, text) {
   const cs = Array.from(text.trim().replace(/[+#＋]$/, ''));
   if (cs.length !== 4) throw new Error('认不出的着法：' + text);
@@ -212,7 +212,7 @@ export function parseMove(pos, text) {
 
 // ---------------------------------------------------------------- WXF 记法（只为英文界面显示，docs/viewer.md「英文界面」）
 // 从局面和坐标算，不看棋谱里的中文原文，所以别人棋谱里不规范的写法也能写成规范的 WXF。规则照 xqbase《着法表示》第五节
-// 与导出端 pgn_move（llmchess/xiangqi.py）的消歧规则逐条对应，只把汉字换成字母和符号：
+// 与导出端 pgn_move（agi_chess/xiangqi.py）的消歧规则逐条对应，只把汉字换成字母和符号：
 //   棋子 K A E H R C P（世界象棋联合会推荐的字母：相 E、马 H）；进 +、退 -、平 .；纵线与格数都用阿拉伯数字，两方各从自己右手数。
 //   车马炮兵同一纵线两个：「前」「后」写成 + / -，放在棋子字母后面、代替纵线号（前炮退二 → C+-2）。
 //   兵卒同一纵线三个以上，或两条纵线各有多个（这时两条线的兵一起编号）：从前往后编 a b c d e（xqbase：「一二三四五」用 abcde），

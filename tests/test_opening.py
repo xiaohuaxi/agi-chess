@@ -1,11 +1,11 @@
-"""离线测试：随机开局（llmchess/opening.py 和 runner / cli / analyze 里接它的地方）。不调 claude。
+"""离线测试：随机开局（agi_chess/opening.py 和 runner / cli / analyze 里接它的地方）。不调 claude。
 起本机引擎的用例在没有引擎时跳过；记录放在每个用例自建的临时目录里，用完删掉。
 """
 import contextlib, io, json, os, shutil, tempfile, unittest
 from unittest import mock
 
-from llmchess import analyze as A, chess_ as C, cli, opening, records
-from llmchess import xiangqi as X
+from agi_chess import analyze as A, chess_ as C, cli, opening, records
+from agi_chess import xiangqi as X
 
 FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
 STOCKFISH_MISSING = shutil.which('stockfish') is None and not os.path.exists('/opt/homebrew/bin/stockfish')
@@ -87,7 +87,7 @@ class XiangqiGenerate(unittest.TestCase):
 @unittest.skipIf(FSF_MISSING, '本机没有 fairy-stockfish')
 class PlayWithOpening(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     def recs(self, run_dir):

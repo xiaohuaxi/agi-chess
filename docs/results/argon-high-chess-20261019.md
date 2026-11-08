@@ -18,11 +18,11 @@
 | 关键复核 | 同引擎深度 22，保存最佳主变与限定实战着法的搜索；全部主变验证合法 |
 | 数据 | `runs/argon-high-chess-self-20261019/` 的 `game.jsonl`、`analysis.jsonl`、`analysis-summary.json`、`review-depth22.json`、`review-evidence.json` |
 
-分析命令为 `/usr/bin/python3 -m llmchess.analyze runs/argon-high-chess-self-20261019`；关键复核脚本 `review_chess.py` 保存在该 run 内。模型棋手没有接触这些分析，没有追加真实模型问答或拒答探测。85 着已用 python-chess 全部重放，终局确为将死。白方 agy conversation 为 `ad4a369d-9ad6-4446-8314-d45bb5dac5f4`，黑方为 `4a4997c5-93fe-4402-b1e4-608ff9b97f5d`。原始目录被 git 忽略，本报告保存可追溯结论。
+分析命令为 `/usr/bin/python3 -m agi_chess.analyze runs/argon-high-chess-self-20261019`；关键复核脚本 `review_chess.py` 保存在该 run 内。模型棋手没有接触这些分析，没有追加真实模型问答或拒答探测。85 着已用 python-chess 全部重放，终局确为将死。白方 agy conversation 为 `ad4a369d-9ad6-4446-8314-d45bb5dac5f4`，黑方为 `4a4997c5-93fe-4402-b1e4-608ff9b97f5d`。原始目录被 git 忽略，本报告保存可追溯结论。
 
 ## 全盘质量
 
-沿用 `llmchess/analyze.py` 既有定义，未为本盘调整阈值。国际象棋主要看胜率损失：大失误为下降至少 15 个百分点，失误至少 10 点，不精确至少 5 点；杀棋出现／消失另按既有 MateAdvice 分类。这是引擎评分的变换，不是本模型对真人的实测胜率。ACPL 将走前／走后评分各截在 ±1000，逐步取非负亏损后平均；不会因优势方已领先很多、没有最快将死就不断增加损失。
+沿用 `agi_chess/analyze.py` 既有定义，未为本盘调整阈值。国际象棋主要看胜率损失：大失误为下降至少 15 个百分点，失误至少 10 点，不精确至少 5 点；杀棋出现／消失另按既有 MateAdvice 分类。这是引擎评分的变换，不是本模型对真人的实测胜率。ACPL 将走前／走后评分各截在 ±1000，逐步取非负亏损后平均；不会因优势方已领先很多、没有最快将死就不断增加损失。
 
 | 指标 | 白方 | 黑方 |
 |---|---:|---:|

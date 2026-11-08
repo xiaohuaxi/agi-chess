@@ -1,9 +1,9 @@
 """事后引擎分析：逐步亏损、大失误 / 失误，以及多盘汇总表（design.md 第四节末尾）。
 
-    python3 -m llmchess.analyze runs/<tag> [runs/<tag2> ...]          # 逐步分析，写 analysis.jsonl 和 analysis-summary.json
-    python3 -m llmchess.analyze --force runs/<tag>                     # 参数一致也重算
-    python3 -m llmchess.analyze --table runs/a runs/b ...              # 每盘一行、模型方的数字；缺分析的先补
-    python3 -m llmchess.analyze --table --out runs/t1 runs/*           # 表另存 runs/t1.md 和 runs/t1.json
+    python3 -m agi_chess.analyze runs/<tag> [runs/<tag2> ...]          # 逐步分析，写 analysis.jsonl 和 analysis-summary.json
+    python3 -m agi_chess.analyze --force runs/<tag>                     # 参数一致也重算
+    python3 -m agi_chess.analyze --table runs/a runs/b ...              # 每盘一行、模型方的数字；缺分析的先补
+    python3 -m agi_chess.analyze --table --out runs/t1 runs/*           # 表另存 runs/t1.md 和 runs/t1.json
 
 口径：
   - 按 config 和 move 事件从起始局面重放全部落定着法（棋种模块的 start / push / ending），每个局面问一次引擎
@@ -419,7 +419,7 @@ def markdown(rows):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog='python3 -m llmchess.analyze', description=__doc__.split('\n')[0],
+    ap = argparse.ArgumentParser(prog='python3 -m agi_chess.analyze', description=__doc__.split('\n')[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
     ap.add_argument('dirs', nargs='+', help='runs/<tag> 目录')
     ap.add_argument('--force', action='store_true', help='参数一致也重算')

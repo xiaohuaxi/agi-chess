@@ -2,7 +2,7 @@
 
 # Setup & Running
 
-Start by recomputing published rating numbers or browsing the 180 checked-in official games and test samples in the viewer, then set up rule libraries, chess engines, and model CLIs only as needed. The first two activities make no model calls and consume no subscription or API quota.
+Start by recomputing published rating numbers or browsing the 171 checked-in official games and test samples in the viewer, then set up rule libraries, chess engines, and model CLIs only as needed. The first two activities make no model calls and consume no subscription or API quota.
 
 All commands in this guide run from the repository root. For experimental conclusions see the [Research Index](research.en.md), for third-party provenance and licensing see [Dependencies & Provenance](dependencies.en.md), and for the project overview see [README](../README.md).
 
@@ -44,7 +44,7 @@ Keep this terminal running and open in your browser:
 - Chess Test Sample: <http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en>
 - Xiangqi Test Sample: <http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en>
 
-The repository's `runs/` directory includes `game.pgn` (with full per-move rationales, elapsed time, and token counts) for all 65 official model match directories (180 games in total). You can replace `files=` with any `/runs/<tag>/game.pgn` to inspect any official game. Press Space to play/pause and Left/Right arrow keys to step through moves; press Ctrl-C in the server terminal when done. The server binds only to `127.0.0.1`; if port 8000 is busy, pick another port and update the URL. The viewer uses ES modules and cannot be opened directly via `file://`. For full controls and video recording, see the [Viewer & Video Guide](viewer-guide.en.md).
+The repository's `runs/` directory includes `game.pgn` (with full per-move rationales, elapsed time, and token counts) for all 65 official model match directories (171 games in total). You can replace `files=` with any `/runs/<tag>/game.pgn` to inspect any official game. Press Space to play/pause and Left/Right arrow keys to step through moves; press Ctrl-C in the server terminal when done. The server binds only to `127.0.0.1`; if port 8000 is busy, pick another port and update the URL. The viewer uses ES modules and cannot be opened directly via `file://`. For full controls and video recording, see the [Viewer & Video Guide](viewer-guide.en.md).
 
 The viewer defaults to Chinese; append `&lang=en` to switch the UI to English, and use `names=` to override displayed player names. See the [Viewer & Video Guide](viewer-guide.en.md) for syntax details.
 
@@ -57,7 +57,7 @@ python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements.txt
 python -c 'import chess, pyffish; print("Rule libraries imported successfully")'
-python -m llmchess --help
+python -m agi_chess --help
 python data/batch2/select_positions.py check
 python -m unittest discover -s tests -t .
 ```
@@ -72,7 +72,7 @@ Verified on the maintainer's machine (2026-11-05): `/usr/bin/python3` is Python 
 
 ## Model Matches: Built-in `llm-chat`, Local CLI Subscriptions & HTTP API Keys
 
-Full-game matches run through `llmchess/chat.py`, which invokes `llm-chat`. **The repository now bundles `llm-chat` (including `scripts/llm_chat.py` and `scripts/agy_core.py`) directly under `.agents/skills/llm-chat/`, and `llmchess/chat.py` calls this in-repo script by default.** External users do not need to wait for or install any external `llm-chat` skill (though you can still override the script path via the `LLMCHESS_LLM_CHAT` environment variable).
+Full-game matches run through `agi_chess/chat.py`, which invokes `llm-chat`. **The repository now bundles `llm-chat` (including `scripts/llm_chat.py` and `scripts/agy_core.py`) directly under `.agents/skills/llm-chat/`, and `agi_chess/chat.py` calls this in-repo script by default.** External users do not need to wait for or install any external `llm-chat` skill (though you can still override the script path via the `AGI_CHESS_LLM_CHAT` environment variable, with backward compatibility for `AGICHESS_LLM_CHAT` and `LLMCHESS_LLM_CHAT`).
 
 `llm-chat` drives two categories of model channels for full-game matches:
 
@@ -90,16 +90,16 @@ Configuration and command examples:
 
 ```sh
 # Option 1: Use an authenticated local CLI (claude / codex / agy) against a random mover (short smoke test)
-python -m llmchess play --game chess --tag my-first-game --white claude:opus --black random --effort medium --max-plies 6 --on-limit pause
+python -m agi_chess play --game chess --tag my-first-game --white claude:opus --black random --effort medium --max-plies 6 --on-limit pause
 
 # Option 2: Use a DeepSeek official API key or an OpenRouter API key (DeepSeek supports effort levels: low / high / max)
 export API_KEY_DEEPSEEK="sk-..."        # or alias DEEPSEEK_API_KEY
 # Or if you only have an OpenRouter key, deepseek:flash / deepseek:v4-pro routes via OpenRouter automatically:
 export API_KEY_OPENROUTER="sk-or-..."   # or alias OPENROUTER_API_KEY
-python -m llmchess play --game chess --tag ds-smoke --white deepseek:v4-pro --black random --effort low --max-plies 6 --on-limit pause
+python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --black random --effort low --max-plies 6 --on-limit pause
 ```
 
-Available model slugs, rate limits, and billing depend on your own accounts and subscriptions; this repository does not provide accounts, credentials, or quota. Stateless position quizzes (`python3 -m llmchess.quiz`) continue to invoke `claude` or `codex exec` directly; for `deepseek` position quizzes, `codex_cli.py` reads `~/.codex/deepseek.config.toml` by default (overridable via `LLMCHESS_DEEPSEEK_CONFIG`).
+Available model slugs, rate limits, and billing depend on your own accounts and subscriptions; this repository does not provide accounts, credentials, or quota. Stateless position quizzes (`python3 -m agi_chess.quiz`) continue to invoke `claude` or `codex exec` directly; for `deepseek` position quizzes, `codex_cli.py` reads `$CODEX_HOME/deepseek.config.toml` (or `~/.codex/deepseek.config.toml` when `CODEX_HOME` is unset) by default, overridable via `AGI_CHESS_DEEPSEEK_CONFIG` (with backward compatibility for `AGICHESS_DEEPSEEK_CONFIG` and `LLMCHESS_DEEPSEEK_CONFIG`).
 
 Review the CLI `--help` output and Section 9 of [System Design (zh-CN)](design.md) before launching live games. The `--max-plies 6` command against `random` above is only a short smoke check, not a strength evaluation. Use a fresh `--tag` for each run; outputs are written to `runs/<tag>/` (local `game.jsonl` event streams are git-ignored). Never grant model players access to chess engines or rule-library tools. Any tool call attempt or anti-CoT-extraction safety refusal immediately halts the match for inspection without auto-retrying.
 

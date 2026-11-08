@@ -12,8 +12,8 @@ import unittest
 
 import chess.pgn
 
-from llmchess import chess_ as C, cli, records
-from llmchess import xiangqi as X
+from agi_chess import chess_ as C, cli, records
+from agi_chess import xiangqi as X
 
 
 def chat_attempt(ply, side, meta, usage, elapsed, legal=True, **kw):
@@ -156,7 +156,7 @@ class ExportsWithMeta(unittest.TestCase):
 
 class ExtractReason(unittest.TestCase):
     def test_cuts_at_last_move_marker(self):
-        from llmchess import memory
+        from agi_chess import memory
         self.assertEqual(memory.extract_reason('先出车，Nf3 也可以。\n\n**着法: e2e4**'), '先出车，Nf3 也可以。')
         self.assertEqual(memory.extract_reason('应当写皇后的着法：\n\n着法: g3e3'), '应当写皇后的着法：')
         self.assertEqual(memory.extract_reason('Develop.\nMove: Nf3'), 'Develop.')
@@ -173,7 +173,7 @@ class ExtractReason(unittest.TestCase):
 
 class ExportCommand(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     def quiet(self, argv):

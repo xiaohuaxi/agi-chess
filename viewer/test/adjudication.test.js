@@ -15,7 +15,7 @@ test('上限裁决：真实文案与 PGN 往返涵盖两棋种、双方走子、
   const py = spawnSync('python3', ['-c', `
 import json
 from unittest.mock import patch
-from llmchess import analyze, chess_ as C, xiangqi as X
+from agi_chess import analyze, chess_ as C, xiangqi as X
 out = []
 for kind, G, move in [('chess', C, 'e2e4'), ('xiangqi', X, 'h2e2')]:
     for black in [False, True]:
@@ -23,7 +23,7 @@ for kind, G, move in [('chess', C, 'e2e4'), ('xiangqi', X, 'h2e2')]:
         if black:
             G.push(st, move)
         for score in [('mate', 3), ('mate', -2), ('mate', 0), ('cp', 350), ('cp', -300), ('cp', 299), ('cp', -299), ('cp', 0)]:
-            with patch('llmchess.analyze.Analyser') as mocked:
+            with patch('agi_chess.analyze.Analyser') as mocked:
                 eng = mocked.return_value.__enter__.return_value
                 eng.evaluate.return_value = (score, 16, None)
                 eng.id = 'fixture'

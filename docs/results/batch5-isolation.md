@@ -1,7 +1,7 @@
 # 第五批准备：Codex（sol）和 DeepSeek 当棋手，工具关掉的证明
 
 - 日期：2026-09-28。本机 Codex CLI 0.157.1；源码对照 `openai/codex` 的 `rust-v0.157.1` 标签（本地检出 `~/repos/codex`）。
-- 两家都走 `codex exec` 非交互调用，程序在 `llmchess/codex_cli.py`：
+- 两家都走 `codex exec` 非交互调用，程序在 `agi_chess/codex_cli.py`：
   - **sol**：模型全名 `gpt-6-sol`（`codex debug models` 里的条目），走 ChatGPT 订阅登录。
   - **DeepSeek**：`~/.codex/deepseek.config.toml` 这份 profile 的默认模型 `deepseek-v4-pro`，供应商 `api.deepseek.com`（Responses 接口），密钥从环境变量 `API_KEY_DEEPSEEK` 取。这个模型只支持 low / high / max 三档思考，没有 medium / xhigh。
   - 思考深度每次用 `-c model_reasoning_effort="high"` 显式传，抓到的请求里 sol 是 `{"effort":"high","context":"all_turns"}`，DeepSeek 是 `{"effort":"high"}`。

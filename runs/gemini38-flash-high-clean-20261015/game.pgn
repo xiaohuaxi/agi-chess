@@ -1,5 +1,5 @@
 [Game "Chinese Chess"]
-[Event "llm-chess gemini38-flash-high-clean-20261015"]
+[Event "agi-chess gemini38-flash-high-clean-20261015"]
 [Red "gemini:gemini-3.8-flash-high"]
 [Black "gemini:gemini-3.8-flash-high"]
 [RedEffort "high"]

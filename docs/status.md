@@ -2,7 +2,7 @@
 
 ## 公开前清理、依赖收敛与许可定案（2026-11-08）
 
-- **彻底移除 cchess 依赖**：核实 `llmchess/xiangqi.py` 自研 `pgn_move` 与原 `notation`（cchess）行为在标准局面完全一致、少见多兵局面更准确（遵照 xqbase 规范无歧义），已将 `notation` 改用仓内自研实现并彻底移除 `import cchess`。同步更新安装与依赖许可文档；全量 Python 测试在无 cchess 环境下验证通过。
+- **彻底移除 cchess 依赖**：核实 `agi_chess/xiangqi.py` 自研 `pgn_move` 与原 `notation`（cchess）行为在标准局面完全一致、少见多兵局面更准确（遵照 xqbase 规范无歧义），已将 `notation` 改用仓内自研实现并彻底移除 `import cchess`。同步更新安装与依赖许可文档；全量 Python 测试在无 cchess 环境下验证通过。
 - **清理硬编码个人绝对路径**：清理 `tests/test_claude_cli.py` 与 `docs/viewer-survey/` 中的硬编码本机绝对路径，全仓无个人用户名或路径残留。
 - **分支清理**：核实 `x-viewer-en` 提交均已并入 `main`，已删除本地及远端分支。
 - **新增 LICENSE 与 requirements.txt**：
@@ -13,18 +13,21 @@
   - 更新 `AGENTS.md`：在硬约束中就地注明 `pyffish` 与 `python-chess` 属于对通用规范「禁强 copyleft」的刻意例外及理由（仅由用户 pip 安装、不随仓分发，冗余的 `cchess` 已移除）。
 - **外部复现体验与测试细节修复**：
   - 补齐 `tests/test_cap.py`、`tests/test_runner.py`、`tests/test_quiz.py` 中起引擎用例的 `STOCKFISH_MISSING` / `FSF_MISSING` 跳过装饰器，无本机引擎时均优雅 skip；
-  - 修复 `tests/test_move_meta.py` 未关闭文件句柄导致的 `ResourceWarning`，全套 314 项测试在 `-W default` 下零告警通过；
+  - 修复 `tests/test_move_meta.py` 未关闭文件句柄导致的 `ResourceWarning`，全套 316 项测试在 `-W default` 下零告警通过；
   - 修复 `analysis/rating/stats.py` 缺少未入库 `runs/` 目录时的未捕获 `FileNotFoundError`，改为输出友好提示引导使用 `python3 analysis/rating/rate.py report` 并干净退出；
-  - `llmchess/codex_cli.py` 支持通过 `LLMCHESS_DEEPSEEK_CONFIG` 环境变量覆盖 DeepSeek 局面题配置文件路径；`README.md` 与 `docs/setup.md` 补充 `python3 data/batch2/select_positions.py check` 离线题库校验说明；`.agents/skills/replay-video/SKILL.md` 改为仓库根目录相对路径说明。
+  - `agi_chess/codex_cli.py` 支持通过 `AGI_CHESS_DEEPSEEK_CONFIG`（兼容 `AGICHESS_DEEPSEEK_CONFIG` 与 `LLMCHESS_DEEPSEEK_CONFIG`）或 `CODEX_HOME` 环境变量覆盖 DeepSeek 局面题配置文件路径；`.agents/skills/llm-chat/scripts/llm_chat.py` 的 `check_choice()` 优先报告无正文的 `tool_calls` / `annotations` 错误；`README.md` 与 `docs/setup.md` 补充 `python3 data/batch2/select_positions.py check` 离线题库校验说明；`.agents/skills/replay-video/SKILL.md` 改为仓库根目录相对路径说明。
 - **内置 `.agents/skills/llm-chat/` 双通道调用层**：
-  - 将 `llm-chat`（含 `scripts/llm_chat.py`、`scripts/agy_core.py` 与 `SKILL.md`）收归仓内 `.agents/skills/llm-chat/`，`llmchess/chat.py` 默认直接调用仓内脚本，移除对仓外用户级 `llm-chat` skill 的依赖；
+  - 将 `llm-chat`（含 `scripts/llm_chat.py`、`scripts/agy_core.py` 与 `SKILL.md`）收归仓内 `.agents/skills/llm-chat/`，`agi_chess/chat.py` 默认直接调用仓内脚本（支持 `AGI_CHESS_LLM_CHAT` / `AGICHESS_LLM_CHAT` / `LLMCHESS_LLM_CHAT` 覆盖），移除对仓外用户级 `llm-chat` skill 的依赖；
   - 统一驱动两类通道：① 本地 Agent CLI 订阅通道（`claude`、`codex`、`agy`，未安装对应 CLI 时直接报未安装错误）；② HTTP API 通道（支持 `API_KEY_OPENROUTER` / `OPENROUTER_API_KEY` 与 `API_KEY_DEEPSEEK` / `DEEPSEEK_API_KEY`，仅配 OpenRouter Key 时 `deepseek:flash` / `deepseek:v4-pro` 自动走 OpenRouter 映射模型 `deepseek/deepseek-v4.1-flash` / `deepseek/deepseek-v4-pro`）。
 - **`runs/` 正式对局与局面题产出物入库（约 17.6 MiB）**：
-  - 仓库 `runs/` 现随仓包含全部 65 个正式模型对局目录（43 盘模型互弈 + 22 批模型对引擎，共 180 盘）的 `game.pgn`（含每步完整思考理由批注、耗时及 token 统计）、`analysis.jsonl` / `analysis-summary.json`、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`）的汇总判卷结果 `judged.jsonl` 与 `report.txt`；
+  - 仓库 `runs/` 现随仓包含全部 65 个正式模型对局目录（43 盘模型互弈 + 22 批模型对引擎，共 171 盘）的 `game.pgn`（含每步完整思考理由批注、耗时及 token 统计）、`analysis.jsonl` / `analysis-summary.json`、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的汇总判卷结果 `judged.jsonl` 与 `report.txt`；
   - 排除体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `analysis/rating/games-engines.csv`）及录屏 `.mp4` 视频；外部用户克隆后可直接用阅读器打开任意正式对局（如 `runs/g7-c-opus-astra-1/game.pgn`）。
 - **根目录与 `docs/` 5 篇核心入门文档中英双语化**：
   - 按 `coclaw` 规范将根目录 `README.md` 设为英文主文件、新增中文版 `README.zh-CN.md`，首行互链；
   - 保留 `docs/{setup,viewer-guide,research,dependencies,license-review}.md` 中文原名确保仓内既有相对链接不断，新增对应英文版 `docs/*.en.md` 并完成首行中英互链与最新事实口径同步。
+- **全仓更名为 `agi-chess`（Python 包 `agi_chess`）并更新双语 README 开篇**：
+  - 按语法与生态惯例，Python 源码包目录与模块更名为 `agi_chess/`、环境变量改为 `AGI_CHESS_*`（兼容 `AGICHESS_*` 与旧 `LLMCHESS_*`）；其余项目名、文档标题、PGN `[Event "agi-chess <tag>"]`（含 171 份入库 `game.pgn` 及 `viewer/test/runs.test.js` 对本机未入库旧 PGN 的兼容）、前端包名 `agi-chess-viewer` 与临时目录前缀统一用连字符 `agi-chess`；
+  - 更新 `README.md` 与 `README.zh-CN.md` 开篇导语，并在开篇醒目位置高亮展示零配置即用的交互式棋谱阅读器（`viewer/`）。
 
 ## 公开文档整理（2026-11-05）
 
@@ -56,7 +59,7 @@
 ## 对弈入口与离线验证（2026-10-31）
 
 - agy／Gemini接入、拒答与工具停盘、显式空闲超时恢复及对应实验报告已完成。`runs/` 原始数据与视频继续留在本地，不入库。
-- 提交前验证：Python314项通过；阅读器70项通过、2项跳过、零失败；独立只读核验与diff空白检查通过。既有测试有未关闭文件ResourceWarning，未发生测试失败或flaky。日志在工作区外 `/tmp/llmchess-precommit-20261031-{python,viewer}.log`。
+- 提交前验证：Python314项通过；阅读器70项通过、2项跳过、零失败；独立只读核验与diff空白检查通过。既有测试有未关闭文件ResourceWarning，未发生测试失败或flaky。日志在工作区外 `/tmp/agi-chess-precommit-20261031-{python,viewer}.log`。
 
 ## 四局连播视频核验（2026-10-30）
 
@@ -198,7 +201,7 @@
 ## 基础设施收敛：模型就是真实棋手（2026-09-28）
 
 - **整盘协议**（`design.md` 第九节，`--protocol real` 为默认）：每方一段连续会话；只给轮到谁、对方上一步、当前局面；**不再报将军**，子力清单不写子数，国际象棋对方着法只写 UCI；着法记录只在会话第一条给一次；不要求中文；只需给出着法（英文、只回一行着法也读得出；9/29 起默认着法前写理由，见「已拍板」）；非法只说「不合法」（纯写法问题照实说），一手棋最多 3 次（9/29 起，原 4 次），用完判负，赛制写进系统提示。拿不准的几条和 astra 一起定。旧提示和调用保留为 `--protocol legacy`，旧数据逐字复现；局面题默认仍是旧的。
-- **棋手走 llm-chat**（`llmchess/chat.py`）：`claude:opus`、`codex:sol`（gpt-6-sol）、`deepseek:deepseek-v4-pro` 三路都支持连续会话。隔离与跨轮思考实测（`results/llm-chat-isolation.md`）：Claude、DeepSeek 零工具；**GPT 请求里仍挂着 4 个 code mode 工具，执行层关着、调出来也落空**，程序每轮查它的会话记录，出现工具调用就暂停；Claude、GPT 思考能带到下一轮，DeepSeek 不带。llm-chat 下 GPT 不再带 `~/.codex/AGENTS.md`。
+- **棋手走 llm-chat**（`agi_chess/chat.py`）：`claude:opus`、`codex:sol`（gpt-6-sol）、`deepseek:deepseek-v4-pro` 三路都支持连续会话。隔离与跨轮思考实测（`results/llm-chat-isolation.md`）：Claude、DeepSeek 零工具；**GPT 请求里仍挂着 4 个 code mode 工具，执行层关着、调出来也落空**，程序每轮查它的会话记录，出现工具调用就暂停；Claude、GPT 思考能带到下一轮，DeepSeek 不带。llm-chat 下 GPT 不再带 `~/.codex/AGENTS.md`。
 - **新协议下给法复测**（`results/batch6-real-presentation.md`，opus high 387 次、sol high 174 次，只能看方向）：默认给法不改。中国象棋 opus 仍是只给清单最好，sol 三档分不开；国际象棋 opus all 对 board 分不开。不报将军后没看到变差，首答非法全是走法没套对，和被将军无关。
 - **opus 对 sol 首局**（`results/game-opus-vs-sol-1.md`，xhigh，每种棋 1 盘，只能看个样子）：两盘都是 opus 执先将死 sol，双方 0 非法、0 工具调用、0 异常；互相送子漏吃明显。opus 每步思考中位 143（国际象棋）/ 2,386（中国象棋）token。
 - **opus 对 astra 国际象棋**（`results/game-opus-vs-astra-1.md`，双方 xhigh，6 盘互换先后，标准开局，着法前写理由，只看方向）：astra 4 比 2（前 4 盘 2 比 2、执白全胜，补的 2 盘 astra 都赢）；0 判负、0 续跑、0 工具调用、0 故障，非法 7 次（opus 5、astra 2）都一次改对。略偏 astra 但分不开：每步平均亏损合计 opus 61.0 / astra 55.0，lichess 大失误 23 / 19。思考中位 opus 682、astra 173 token，耗时中位 13.5 / 16.1 秒；opus 六盘 $26.51。两边都有「对方白送的子连着几步没吃」这类没看到的错，也有理由里算了应法却算错的；补的两盘 opus 一盘车走到挡住自己象的格子被两步杀，一盘马挡住自己后的保护被一步杀，都没看到。
@@ -215,11 +218,11 @@
 ## 已完成
 
 - 设计与前提核实 `design.md`、跨轮思考调研 `thinking-carryover.md`；引擎 Stockfish 19、lc0、Maia 1100–1900（`~/.local/share/maia/`）。
-- 程序 `llmchess/`：对弈循环、两个棋种模块、事后分析器、局面题（含各提示档与「说明理由」档）、随机开局、批量跑盘、限额等待续跑；着法提取的改口修复已合（a363108）。离线测试 250 个全过。
+- 程序 `agi_chess/`：对弈循环、两个棋种模块、事后分析器、局面题（含各提示档与「说明理由」档）、随机开局、批量跑盘、限额等待续跑；着法提取的改口修复已合（a363108）。离线测试 250 个全过。
 - 第一至四批全部实验和结论文档，第一轮总结论 `results/summary-round1.md`，棋力人群对照 `results/rating-reference.md`。原始数据都在被忽略的 `runs/`。
-- 棋谱每步带元信息（2026-09-28）：`game.pgn` / `record.txt` 每步评注里写 `[%emt 用时]`（PGN 标准命令）和自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite]`、非法 / 被拦 / 空回复次数，后端没给的项省掉不补 0（`design.md` 第四节）。已结束的盘不用重下：`python3 -m llmchess export runs/<tag>`。
+- 棋谱每步带元信息（2026-09-28）：`game.pgn` / `record.txt` 每步评注里写 `[%emt 用时]`（PGN 标准命令）和自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite]`、非法 / 被拦 / 空回复次数，后端没给的项省掉不补 0（`design.md` 第四节）。已结束的盘不用重下：`python3 -m agi_chess export runs/<tag>`。
 - 局面给法开关 `show`（all / board / pieces / fen / boardpieces），整盘和局面题共用，默认按第四批结论。
-- 棋谱阅读器（`docs/viewer.md`，2026-09-30）：方案第 1–5 步（导出、解析、打样、页面含窄版 / 宽版 / 播放 / 录制接口、录制脚本 `viewer/record.mjs`）已实施完，版式用户已定稿，2026-09-30 合回 main（阅读器认得 `drop_thinking` 对局的 `[%dropped]` 评注）。一条命令出 3:4 mp4，用法见项目 skill `.agents/skills/replay-video/`。第 6 步走子滑动动画（两种棋，默认 0.3 秒、算在每步间隔内）2026-09-30 做完并合回 main。合回时已用新代码把当时已结束的对局重导（`python3 -m llmchess export runs/<tag>`）；合回时还在下的对局（进程里跑的仍是旧代码，如 g6-x-opusdrop-astra-2）结束后要再重导一次。
+- 棋谱阅读器（`docs/viewer.md`，2026-09-30）：方案第 1–5 步（导出、解析、打样、页面含窄版 / 宽版 / 播放 / 录制接口、录制脚本 `viewer/record.mjs`）已实施完，版式用户已定稿，2026-09-30 合回 main（阅读器认得 `drop_thinking` 对局的 `[%dropped]` 评注）。一条命令出 3:4 mp4，用法见项目 skill `.agents/skills/replay-video/`。第 6 步走子滑动动画（两种棋，默认 0.3 秒、算在每步间隔内）2026-09-30 做完并合回 main。合回时已用新代码把当时已结束的对局重导（`python3 -m agi_chess export runs/<tag>`）；合回时还在下的对局（进程里跑的仍是旧代码，如 g6-x-opusdrop-astra-2）结束后要再重导一次。
 - 阅读器走子音效（2026-10-02 合回 main）：落子 / 吃子各一声、将军不单配、终局再一声，两种棋共用 CC0 素材（`viewer/vendor/sounds/`）。录视频默认有声（单声道，落子峰值约 -10 dBFS、不做整体归一化），`--vol` 调、`--no-sound` 关；网页默认静音，`sound=1` 开。默认音量按「多数人手机音量约一半」的实测研究定，不再压低（调研见 `docs/viewer.md` 音效一节）。同次修了评注在「……」「——」后断行、读回多一个空格的问题，受影响的已结束对局已重导。
 - 连播开局停留控制（2026-10-04）：阅读器新增 `openhold`，每盘初始局面停留时间可独立设置，默认仍同 `gap`；视频核验使用0.5秒。该功能及英文界面已合入main，见11-05验收。
 

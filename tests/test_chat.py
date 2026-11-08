@@ -14,8 +14,8 @@ import subprocess
 import unittest
 from unittest import mock
 
-from llmchess import batch, chat, chess_ as C, cli, memory, records, runner
-from llmchess import xiangqi as X
+from agi_chess import batch, chat, chess_ as C, cli, memory, records, runner
+from agi_chess import xiangqi as X
 
 FAKE = r'''
 import json, os, sys, uuid
@@ -51,7 +51,7 @@ sys.exit(1)
 
 class FakeChat(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-chat-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-chat-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.fake = os.path.join(self.tmp, 'fake_llm_chat.py')
         with open(self.fake, 'w') as f:
@@ -789,7 +789,7 @@ class RealProtocolPrompts(unittest.TestCase):
         self.assertNotIn('reason', cli.side_cfg(a, C, None, 200))
 
     def test_quiz_real_reason_not_doubled(self):
-        from llmchess import quiz
+        from agi_chess import quiz
         sc = dict(quiz.side_cfg(C, 'high', {'reason': 'on'}), protocol='real', retries=3)
         s = quiz.system_of(C, 'w', sc)
         self.assertIn(quiz.REASON_ASK, s)
@@ -805,15 +805,24 @@ class RealProtocolPrompts(unittest.TestCase):
         import importlib.util
         self.assertTrue(chat._REPO_SCRIPT.is_file())
         with mock.patch.dict(os.environ, {}, clear=False):
-            os.environ.pop('LLMCHESS_LLM_CHAT', None)
+            for var in ('AGI_CHESS_LLM_CHAT', 'AGICHESS_LLM_CHAT', 'LLMCHESS_LLM_CHAT'):
+                os.environ.pop(var, None)
             self.assertEqual(chat._default_script(), str(chat._REPO_SCRIPT))
             with mock.patch.object(chat, '_REPO_SCRIPT', chat._REPO_SCRIPT.parent / 'missing.py'):
                 self.assertEqual(chat._default_script(), str(chat._USER_SCRIPT))
-        with mock.patch.dict(os.environ, {'LLMCHESS_LLM_CHAT': '/custom/llm_chat.py'}):
-            self.assertEqual(chat._default_script(), '/custom/llm_chat.py')
+            for var in ('AGI_CHESS_LLM_CHAT', 'AGICHESS_LLM_CHAT', 'LLMCHESS_LLM_CHAT'):
+                with mock.patch.dict(os.environ, {var: f'/custom/{var}.py'}):
+                    self.assertEqual(chat._default_script(), f'/custom/{var}.py')
         spec = importlib.util.spec_from_file_location('repo_llm_chat', chat._REPO_SCRIPT)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
+        for choice in (
+            {'finish_reason': 'tool_calls', 'message': {'role': 'assistant', 'content': '', 'tool_calls': [{'id': 'c1'}]}},
+            {'finish_reason': 'stop', 'message': {'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'c1'}]}},
+        ):
+            with self.assertRaises(mod.ChatError) as ctx:
+                mod.check_choice({'choices': [choice]})
+            self.assertIn('the model called a tool; plain chat allows none', str(ctx.exception))
         self.assertEqual(mod.AGY_CORE_DIR, chat._REPO_SCRIPT.parent)
         with mock.patch.object(sys, 'path', list(sys.path)), mock.patch.dict(sys.modules):
             sys.modules.pop('agy_core', None)

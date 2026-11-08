@@ -308,7 +308,7 @@ def cmd_fit(a):
 # ---------------------------------------------------------------- 从 runs/ 导出
 def export():
     sys.path.insert(0, ROOT)
-    from llmchess import batch, records
+    from agi_chess import batch, records
     eng_rows, opus_rows = [], []
     for game, dirs in BATCHES.items():
         for b in dirs:

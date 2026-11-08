@@ -515,7 +515,7 @@ def play(ctx, stop_after=None, stop_file=None):
     except Paused as e:
         log(ctx, {'type': 'pause', 'ply': len(st['moves']), 'why': str(e)})
         hint = (TOOL_MESSAGE if ctx.get('tool_call') else UNCERTAIN_MESSAGE if ctx.get('uncertain')
-                else '接着下：python3 -m llmchess resume %s' % ctx['dir'])
+                else '接着下：python3 -m agi_chess resume %s' % ctx['dir'])
         print('停在第 %d 个半回合之后：%s\n%s' % (len(st['moves']), e, hint))
         return None
     finally:
@@ -537,7 +537,7 @@ def finish(ctx):
 
 def write_exports(ctx):
     """按记录写棋谱文件（record.txt、game.pgn），原子替换。终局时 finish 调；已结束的盘也可以
-    用 `python3 -m llmchess export <目录>` 重新导出（load 重放后调这里，不写任何记录）。返回 {文件名: 内容}。"""
+    用 `python3 -m agi_chess export <目录>` 重新导出（load 重放后调这里，不写任何记录）。返回 {文件名: 内容}。"""
     files = render_exports(ctx)
     for name, text in files.items():
         path = os.path.join(ctx['dir'], name)

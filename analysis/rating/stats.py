@@ -5,7 +5,7 @@ runs/b2），出一份中文 markdown——按对手的战绩、每盘明细（�
 
 只依赖本地原始对局记录 game.jsonl（公开仓库仅入库脱敏后的 game.pgn / analysis.jsonl / summary.*，不含 game.jsonl）；
 没下完 / 没分析的盘稳妥跳过并注明。大失误、ACPL 要先跑过事后分析
-（python3 -m llmchess.batch summary runs/zc --analyze）。
+（python3 -m agi_chess.batch summary runs/zc --analyze）。
 
     python3 analysis/rating/stats.py [--out 路径]     # 默认打到标准输出
 """
@@ -13,7 +13,7 @@ import argparse, datetime, os, statistics, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
-from llmchess import batch, analyze, records  # noqa: E402
+from agi_chess import batch, analyze, records  # noqa: E402
 
 RUNS = os.path.join(ROOT, 'runs')
 GAME_ZH = {'chess': '国际象棋', 'xiangqi': '中国象棋'}

@@ -1,6 +1,6 @@
 // 静态截图：起本机服务，无头打开 index.html 的若干格画面，各截一张 2 倍图（540×720 → 1080×1440）。
 // 用法：node viewer/shot.mjs <输出目录> [--runs <目录>] [--measure] [--size 宽x高] <名字>=<网址参数> ...
-//   例：node viewer/shot.mjs /tmp/shots --runs ~/repos/llm-chess/runs chess-open='files=/runs/g1-c-opus-sol/game.pgn&ply=0'
+//   例：node viewer/shot.mjs /tmp/shots --runs ~/repos/agi-chess/runs chess-open='files=/runs/g1-c-opus-sol/game.pgn&ply=0'
 //   --runs 把网址 /runs/ 映射到给定目录（worktree 里没有 runs/）；--measure 另存 <名字>.json：页面里实测的各块尺寸。
 //   --size 换视口（默认 540x720，宽版截图用如 1440x900）；网址参数里没写 layout= 时补 layout=compact。
 // 浏览器：playwright-core 锁在 1.58.2，默认用它配套的缓存 chromium-1208；缓存里没有时用 VIEWER_CHROMIUM 指到可执行文件。

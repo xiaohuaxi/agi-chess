@@ -14,7 +14,7 @@
 | 调用 | 双方各 79 次，全部首答合法；无空回复、拒答、调用失败或暂停；约 3 小时 2 分钟 |
 | 思考量 | 记录里的每步思考 token 中位：红 3,852、黑 3,246；这是统计字段，不是读取隐藏思考 |
 | 裁判 | Fairy-Stockfish 14.0.1 XQ，xiangqi，深度 16，Threads=1，Hash=64 MiB；每局面 `ucinewgame`、起始 FEN 加完整历史 |
-| 真身与产物 | `llmchess/analyze.py`；`runs/argon-high-self-20261019/analysis.jsonl`、`analysis-summary.json` |
+| 真身与产物 | `agi_chess/analyze.py`；`runs/argon-high-self-20261019/analysis.jsonl`、`analysis-summary.json` |
 
 沿用既有中国象棋口径：走前不是杀棋分数且绝对值 <1000 厘兵才进入“大失误／失误”统计；走前、走后各截断到 ±1000，亏损 ≥250 为大失误，100–249 为失误；杀棋按 ±1000 计。ACPL 对全部着法的非负截断亏损取平均。这是本项目的分析指标，不是人类等级分标尺；“未分胜负”也只表示未触及这个阈值，并不等于客观可守和。
 
@@ -85,7 +85,7 @@
 早期炮口事件与既有 [能吃未吃分析](missed-captures.md) 的“炮隔炮打车”是同一种局面关系；本盘没有重问实验，只能说错误形态相同，不能把旧模型的机制诊断直接套给 Argon。这里不新增 Flash 全盘分析，也不依据观看印象给 Flash 与 Argon 排序。
 
 - 原始记录：`runs/argon-high-self-20261019/game.jsonl`，对应半回合的 `attempt.reply`；阅读版 `record.txt`、`game.pgn`。配置在首条 `config`，本次对局记录的 commit 为 `87dbd05-dirty`，不能当成干净提交的完整复现快照。
-- 全盘统计：同目录 `analysis.jsonl`（158 行）、`analysis-summary.json`。命令：`/usr/bin/python3 -m llmchess.analyze runs/argon-high-self-20261019`；本机 `/usr/bin/python3` 3.9 有 chess/pyffish，默认 Python 3.15 缺这些依赖。
+- 全盘统计：同目录 `analysis.jsonl`（158 行）、`analysis-summary.json`。命令：`/usr/bin/python3 -m agi_chess.analyze runs/argon-high-self-20261019`；本机 `/usr/bin/python3` 3.9 有 chess/pyffish，默认 Python 3.15 缺这些依赖。
 - 关键主变：同目录 `review-pv.json`（开局）、`review-pv-mid.json`（中盘）、`review-pv-end.json`（漏炮及残局）。各条保存半回合、限定着法（如有）、引擎名、评分、深度、完整 UCI 输出、ICCS 主变及中文记谱。补充搜索与全盘同参数；通过现有 `Analyser` 运行，未改产品代码。
 - 合法性与可见回复核对：同目录 `review-evidence.json`，保存关键局面的 FEN、棋子表、合法吃子与回复；全部 158 着重放并检查合法及禁着，终局复算为黑方将死。所有保存的主变也经 `G.push` 逐着合法性校验。
 

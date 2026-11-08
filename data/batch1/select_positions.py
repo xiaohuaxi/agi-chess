@@ -50,7 +50,7 @@ def write_jsonl(path, rows):
 
 # ---------------------------------------------------------------- 中国象棋
 def xiangqi():
-    from llmchess import xiangqi as X
+    from agi_chess import xiangqi as X
     cases = list(csv.DictReader(open(os.path.join(XQ_DIR, 'blunder_cases.tsv'), encoding='utf-8'), delimiter='\t'))
     plies = {(r['game'], int(r['ply'])): r
              for r in csv.DictReader(open(os.path.join(XQ_DIR, 'plies.tsv'), encoding='utf-8'), delimiter='\t')}

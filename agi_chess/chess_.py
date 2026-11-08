@@ -459,7 +459,7 @@ def exports(st, cfg, end, summary_lines, meta=None):
              '结果：%s，共 %d 个半回合' % (res, len(st['moves'])), '', _movetext(st), '',
              'UCI：' + ' '.join(st['moves']), ''] + summary_lines
     g = chess.pgn.Game.from_board(st['board'])
-    g.headers['Event'] = 'llm-chess %s' % cfg['tag']
+    g.headers['Event'] = 'agi-chess %s' % cfg['tag']
     g.headers['White'], g.headers['Black'] = cfg['players']['w'], cfg['players']['b']
     g.headers['Result'] = '1-0' if end['winner'] == 'w' else '0-1' if end['winner'] == 'b' else '1/2-1/2'
     g.headers['Termination'] = end['reason']

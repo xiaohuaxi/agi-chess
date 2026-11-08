@@ -1,12 +1,12 @@
 """命令行：模型对模型、模型对引擎 / 随机走子，下中国象棋或国际象棋。
 
-    python3 -m llmchess play --game xiangqi --tag x1 --black random --max-plies 6
-    python3 -m llmchess play --game chess --tag c1 --black engine:maia-1100 --memory notes
-    python3 -m llmchess play --game chess --tag c2 --b effort=high --b memory=session   # 两方分设
-    python3 -m llmchess play --game xiangqi --tag x2 --dry-run                          # 只打印提示，不调模型
-    python3 -m llmchess play --game chess --tag c3 --black engine:maia-1500 --opening random:8 --opening-seed 1
-    python3 -m llmchess resume runs/x1                                                  # 暂停后接着下
-    python3 -m llmchess export runs/x1                                                  # 已结束的盘重新导出棋谱
+    python3 -m agi_chess play --game xiangqi --tag x1 --black random --max-plies 6
+    python3 -m agi_chess play --game chess --tag c1 --black engine:maia-1100 --memory notes
+    python3 -m agi_chess play --game chess --tag c2 --b effort=high --b memory=session   # 两方分设
+    python3 -m agi_chess play --game xiangqi --tag x2 --dry-run                          # 只打印提示，不调模型
+    python3 -m agi_chess play --game chess --tag c3 --black engine:maia-1500 --opening random:8 --opening-seed 1
+    python3 -m agi_chess resume runs/x1                                                  # 暂停后接着下
+    python3 -m agi_chess export runs/x1                                                  # 已结束的盘重新导出棋谱
 
 协议 --protocol（默认 real）：real 是「模型就是真实棋手」（design.md 第九节）——每方一段连续会话（memory 默认 session），
   只给局面、轮到谁、对方上一步，不报将军、不给合法着法；默认请棋手在着法之前写出理由（reason=off 关掉）；
@@ -46,7 +46,7 @@ from . import chat, claude_cli, memory, opening, records, runner
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RUNS = ROOT / 'runs'
-GAMES = {'xiangqi': 'llmchess.xiangqi', 'chess': 'llmchess.chess_'}
+GAMES = {'xiangqi': 'agi_chess.xiangqi', 'chess': 'agi_chess.chess_'}
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
 SIDE_KEYS = {'effort': str, 'memory': str, 'show': str, 'view': str, 'history': int, 'legal': str, 'selfcheck': str,
              'recite': str, 'notes_keep': int, 'session_view': str, 'reason': str, 'drop_thinking': str}
@@ -143,7 +143,7 @@ def check_player(G, spec, protocol='legacy'):
 def commit():
     try:
         out = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', '--short', 'HEAD'], capture_output=True, text=True)
-        dirty = subprocess.run(['git', '-C', str(ROOT), 'status', '--porcelain', '--', 'llmchess'],
+        dirty = subprocess.run(['git', '-C', str(ROOT), 'status', '--porcelain', '--', 'agi_chess'],
                                capture_output=True, text=True).stdout.strip()
         return out.stdout.strip() + ('-dirty' if dirty else '')
     except Exception as e:                       # 只是记进 config
@@ -286,7 +286,7 @@ def cmd_play(a):
     cfg['claude_version'] = claude_cli.version()
     cfg['commit'] = commit()
     cfg['argv'] = sys.argv
-    cfg['claude_cwd'] = os.path.join(os.path.realpath(tempfile.gettempdir()), 'llmchess-cwd',
+    cfg['claude_cwd'] = os.path.join(os.path.realpath(tempfile.gettempdir()), 'agi-chess-cwd',
                                      '%s-%s' % (a.tag, uuid.uuid4().hex[:8]))
     ctx = runner.new_ctx(G, cfg, str(run_dir))
     runner.log(ctx, {'type': 'config', 'cfg': cfg})
@@ -338,7 +338,7 @@ LIMIT_HELP = ('撞额度时：wait（默认）在程序里等到解除再接着�
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog='python3 -m llmchess', description=__doc__.split('\n')[0],
+    ap = argparse.ArgumentParser(prog='python3 -m agi_chess', description=__doc__.split('\n')[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
     sub = ap.add_subparsers(dest='cmd', required=True)
     p = sub.add_parser('play', help='开一盘')

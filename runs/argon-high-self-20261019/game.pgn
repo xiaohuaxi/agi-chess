@@ -1,5 +1,5 @@
 [Game "Chinese Chess"]
-[Event "llm-chess argon-high-self-20261019"]
+[Event "agi-chess argon-high-self-20261019"]
 [Red "gemini:gemini-4-argon-high"]
 [Black "gemini:gemini-4-argon-high"]
 [RedEffort "high"]

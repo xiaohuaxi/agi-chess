@@ -93,7 +93,7 @@ Max国际象棋两次先前超时调用没有返回用量，表中只包含后�
 
 ## 计量来源与复算
 
-旧CLI Claude从 `usage.output_tokens_details.thinking_tokens` 取数；llm-chat把它映射为 `meta.reasoning_tokens`，项目 `llmchess/chat.py:140` 再映射为 `think`。Codex一路由 `reasoning_output_tokens` 映射，连续会话由llm-chat先按累计用量做差；历史[会话诊断](thinking-in-session.md)逐轮核验过此口径。`llmchess/records.py:116` 的可用性判定要求看原始字段，`runner.py` 在每次attempt之后累加统计。因此本报告统计的是后端返回的计量，不是从隐藏文本重新分词，也不代表后端未报告的计算。
+旧CLI Claude从 `usage.output_tokens_details.thinking_tokens` 取数；llm-chat把它映射为 `meta.reasoning_tokens`，项目 `agi_chess/chat.py:140` 再映射为 `think`。Codex一路由 `reasoning_output_tokens` 映射，连续会话由llm-chat先按累计用量做差；历史[会话诊断](thinking-in-session.md)逐轮核验过此口径。`agi_chess/records.py:116` 的可用性判定要求看原始字段，`runner.py` 在每次attempt之后累加统计。因此本报告统计的是后端返回的计量，不是从隐藏文本重新分词，也不代表后端未报告的计算。
 
 原始组：
 

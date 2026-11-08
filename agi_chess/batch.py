@@ -1,10 +1,10 @@
 """批量驱动（plan-batch2 0.5）：一批盘逐盘跑完、自动分析、出汇总。
 
-    python3 -m llmchess.batch run --game chess --batch b1 --opp maia-1500 --seeds 1-2 --jobs 4
-    python3 -m llmchess.batch run --game chess --batch b1 --opp random --seeds 101          # 同一批次追加对手 / 种子
-    python3 -m llmchess.batch run --game xiangqi --batch b2cal-30v10 --player engine:fsf:nodes=30 \\
+    python3 -m agi_chess.batch run --game chess --batch b1 --opp maia-1500 --seeds 1-2 --jobs 4
+    python3 -m agi_chess.batch run --game chess --batch b1 --opp random --seeds 101          # 同一批次追加对手 / 种子
+    python3 -m agi_chess.batch run --game xiangqi --batch b2cal-30v10 --player engine:fsf:nodes=30 \\
         --opp fsf:nodes=10 --seeds 1-10 --no-analyze --jobs 8                              # 两边都是引擎
-    python3 -m llmchess.batch summary runs/b1                                               # 只重出汇总，不跑盘
+    python3 -m agi_chess.batch summary runs/b1                                               # 只重出汇总，不跑盘
 
 一批 = runs/<批>/（--out 改上级目录），一盘一个子目录，名字是 <对手>-s<种子>-<w|b>：种子同时是开局种子和随机走子种子，
 w / b 是「我方」（--player，默认 claude:opus）执先走的一方（红 / 白）还是黑方。--colors both 时同一开局两色各一盘。
@@ -162,7 +162,7 @@ def game_state(gdir):
 
 def play_cmd(a, gdir, opp, seed, side):
     players = {side: a.player, other(side): opp}
-    cmd = [sys.executable, '-m', 'llmchess', 'play', '--game', a.game, '--tag', os.path.basename(gdir),
+    cmd = [sys.executable, '-m', 'agi_chess', 'play', '--game', a.game, '--tag', os.path.basename(gdir),
            '--out', os.path.dirname(gdir), '--white', players['w'], '--black', players['b'],
            '--protocol', a.protocol, '--effort', a.effort, '--memory', a.memory, '--max-plies', str(a.max_plies), '--retries', str(a.retries),
            '--seed', str(seed), '--stop-file', os.path.join(os.path.dirname(gdir), STOP)]
@@ -175,7 +175,7 @@ def play_cmd(a, gdir, opp, seed, side):
 
 
 def resume_cmd(a, gdir):
-    cmd = [sys.executable, '-m', 'llmchess', 'resume', gdir, '--stop-file', os.path.join(os.path.dirname(gdir), STOP)]
+    cmd = [sys.executable, '-m', 'agi_chess', 'resume', gdir, '--stop-file', os.path.join(os.path.dirname(gdir), STOP)]
     return cmd + pass_through(a)
 
 
@@ -514,7 +514,7 @@ def cmd_summary(a):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog='python3 -m llmchess.batch', description=__doc__.split('\n')[0],
+    ap = argparse.ArgumentParser(prog='python3 -m agi_chess.batch', description=__doc__.split('\n')[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
     sub = ap.add_subparsers(dest='cmd', required=True)
     p = sub.add_parser('run', help='跑一批（再跑同一条命令就是续跑）')

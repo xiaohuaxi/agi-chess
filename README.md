@@ -1,17 +1,21 @@
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-# llm-chess
+# agi-chess
 
-Investigating how general-purpose AI models play International Chess and Xiangqi (Chinese Chess): where they blunder, how reasoning effort, board representation, and session continuity shape their play, and how to build an evaluation harness that never makes decisions on a player's behalf.
+**If an AI cannot even play a decent game of chess on its own, it cannot be called AGI.** Chess and Xiangqi (Chinese Chess) are games of simple rules and complete information that ordinary people play well without specialized training; reasoning step by step from the position on the board to the moves that follow runs on the same principle as reasoning from the known to the unknown. A model that excels at coding or hard exam problems yet blunders pieces away the moment it sits at a board without an engine is still "jagged intelligence"—far from truly general.
 
-This repository includes a command-line match and position-quiz runner, a built-in multi-model session driver (`.agents/skills/llm-chat/`), post-game engine analysis, experimental reports, 180 official model games and 9 judged position-quiz batches checked into `runs/`, rating recomputation scripts, and a game viewer that displays per-move reasoning and token usage. Because this is an ongoing research project whose models, prompts, tournament rules, and analysis criteria evolved across batches, results from different phases should not be merged into a single leaderboard.
+This project puts untuned general-purpose models at the board like human players—with no engines, legal-move lists, or tactical hints—to measure their real strength in International Chess and Xiangqi, diagnose why they blunder, and test how reasoning effort, board representation, and thought carryover affect their play. The repository includes the match and quiz runner, 171 official model games, 9 judged quiz batches, rating calibration scripts, research reports, and an interactive game viewer.
+
+> **Interactive Game Viewer ([`viewer/`](viewer/)) — Browse All 171 Games Zero-Config**
+>
+> Without installing any chess engine or configuring API keys, run `python3 -m http.server 8000` in the repository root and open [`http://localhost:8000/viewer/?lang=en`](http://localhost:8000/viewer/?lang=en) to step through all 171 checked-in International Chess and Xiangqi matches in your browser, inspect per-move model rationales, engine centipawn loss and blunder classifications, elapsed time and token stats, or export MP4 replay videos (see [Viewer & Video Guide](docs/viewer-guide.en.md)).
 
 ## Start Here
 
 | What you want to do | Entry point |
 | --- | --- |
+| **Replay real model games or samples, read per-move rationales, or record MP4 videos** | **[Viewer & Video Guide](docs/viewer-guide.en.md) ([`viewer/`](viewer/))** |
 | Browse all experiments, findings, and available public evidence | [Research Index](docs/research.en.md) |
-| Replay real model games or samples, read per-move rationales, or record MP4 videos | [Viewer & Video Guide](docs/viewer-guide.en.md) |
 | Recompute ratings, set up the environment, run tests, or launch matches | [Setup & Running](docs/setup.en.md) |
 | Check dependency roles, upstream provenance, and licenses | [Dependencies & Provenance](docs/dependencies.en.md) |
 | Understand prompts, match protocols, record formats, and failure handling | [System Design (zh-CN)](docs/design.md) |
@@ -59,7 +63,7 @@ Open in your browser (with `&lang=en` for the English UI):
 
 Use the Left/Right arrow keys to step through moves and Space to play or pause; you can also open the [Blank Viewer](http://127.0.0.1:8000/viewer/?lang=en) and drag in any `.pgn` file, or point `files=` to any checked-in `/runs/<tag>/game.pgn`. Press Ctrl-C in the terminal when finished. If port 8000 is busy, choose another port and update the URLs accordingly.
 
-Viewing in a browser requires no `npm` installation. `runs/` includes `game.pgn` (with full per-move rationale annotations, elapsed time, and token counts) for all 180 official model games. Recording MP4 videos requires headless Chromium automation and FFmpeg; see the [Viewer & Video Guide](docs/viewer-guide.en.md).
+Viewing in a browser requires no `npm` installation. `runs/` includes `game.pgn` (with full per-move rationale annotations, elapsed time, and token counts) for all 171 official model games. Recording MP4 videos requires headless Chromium automation and FFmpeg; see the [Viewer & Video Guide](docs/viewer-guide.en.md).
 
 The viewer defaults to Chinese (`lang=zh`); append `&lang=en` to switch the interface to English, and use `names=` to override displayed player names. See the [Viewer & Video Guide](docs/viewer-guide.en.md) for full URL parameters.
 
@@ -79,8 +83,8 @@ If a model invokes or attempts a tool call, the match pauses immediately; if a s
 
 ## Runtime & Data Boundaries
 
-- **Official Games & Judged Quizzes Included:** `runs/` now ships with all 65 official model match directories (43 model-vs-model games + 22 model-vs-engine batches, 180 games in total), including `game.pgn` (with per-move rationales, timing, and token metadata), `analysis.jsonl` / `analysis-summary.json` (per-move engine evaluations and blunder flags), `summary.json` / `summary.md`, and 9 official position-quiz batches (`quiz-*`) with `judged.jsonl` and `report.txt`. Only bulky low-level event logs (`game.jsonl`), duplicate `record.txt` files, raw engine-vs-engine calibration games (whose outcomes are in `analysis/rating/games-engines.csv`), and `.mp4` video recordings are excluded.
-- **Built-in `llm-chat` Dual-Channel Driver:** The repository bundles `llm-chat` (`llm_chat.py` and `agy_core.py`) under `.agents/skills/llm-chat/`, and `llmchess/chat.py` invokes this in-repo script by default—no external `llm-chat` skill installation is required. Full-game matches drive two categories of model channels (see [Setup & Running](docs/setup.en.md)):
+- **Official Games & Judged Quizzes Included:** `runs/` now ships with all 65 official model match directories (43 model-vs-model games + 22 model-vs-engine batches, 171 games in total), including `game.pgn` (with per-move rationales, timing, and token metadata), `analysis.jsonl` / `analysis-summary.json` (per-move engine evaluations and blunder flags), `summary.json` / `summary.md`, and 9 official position-quiz batches (`quiz-*`) with `judged.jsonl` and `report.txt`. Only bulky low-level event logs (`game.jsonl`), duplicate `record.txt` files, raw engine-vs-engine calibration games (whose outcomes are in `analysis/rating/games-engines.csv`), and `.mp4` video recordings are excluded.
+- **Built-in `llm-chat` Dual-Channel Driver:** The repository bundles `llm-chat` (`llm_chat.py` and `agy_core.py`) under `.agents/skills/llm-chat/`, and `agi_chess/chat.py` invokes this in-repo script by default—no external `llm-chat` skill installation is required. Full-game matches drive two categories of model channels (see [Setup & Running](docs/setup.en.md)):
   - **Local Agent CLI Subscription Channel** (primary experimental channel): Claude (via `claude` CLI), GPT (via `codex` CLI), and Gemini (via `agy` CLI), using the subscription quota of the locally installed and authenticated CLI; if the required CLI is not installed, `llm-chat` immediately returns a clear "not installed" error.
   - **HTTP API Channel** (DeepSeek & OpenRouter): Configured via environment variables `API_KEY_OPENROUTER` (or `OPENROUTER_API_KEY`) and `API_KEY_DEEPSEEK` (or `DEEPSEEK_API_KEY`). When running `deepseek:flash` (`deepseek-flash`) or `deepseek:v4-pro` (`deepseek-v4-pro`), if `API_KEY_OPENROUTER` is set without `API_KEY_DEEPSEEK`, `llm-chat` automatically routes DeepSeek requests through OpenRouter (`deepseek-flash` → `deepseek/deepseek-v4.1-flash`, `deepseek-v4-pro` → `deepseek/deepseek-v4-pro`), so a separate official DeepSeek API key is not required.
 - Model availability, CLI behavior, and session handling change over time. Model names and versions in reports document historical experiments rather than guaranteeing current service availability.
@@ -90,17 +94,17 @@ If a model invokes or attempts a tool call, the match pauses immediately; if a s
 
 | Path | Contents |
 | --- | --- |
-| `llmchess/` | Match loop, position quizzes, PGN/record export, and post-game engine analyzer |
+| `agi_chess/` | Match loop, position quizzes, PGN/record export, and post-game engine analyzer |
 | `.agents/skills/` | Built-in `llm-chat` (multi-model session driver) and `replay-video` (viewer & video recording skill) |
 | `tests/` | Python offline unit tests |
 | `data/` | Checked-in position banks and selection scripts; some raw selection sources reside only on the maintainer's machine |
 | `analysis/rating/` | Rating fitting scripts, match stats scripts, and input datasets |
 | `viewer/` | Web PGN viewer, MP4 recorder, test fixtures, and vendored third-party assets |
 | `docs/results/` | Batch-by-batch research reports |
-| `runs/` | Checked-in outputs for 65 official model match directories (180 `game.pgn` files + engine analyses) and 9 judged quiz batches; raw `game.jsonl` streams and `.mp4` videos are git-ignored |
+| `runs/` | Checked-in outputs for 65 official model match directories (171 `game.pgn` files + engine analyses) and 9 judged quiz batches; raw `game.jsonl` streams and `.mp4` videos are git-ignored |
 
 ## Licensing
 
 - Original source code, research reports, position banks, and the `viewer/` web application in this repository are licensed under the MIT License (see root [LICENSE](LICENSE));
 - Third-party frontend components and media under `viewer/vendor/` retain their respective permissive licenses (BSD-2-Clause, MIT, BSD-3-Clause, CC0 1.0); see [Dependencies & Provenance](docs/dependencies.en.md);
-- Rule validation in `llmchess/` imports `chess` (`python-chess`) and `pyffish` in-process at runtime (both GPL-3.0-or-later, not distributed in this repo, installed locally via `python3 -m pip install -r requirements.txt`); running the combined Python program or redistributing a bundle containing them is subject to GPL-3.0-or-later. See [License Review](docs/license-review.en.md) for full details.
+- Rule validation in `agi_chess/` imports `chess` (`python-chess`) and `pyffish` in-process at runtime (both GPL-3.0-or-later, not distributed in this repo, installed locally via `python3 -m pip install -r requirements.txt`); running the combined Python program or redistributing a bundle containing them is subject to GPL-3.0-or-later. See [License Review](docs/license-review.en.md) for full details.

@@ -53,7 +53,7 @@ const HELP = `用法：node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -
   -h, --help               显示本说明
 
 没给的停留时长用页面的默认值；各格停多久由页面决定，脚本只照 next() 返回的 anim 与 hold 办。
-例：node viewer/record.mjs ~/repos/llm-chess/runs/g1-c-opus-sol -o /tmp/g1.mp4 --gap 1.5
+例：node viewer/record.mjs ~/repos/agi-chess/runs/g1-c-opus-sol -o /tmp/g1.mp4 --gap 1.5
 `;
 
 // 用户能看懂的错误：main 只打印 message，不打堆栈。

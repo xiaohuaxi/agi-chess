@@ -2,7 +2,7 @@
 
 # 安装与运行
 
-先复算已有结果或浏览仓内已入库的 180 盘正式对局与样例，再按需要准备规则库、引擎和模型调用环境。前两项不调用模型、不消耗订阅或 API 额度。
+先复算已有结果或浏览仓内已入库的 171 盘正式对局与样例，再按需要准备规则库、引擎和模型调用环境。前两项不调用模型、不消耗订阅或 API 额度。
 
 本文命令都从仓库根目录运行。研究结论见[研究索引](research.md)，依赖来源与许可见[依赖说明](dependencies.md)，项目入口见 [README](../README.zh-CN.md)。
 
@@ -44,7 +44,7 @@ python3 -m http.server --bind 127.0.0.1 8000
 - 国际象棋测试样例：<http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn>
 - 中国象棋测试样例：<http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn>
 
-仓库 `runs/` 已随仓包含全部 65 个正式模型对局目录（共 180 盘）的 `game.pgn`（内含每步完整思考理由批注、耗时与 token 统计），可直接将网址中的 `files=` 替换为任意 `/runs/<tag>/game.pgn` 浏览。按空格播放，左右键逐步看；用完在服务终端按 Ctrl-C。服务只绑定本机；若 8000 端口已占用，换个端口并同步修改网址。页面不能直接用 `file://` 打开。更多操作见[棋谱浏览与视频录制](viewer-guide.md)。
+仓库 `runs/` 已随仓包含全部 65 个正式模型对局目录（共 171 盘）的 `game.pgn`（内含每步完整思考理由批注、耗时与 token 统计），可直接将网址中的 `files=` 替换为任意 `/runs/<tag>/game.pgn` 浏览。按空格播放，左右键逐步看；用完在服务终端按 Ctrl-C。服务只绑定本机；若 8000 端口已占用，换个端口并同步修改网址。页面不能直接用 `file://` 打开。更多操作见[棋谱浏览与视频录制](viewer-guide.md)。
 
 阅读器默认中文；在网址后加 `&lang=en` 切换英文，`names=` 可覆盖棋手显示名。具体写法见[阅读器指南](viewer-guide.md)。
 
@@ -57,7 +57,7 @@ python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements.txt
 python -c 'import chess, pyffish; print("规则库可导入")'
-python -m llmchess --help
+python -m agi_chess --help
 python data/batch2/select_positions.py check
 python -m unittest discover -s tests -t .
 ```
@@ -72,7 +72,7 @@ python -m unittest discover -s tests -t .
 
 ## 模型对弈：内置 `llm-chat`、本地 CLI 订阅与 HTTP API 配置
 
-整盘对弈默认走 `llmchess/chat.py` 调用的 `llm-chat` 脚本。**仓库现已在 `.agents/skills/llm-chat/` 内置了完整 `llm-chat`（含 `scripts/llm_chat.py` 与 `scripts/agy_core.py`），`llmchess/chat.py` 默认直接调用该仓内脚本，外部用户无需再额外等待或安装外部 `llm-chat` skill**（如仍需覆盖脚本路径，可设置环境变量 `LLMCHESS_LLM_CHAT`）。
+整盘对弈默认走 `agi_chess/chat.py` 调用的 `llm-chat` 脚本。**仓库现已在 `.agents/skills/llm-chat/` 内置了完整 `llm-chat`（含 `scripts/llm_chat.py` 与 `scripts/agy_core.py`），`agi_chess/chat.py` 默认直接调用该仓内脚本，外部用户无需再额外等待或安装外部 `llm-chat` skill**（如仍需覆盖脚本路径，可设置环境变量 `AGI_CHESS_LLM_CHAT`，同时兼容 `AGICHESS_LLM_CHAT` 与 `LLMCHESS_LLM_CHAT`）。
 
 `llm-chat` 在整盘对弈中统一驱动两类模型通道：
 
@@ -90,16 +90,16 @@ python -m unittest discover -s tests -t .
 
 ```sh
 # 方式一：使用已登录的本机 CLI（如 claude / codex / agy）对弈随机对手（短冒烟）
-python -m llmchess play --game chess --tag my-first-game --white claude:opus --black random --effort medium --max-plies 6 --on-limit pause
+python -m agi_chess play --game chess --tag my-first-game --white claude:opus --black random --effort medium --max-plies 6 --on-limit pause
 
 # 方式二：使用 DeepSeek 官方 API Key 或 OpenRouter API Key 运行整盘对弈（DeepSeek 思考档位支持 low / high / max）
 export API_KEY_DEEPSEEK="sk-..."        # 或使用同义变量 DEEPSEEK_API_KEY
 # 若无 DeepSeek 官方 Key，仅配置 OpenRouter 即可自动路由 deepseek:flash / deepseek:v4-pro：
 export API_KEY_OPENROUTER="sk-or-..."   # 或使用同义变量 OPENROUTER_API_KEY
-python -m llmchess play --game chess --tag ds-smoke --white deepseek:v4-pro --black random --effort low --max-plies 6 --on-limit pause
+python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --black random --effort low --max-plies 6 --on-limit pause
 ```
 
-可用型号、额度与收费由账号和服务决定；本仓库不提供账号、凭据或额度。无状态局面题（`python3 -m llmchess.quiz`）仍按原路径直调 `claude` 或 `codex exec`；其中 `deepseek` 局面题默认读取 `~/.codex/deepseek.config.toml` 还原供应商与模型目录配置，可通过环境变量 `LLMCHESS_DEEPSEEK_CONFIG` 覆盖配置文件路径。
+可用型号、额度与收费由账号和服务决定；本仓库不提供账号、凭据或额度。无状态局面题（`python3 -m agi_chess.quiz`）仍按原路径直调 `claude` 或 `codex exec`；其中 `deepseek` 局面题默认读取 `$CODEX_HOME/deepseek.config.toml`（未设 `CODEX_HOME` 时为 `~/.codex/deepseek.config.toml`）还原供应商与模型目录配置，可通过环境变量 `AGI_CHESS_DEEPSEEK_CONFIG`（兼容 `AGICHESS_DEEPSEEK_CONFIG` 与 `LLMCHESS_DEEPSEEK_CONFIG`）覆盖配置文件路径。
 
 先看 CLI 帮助与[对弈协议](design.md)第九节。上面的 `--max-plies 6` 配 `random` 对手只是短冒烟，不用于评测棋力。每盘用新的 `--tag`，输出写入 `runs/<tag>/`（新建本地运行目录默认仅入库指定的已提交正式批次，底层 `game.jsonl` 被 git 忽略）。真实评测条件与停止规则见设计文档；不要给模型棋手开放引擎或规则库工具。工具调用或明确的防思维链泄露类拒答应立即停盘分析，不自动重问续跑。
 

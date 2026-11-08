@@ -1,4 +1,4 @@
-# llm-chess 项目规范
+# agi-chess 项目规范
 
 > 本仓库规范以 `AGENTS.md` 为准；这里只放硬约束与指针，设计与证据见 `docs/`。
 

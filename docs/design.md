@@ -1,4 +1,4 @@
-# llm-chess 设计：模型对模型下棋
+# agi-chess 设计：模型对模型下棋
 
 - 日期：2026-09-25。本机 Claude Code 2.1.282，服务端模型串 `claude-opus-5-5`；Codex CLI 0.156.1。
 - 目的：研究通用大模型下棋为什么臭、基础设施怎么搭才对。对局流程外壳两种棋共用一份，棋种相关的部分各写一个平铺的模块（不写基类、不做继承层），无界面，命令行跑、全程落盘。
@@ -36,14 +36,14 @@
 | P7 | 关掉工具、MCP、用户设置、CLAUDE.md 后，模型拿不到引擎 | **已核实** | 沿用上一轮命令（`--tools "" --strict-mcp-config --setting-sources "" --system-prompt ... CLAUDE_CODE_DISABLE_CLAUDE_MDS=1`），抓到的请求 `tools: []`。system 里只剩 Claude Code 固定的一句身份说明和我们的系统提示，用户消息前多一小段 userEmail 提示，另有一条环境说明（工作目录、日期、模型名）。**2026-09-25 用对弈程序实际拼出的命令复核**（运行目录是仓库外的空临时目录，桩服务抓请求）：`tools: []`，没有 MCP，system 只有身份说明和我们的提示，全文搜不到 stockfish / fairy / lc0 / maia / `/opt/homebrew` / llm-chess / CLAUDE.md / AGENTS / memory / skill / hook。`--bare` 只认 API key、不能走订阅，不用；加 `--safe-mode` 请求体没有变化，不加。 |
 | P8 | 续接跨天、跨长暂停后思考仍保留 | 待验证 | 文档说前缀必须逐字节一致。环境说明里带日期，续接时 Claude Code 是重放当初那条还是重新生成，没测。上一段 P5 的实测都在几分钟内完成。 |
 | P9 | 走 API 直连更可控，但本研究不需要 | **已核实（文档）/ 决定不用** | 直连能多拿到：`display: "summarized"` 的思考摘要、`thinking-binding-controls` 的丢块报告、完全干净的 system（没有 Claude Code 那两段）、per-message effort。代价是走 API 计费、不走订阅额度，而且要自己维护 messages 数组、保证只追加不改写，否则思考块会被丢掉或 400。本研究要的"思考深度、思考延续、token 统计"`claude -p` 全都能做到，所以**默认 `claude -p`**，API 只作为以后要看思考摘要时的可选后端；要加时再在对局循环里加一个棋手分支。 |
-| P10 | Codex 能当另一方 | **已核实（2026-09-28）** | sol 和 DeepSeek 都走 `codex exec`（`llmchess/codex_cli.py`），关 features + 补丁模型目录后请求里工具数为 0，诱导跑引擎、读文件都做不到，事件流和会话记录里没有工具调用；全局 `~/.codex/AGENTS.md` 关不掉，作为固定噪声进上下文。只支持无状态。详见 `results/batch5-isolation.md`。 |
+| P10 | Codex 能当另一方 | **已核实（2026-09-28）** | sol 和 DeepSeek 都走 `codex exec`（`agi_chess/codex_cli.py`），关 features + 补丁模型目录后请求里工具数为 0，诱导跑引擎、读文件都做不到，事件流和会话记录里没有工具调用；全局 `~/.codex/AGENTS.md` 关不掉，作为固定噪声进上下文。只支持无状态。详见 `results/batch5-isolation.md`。 |
 | P11 | 国际象棋固定强度对手：Fairy-Stockfish 限 Elo | **已核实能用 / 分数标定待验证** | 本机 `/opt/homebrew/bin/fairy-stockfish`，`id name Fairy-Stockfish 14.0.1 XQ`，有 `UCI_LimitStrength`、`UCI_Elo`（500–2850）、`Skill Level`（-20..20）。实测同一局面每手 0.1 秒：不限强时 6 次只走 d5/Bb3/Qc2 三种好棋，限 500 时出现 Nxe5（送子）这类着法，限强生效。但它是经典估值、不是正版 Stockfish，Elo 标定和正版不一定一致；python-chess 驱动它时不能手动设 `UCI_Variant`（库自动管）。 |
 | P12 | 正版 Stockfish、Maia | **已安装（用户同意）** | Stockfish 19 在 `/opt/homebrew/bin/stockfish`，lc0 v0.32.1 在 `/opt/homebrew/bin/lc0`；Maia 权重 1100–1900 共 9 档在 `~/.local/share/maia/maia-XXXX.pb.gz`（不入库）。官方 README：用 lc0 加载，`go nodes 1`、不搜索。另有 `pip` 包 `maia2`（要 torch，较重，不用）。 |
 | P13 | 中国象棋固定强度对手 | 部分核实 | 同一个 Fairy-Stockfish 下中国象棋可限强，但 `UCI_Elo` 的标定是国际象棋的，**分数在中国象棋上没有意义**，只能当一把强度旋钮做相对比较。本机没有中国象棋的 Maia 类"像人"引擎。已定：这次不引入 Pikafish，就用本机 Fairy-Stockfish 限节点数或深度造几档弱对手，不和人类段位对应。 |
 | P14 | 规则库 | **已核实** | 本机 python-chess 1.11.2、pyffish 0.0.90；系统 Python 3.9.6（代码要兼容 3.9，别用 `match`、`X | Y` 类型写法）。 |
 | P15 | 长捉只能靠规则库判 | **已核实（文档）/ 边界待验证** | 规则库 pyffish 0.0.90 内嵌的 Fairy-Stockfish 和外部对手引擎 14.0.1 不是一个版本；外部引擎只禁长将、不禁长捉，所以不能指望引擎自己避开长捉。程序先用规则库算出会被判负的着法，引擎对手出棋时用 `searchmoves` 把它们排除；模型走到这类着法当非法着退回。长捉是 pyffish 的近似实现，边界没全测。 |
 | P16 | 国际象棋三次重复、五十回合 | **已核实 / 已定口径** | python-chess 的 `outcome()` 默认不因三次重复、五十回合结束，要 `claim_draw=True`（本机实测）；但 `claim_draw=True` 在"走一步就能凑成三次重复"时也算可申诉，会早一个半回合结束（本机实测），所以程序改为直接查"局面已经出现三次""计数已经到 100 个半回合"。口径：**程序替棋手自动申诉，按终局判和**，终局原因写明是哪一条。五次重复、七十五回合是强制和，同样判和。 |
-| P17 | `claude -p` 的运行目录会进提示 | **已核实** | 桩服务抓到的请求里，环境说明写着工作目录全路径、"Is a git repository"、当天日期，**没有** git 状态和提交记录。运行目录放在仓库外的空临时目录 `$TMPDIR/llmchess-cwd/<tag>-<随机>`（路径记进 config，续跑沿用，会话记录按它存），往上找不到任何 CLAUDE.md / AGENTS.md、也不是 git 仓库。 |
+| P17 | `claude -p` 的运行目录会进提示 | **已核实** | 桩服务抓到的请求里，环境说明写着工作目录全路径、"Is a git repository"、当天日期，**没有** git 状态和提交记录。运行目录放在仓库外的空临时目录 `$TMPDIR/agi-chess-cwd/<tag>-<随机>`（路径记进 config，续跑沿用，会话记录按它存），往上找不到任何 CLAUDE.md / AGENTS.md、也不是 git 仓库。 |
 | P18 | 便条的措辞会触发安全分类器 | **已核实（小样本）** | 冒烟时原版便条要求（"留给下一步的自己：当前意图、预料对手会怎么应、下一两步打算走什么、要提防的坑"，加系统提示"你看不到自己之前的思考"）2/2 被以 `reasoning_extraction` 拒答，只改其中一处的三种写法又拒 3 次；改成"写一段便条，写什么由你定，程序下一步原样给你看"、系统提示不提思考后 4/4 通过，模型自己会写意图和计划。拒答时 `claude -p` 退出码 1、`is_error`、`stop_reason: "refusal"`，程序按拦截记，不当调用失败。 |
 
 ## 二、程序结构
@@ -51,7 +51,7 @@
 对局流程外壳只写一份，两种棋各一个平铺的模块；两边只靠一组同名函数约定对接，**不写基类、不做注册、不写未实现的桩**。以后发现某块差异塞不进这组函数，再把那一块下放到棋种模块。
 
 ```
-llmchess/
+agi_chess/
   cli.py         命令行：play / resume / dry-run；公共变量加两方分设；按 --game 选棋种模块
   claude_cli.py  拼 claude -p 命令（关工具、显式 effort）；调不通重试；撞额度抛暂停；用量展开；安全分类器拦截识别
   memory.py      stateless / notes / session：系统提示里那句说明、便条的要求与提取、重试话术
@@ -138,7 +138,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 - `drop_warn`：开了去掉此前思考的一方，续接轮 `thinking_dropped` 为 0 或没给（第九节）；不中断对局。开了的一方每条 `attempt` 另记 `thinking_dropped`。
 - `pause` / `resume` / `forfeit` / `end`（结果、每方合计与中位数：调用数、非法数、每步输入/输出/思考 token、用时、花费）。
 - 不管给模型的 `history` 设多少，记录里都有起始局面和全部落定着法；续跑时按它重放，重复局面照样判得出。
-- 结束时另写 `record.txt`（棋谱加统计）和 `game.pgn`（国际象棋标准 PGN；中国象棋是 xqbase PGN，2026-09-29 起），中国象棋的 `record.txt` 用中文记谱。PGN 标签里有自定义的思考深度 `WhiteEffort` / `BlackEffort`（中国象棋 `RedEffort` / `BlackEffort`），取 `config` 里双方的 effort，只给模型棋手。终局原因用棋种自己的说法。已结束的盘可以按 `game.jsonl` 重新导出这两个文件（不调模型、不写记录）：`python3 -m llmchess export runs/<tag>`。
+- 结束时另写 `record.txt`（棋谱加统计）和 `game.pgn`（国际象棋标准 PGN；中国象棋是 xqbase PGN，2026-09-29 起），中国象棋的 `record.txt` 用中文记谱。PGN 标签里有自定义的思考深度 `WhiteEffort` / `BlackEffort`（中国象棋 `RedEffort` / `BlackEffort`），取 `config` 里双方的 effort，只给模型棋手。终局原因用棋种自己的说法。已结束的盘可以按 `game.jsonl` 重新导出这两个文件（不调模型、不写记录）：`python3 -m agi_chess export runs/<tag>`。
 - **每步元信息**（2026-09-28 起，`records.move_meta` / `meta_comment`）：模型下的每个半回合，在棋谱里这步着法后面跟一段评注。写法是 PGN 评注里的内嵌命令 `[%名 参数]`（出自 PGN Specification Supplement：`[%` + 字母数字命令名 + 空格 + 参数 + `]`；读不懂的命令阅读器应原样保留、不做处理）。例：`1. e4 { [%emt 0:00:12] [%think 280] [%out 300] [%in 2] [%cacheread 100] [%cachewrite 50] }`。
   - `%emt h:mm:ss`：**标准命令**（规范补充：该步用掉的时间，只到整秒，四舍五入）。取本步各次调用用时之和（`attempt.elapsed`，只算成功回来的那次子进程，不含调不通的重试和等额度；llm-chat 路径含脚本起进程的开销）。
   - 以下都是**自定义命令**，没有通行写法：`%think` 思考 token、`%out` 输出 token（含思考）、`%in` 没走缓存的输入、`%cacheread` / `%cachewrite` 缓存读 / 写，都是本步所有调用的合计，口径同 `attempt.usage`；`%illegal` / `%flagged` / `%empty` 本步非法重选、被安全分类器拦、空回复的次数，为 0 时不写；`%dropped` 只有开了去掉此前思考的一方有（第九节），本步各次调用 llm-chat 报的 `thinking_dropped` 之和，0 也写（续接轮为 0 是要看的异常）。命令名按规范只用字母数字，所以不带下划线。
@@ -156,7 +156,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
   - 国际象棋按从弱到强排一架梯子：`random` → Maia-1100 → Maia-1300/1500 → Stockfish 限 Elo。先用 Maia：它像人、强度有公开对照（ChessArena 里没有通用模型赢过 Maia-1100 [6]），Stockfish 限强在低分段走法不像人。要换算大致分数，就在梯子上找模型胜率约 50% 的那一档，每档至少 10 盘；只有一两盘的结果只能说"明显高于 / 低于"某一档。
   - 中国象棋只有 Fairy-Stockfish，限节点数或深度造几档，当相对旋钮用，不报分数（P13）。
 - 引擎每步给固定时间或节点数（Maia `nodes 1`；Stockfish 限强每步 0.1–0.5 秒），写进 config。
-- **批量驱动**（第二批 0.5，`python3 -m llmchess.batch run|summary`，用法见模块说明）：一批 = `runs/<批>/`，一盘一个子目录 `<对手>-s<种子>-<w|b>`（种子同时是开局种子和随机走子种子，w / b 是「我方」执先走方还是黑方，同一开局两色各一盘）。我方默认 `claude:opus` xhigh stateless，`--player` 换成引擎就是引擎对引擎（B2 标定）；随机开局默认国际象棋 8、中国象棋 6 个半回合。我方设置记在 `batch.json`，再跑须一致，对手和种子可以追加。再跑同一条命令即续跑：下完的跳过、没下完的 resume。`--on-limit`（默认 wait）和 `--timeout` 透传给每盘的 play / resume：wait 时撞额度的盘在自己进程里等，驱动照常开新盘。停下只有一条路：任一盘暂停（含 pause 模式撞额度），或驱动收到 Ctrl-C / SIGTERM（驱动装的是和 play 同一套 `claude_cli` 停止处理），驱动置 STOP 不再开新盘、在批次目录放 `.stop`（在跑的盘在下一步之前停，play / resume 的 `--stop-file`），并给每个在跑的盘发一次 SIGTERM，叫醒它里面在等额度 / 等重试的调用写 pause；第二次信号向在跑的盘的进程组发 SIGINT 直接打断；都退出码 3，再跑同一条命令续跑。每盘各在自己的进程组里跑。`summary.md` / `.json` 按（批次，对手）分组：只算下完的盘；战绩、得分率与 Wilson 95% 区间；我方未分胜负、非开局步的大失误率（国际象棋 lichess Blunder，中国象棋亏损 ≥250）与 ACPL，全组合计；第 20 个半回合局面的两两重合与独立盘数。
+- **批量驱动**（第二批 0.5，`python3 -m agi_chess.batch run|summary`，用法见模块说明）：一批 = `runs/<批>/`，一盘一个子目录 `<对手>-s<种子>-<w|b>`（种子同时是开局种子和随机走子种子，w / b 是「我方」执先走方还是黑方，同一开局两色各一盘）。我方默认 `claude:opus` xhigh stateless，`--player` 换成引擎就是引擎对引擎（B2 标定）；随机开局默认国际象棋 8、中国象棋 6 个半回合。我方设置记在 `batch.json`，再跑须一致，对手和种子可以追加。再跑同一条命令即续跑：下完的跳过、没下完的 resume。`--on-limit`（默认 wait）和 `--timeout` 透传给每盘的 play / resume：wait 时撞额度的盘在自己进程里等，驱动照常开新盘。停下只有一条路：任一盘暂停（含 pause 模式撞额度），或驱动收到 Ctrl-C / SIGTERM（驱动装的是和 play 同一套 `claude_cli` 停止处理），驱动置 STOP 不再开新盘、在批次目录放 `.stop`（在跑的盘在下一步之前停，play / resume 的 `--stop-file`），并给每个在跑的盘发一次 SIGTERM，叫醒它里面在等额度 / 等重试的调用写 pause；第二次信号向在跑的盘的进程组发 SIGINT 直接打断；都退出码 3，再跑同一条命令续跑。每盘各在自己的进程组里跑。`summary.md` / `.json` 按（批次，对手）分组：只算下完的盘；战绩、得分率与 Wilson 95% 区间；我方未分胜负、非开局步的大失误率（国际象棋 lichess Blunder，中国象棋亏损 ≥250）与 ACPL，全组合计；第 20 个半回合局面的两两重合与独立盘数。
 
 ## 六、实验建议（第一批）
 
@@ -236,7 +236,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 
 **着法解析**：先找「着法: 」；没有就认英文「Move: 」；再没有就取最后一个非空行（不超过 30 个字符），交给棋种的解析判合不合法。所以只回一行着法、或用英文作答都读得出来。旧协议不变（只认「着法: 」）。
 
-**模型调用走 llm-chat**（`llmchess/chat.py`）：用户级 skill `~/.claude/skills/llm-chat` 的脚本，一个入口五种棋手串——`claude:<模型>`（claude -p）、`codex:<模型>`（GPT，短名如 sol 按 `codex debug models` 取最新一代全名，现为 gpt-6-sol）、`deepseek:<模型>`（HTTP 直连 api.deepseek.com，默认 deepseek-v4-pro，思考只有 low / high / max）、`gemini:<完整 slug>`（agy）、`agy:<完整 slug>`（显式 agy 路由，包括其 Claude 型号）。脚本只用不改；它的会话 id 记进每条 attempt，续跑照记录接上同一段对话。思考深度每次 `--effort` 显式传。config 记 `backend: llm-chat`、每方实际模型 `models`、脚本路径和内容摘要 `llm_chat`。agy 后端调用失败立即停，不等待或重发；其余后端调不通重试、撞额度等解除与停止信号沿用 `claude_cli.call`（`run` 钩子把脚本的输出折成原来的样子）。隔离与跨轮思考的实测见 `results/llm-chat-isolation.md`。
+**模型调用走 llm-chat**（`agi_chess/chat.py`）：项目级 skill `.agents/skills/llm-chat` 的脚本，一个入口五种棋手串——`claude:<模型>`（claude -p）、`codex:<模型>`（GPT，短名如 sol 按 `codex debug models` 取最新一代全名，现为 gpt-6-sol）、`deepseek:<模型>`（HTTP 直连 api.deepseek.com，默认 deepseek-v4-pro，思考只有 low / high / max）、`gemini:<完整 slug>`（agy）、`agy:<完整 slug>`（显式 agy 路由，包括其 Claude 型号）。脚本只用不改；它的会话 id 记进每条 attempt，续跑照记录接上同一段对话。思考深度每次 `--effort` 显式传。config 记 `backend: llm-chat`、每方实际模型 `models`、脚本路径和内容摘要 `llm_chat`。agy 后端调用失败立即停，不等待或重发；其余后端调不通重试、撞额度等解除与停止信号沿用 `claude_cli.call`（`run` 钩子把脚本的输出折成原来的样子）。隔离与跨轮思考的实测见 `results/llm-chat-isolation.md`。
 - 旧路（`claude -p` 直调、`codex exec` 无状态）原样保留，给旧记录续跑和局面题用，已有数据可以逐字复现。
 
 ## 附：核实用的桩服务

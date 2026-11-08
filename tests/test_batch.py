@@ -1,11 +1,11 @@
-"""离线测试：批量驱动（llmchess/batch.py）。不调 claude：盘都是 random / 引擎，或者 PATH 里换成假 claude，下得很短。
+"""离线测试：批量驱动（agi_chess/batch.py）。不调 claude：盘都是 random / 引擎，或者 PATH 里换成假 claude，下得很短。
 批次放在每个用例自建的临时目录里（名字带随机后缀），用完删掉。起引擎的用例在本机没有引擎时跳过。
 """
 import argparse, contextlib, io, json, os, shutil, signal, subprocess, sys, tempfile, time, unittest
 from unittest import mock
 
-from llmchess import batch as B, claude_cli as CL, records
-from llmchess import xiangqi as X
+from agi_chess import batch as B, claude_cli as CL, records
+from agi_chess import xiangqi as X
 
 FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
 
@@ -70,7 +70,7 @@ class FakeBatchSummary(unittest.TestCase):
     """手写一个批次：4 盘中国象棋，其中两盘前 20 个半回合一模一样；另一个对手 1 盘。看得分率、区间、大失误、独立性。"""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.bdir = os.path.join(self.tmp, 'fb')
         os.makedirs(self.bdir)
@@ -147,7 +147,7 @@ class FakeBatchSummary(unittest.TestCase):
 
 class RunAndResume(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     def argv(self, batch, *extra):
@@ -231,7 +231,7 @@ class PassThrough(unittest.TestCase):
             self.assertEqual(self.opt(cmd, '--timeout'), '100')
 
     def test_agy_player_and_opponent_build_real_config(self):
-        from llmchess import cli
+        from agi_chess import cli
         player, opp = 'agy:claude-opus-5-5-high', 'gemini:gemini-4-argon-high'
         self.assertEqual(B.full_spec(player), player)
         a = ns(player=player, protocol='real', memory='session', effort='high')
@@ -246,7 +246,7 @@ class PassThrough(unittest.TestCase):
 
     def test_commands_parse(self):
         """拼出来的 play / resume 命令，play / resume 自己的命令行都认。"""
-        from llmchess import cli
+        from agi_chess import cli
         a = ns(timeout=100, on_limit='pause')
         seen = {}
         with mock.patch.object(cli, 'cmd_play', lambda x: seen.setdefault('play', x) and 0), \
@@ -267,7 +267,7 @@ class Signals(unittest.TestCase):
         self.addCleanup(CL.STOP.clear)
 
     def test_first_stops_second_interrupts(self):
-        tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
         marker = os.path.join(tmp, 'got-term')
         # 子进程：收到 SIGTERM 只记一笔（像 play 的停止处理一样不退），SIGINT 照默认退出
@@ -298,7 +298,7 @@ class Signals(unittest.TestCase):
             self.assertEqual(f.read(), 't')
 
     def test_no_new_game_after_stop(self):
-        tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
         a = ns(game='xiangqi', player='random', opening='', max_plies=4, stop_after=None,
                              no_analyze=True)
@@ -337,7 +337,7 @@ class FakeClaudeLimit(unittest.TestCase):
     pause 时第一盘撞额度就停、退出码 3。子进程的等待都在停止信号上，测试不睡够任何时长。"""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         CL.STOP.clear()
         self.addCleanup(CL.STOP.clear)
@@ -366,7 +366,7 @@ class FakeClaudeLimit(unittest.TestCase):
 
     def test_one_signal_wakes_all_waiting_games(self):
         bdir = os.path.join(self.tmp, 'w')
-        cmd = [sys.executable, '-m', 'llmchess.batch'] + self.argv('w', '--jobs', '2')
+        cmd = [sys.executable, '-m', 'agi_chess.batch'] + self.argv('w', '--jobs', '2')
         log = open(os.path.join(self.tmp, 'driver.log'), 'w')
         self.addCleanup(log.close)
         p = subprocess.Popen(cmd, cwd=str(B.ROOT), env=self.env, stdout=log, stderr=subprocess.STDOUT,
@@ -420,7 +420,7 @@ class FakeClaudeLimit(unittest.TestCase):
 @unittest.skipIf(FSF_MISSING, '本机没有 fairy-stockfish')
 class RunWithOpening(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     def test_same_opening_both_colors_engine_vs_random(self):

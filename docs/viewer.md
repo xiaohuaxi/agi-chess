@@ -26,7 +26,7 @@
 
 **输入是棋谱文件。**
 - 国际象棋：标准 PGN，一个文件里可以有多盘。
-- 中国象棋：xqbase「中国象棋电脑应用规范」的 PGN（原文 `www.xqbase.com/protocol/cchess_pgn.htm`、`cchess_move.htm`）。要点：`[Game "Chinese Chess"]` 放第一个标签；双方标签是 `Red` / `Black`；`Format` 不写默认是中文记谱；黑方数字用全角「１２３」，同线第几个兵的「一二三」仍用汉字（如「一卒平５」）；同一纵线上有多个同种子时用前 / 中 / 后或一二三四五区分，两条纵线都有多个兵另有编号规则；仕、相同线不写前后，靠进退区分。逐条规则第 1 步已对照原文定下，写在 `llmchess/xiangqi.py` 的 `pgn_move` 注释里：一线两兵前 / 后、三兵前 / 中 / 后、四五兵从前往后一至五；两条纵线各有两个以上兵时，这两条线上的兵一起编一至五，先按走棋方的纵线号从小到大（右边先）、同线从前往后，其余纵线的兵照常写（原文说明里「即先看最左边一列」与「先从右到左」和例局矛盾，以例局为准）。评注后的黑方着法照原文例子直接接着写，不补「N...」。读别人的棋谱时容错半角数字、繁体字（俥傌砲後進）、GBK 编码（解码失败回退 `gb18030`）。
+- 中国象棋：xqbase「中国象棋电脑应用规范」的 PGN（原文 `www.xqbase.com/protocol/cchess_pgn.htm`、`cchess_move.htm`）。要点：`[Game "Chinese Chess"]` 放第一个标签；双方标签是 `Red` / `Black`；`Format` 不写默认是中文记谱；黑方数字用全角「１２３」，同线第几个兵的「一二三」仍用汉字（如「一卒平５」）；同一纵线上有多个同种子时用前 / 中 / 后或一二三四五区分，两条纵线都有多个兵另有编号规则；仕、相同线不写前后，靠进退区分。逐条规则第 1 步已对照原文定下，写在 `agi_chess/xiangqi.py` 的 `pgn_move` 注释里：一线两兵前 / 后、三兵前 / 中 / 后、四五兵从前往后一至五；两条纵线各有两个以上兵时，这两条线上的兵一起编一至五，先按走棋方的纵线号从小到大（右边先）、同线从前往后，其余纵线的兵照常写（原文说明里「即先看最左边一列」与「先从右到左」和例局矛盾，以例局为准）。评注后的黑方着法照原文例子直接接着写，不补「N...」。读别人的棋谱时容错半角数字、繁体字（俥傌砲後進）、GBK 编码（解码失败回退 `gb18030`）。
 - 评注里的 `[%emt]` 显示成用时；自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite] [%illegal] [%flagged] [%empty] [%dropped]` 显示成带中文标签的数字；不认识的命令原样列出，后面的文字当理由显示。着法后的 `?` `??` `!` 等标注照常显示。
 - 标签里的 `WhiteEffort` / `BlackEffort`（中国象棋 `RedEffort` / `BlackEffort`，本项目自定义，见下文导出）显示为思考深度；别人的棋谱没有就不显示。
 
@@ -244,7 +244,7 @@
 
 ```
 node viewer/record.mjs [选项] <棋谱> [<棋谱> …] -o <输出.mp4>
-node viewer/record.mjs ~/repos/llm-chess/runs/g1-c-opus-sol -o /tmp/g1.mp4                 # 单盘，默认时长
+node viewer/record.mjs ~/repos/agi-chess/runs/g1-c-opus-sol -o /tmp/g1.mp4                 # 单盘，默认时长
 node viewer/record.mjs runs/a/game.pgn runs/b/game.pgn -o /tmp/ab.mp4 --gap 1.5 --title     # 连播加标题画面，末尾总比分
 node viewer/record.mjs runs/g1-x-opus-sol -o /tmp/g1x-916.mp4 --aspect 9:16
 ```
@@ -270,13 +270,13 @@ node viewer/record.mjs runs/g1-x-opus-sol -o /tmp/g1x-916.mp4 --aspect 9:16
 
 **开发期依赖。** `viewer/package.json` 只放 playwright-core，**锁精确版本 1.58.2**：它配套的正是本机缓存里的 chromium-1208（1.58.0–1.58.2 都是 1208，1.59 起换 1217），不用下载浏览器。缓存里没有配套浏览器的机器，用环境变量 `VIEWER_CHROMIUM` 指到任一 Chromium / Chrome 可执行文件。`.gitignore` 加 `node_modules/`。
 
-## 仓库里的配套改动（`llmchess/`）
+## 仓库里的配套改动（`agi_chess/`）
 
 - **PGN 标签补思考深度**：国际象棋加 `[WhiteEffort "xhigh"]` / `[BlackEffort …]`，取自 `game.jsonl` 的 `config`（双方用的深度）；非模型方（引擎、随机）不写。
 - **中国象棋导出 PGN**（`game.pgn`，和 `record.txt` 并存）：标签 `Game`（第一个）、`Event`、`Red`、`Black`、`RedEffort`、`BlackEffort`、`Result`、`Termination`（沿用现在的中文结束原因）；评注写法和国际象棋一致。
-  - **着法文字**：现有中文记谱（cchess 库）在多路兵、同线三个以上同种子等少见局面写不准，会在后面补「（坐标）」，出异常时直接写坐标（`llmchess/xiangqi.py` 的 `notation`）；这种写法进 PGN 就没法解析。PGN 导出改为按 xqbase 规则生成中文记谱（从局面和坐标算，只是记谱格式，不涉及棋规）；`record.txt` 保持原样，旧记录照旧复现。现有 135 盘已结束的象棋对局里一次都没碰到这类局面，所以要另造多路兵、同线多兵的局面测往返。
+  - **着法文字**：现有中文记谱（cchess 库）在多路兵、同线三个以上同种子等少见局面写不准，会在后面补「（坐标）」，出异常时直接写坐标（`agi_chess/xiangqi.py` 的 `notation`）；这种写法进 PGN 就没法解析。PGN 导出改为按 xqbase 规则生成中文记谱（从局面和坐标算，只是记谱格式，不涉及棋规）；`record.txt` 保持原样，旧记录照旧复现。现有 135 盘已结束的象棋对局里一次都没碰到这类局面，所以要另造多路兵、同线多兵的局面测往返。
 - **中文折行**：现在导出会在中文字中间断行，任何阅读器读回来断开处都多一个空格。改法：优先在空格或中文标点后断行，实在没有才硬切；阅读器读的时候，两边都是中文的断行不补空格。（已实施：中文串里只在两个全角字符之间断，「中文」按 Unicode 东亚宽度 W / F 判；阅读器照同一判法。断点优先级：中文标点后 > 其余空格 > 两个中文字之间硬切；「中文 空格 中文」里的空格永不作断点，否则按上面的读法会少一个空格，第一版漏了这条，本机 424 步中招，已修并重导。全角标点后断行同样要求标点本身是 W / F：「…」「—」东亚宽度是 A，阅读器不当全角，在「……」后断行读回来多一个空格（2026-10-02 本机 `zx/fsf-nodes100-s2-w` 一步中招），导出端的标点断点集合因此按同一判法过滤、不收这两个，已修并重导受影响的盘。取舍：硬切在两个中文字之间时，我们的阅读器读回正好，别家 PGN 阅读器会多一个空格，可以接受——修之前本来如此，且只在没有标点可断的长串出现。往返由 `viewer/test/wrap.test.js` 和读 runs 的回归逐字核对。）国际象棋不走 `meta_comment`，要改的是评注拆词和折行那两处（`meta_tokens`、`wrap`），两种棋共用。
-- 已结束的盘用 `python3 -m llmchess export runs/<tag>` 重导（只重写导出文件，不动 `game.jsonl`）。批量重导只挑记录里有 `end` 那一行的盘，导不出的跳过并计数；别碰正在下的对局。
+- 已结束的盘用 `python3 -m agi_chess export runs/<tag>` 重导（只重写导出文件，不动 `game.jsonl`）。批量重导只挑记录里有 `end` 那一行的盘，导不出的跳过并计数；别碰正在下的对局。
 
 ## 工作量（估计）
 

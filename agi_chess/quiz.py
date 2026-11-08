@@ -1,19 +1,19 @@
 """局面题模式（design.md 第六节组 1、第八节）：固定局面、stateless，每次只让模型走一步，引擎事后判这步好坏。
 
-    python3 -m llmchess.quiz run --game xiangqi                 # 30 局面 × 四档 × 2 遍；断点续跑就是再跑一次同一条
-    python3 -m llmchess.quiz run --game chess --jobs 4 --efforts medium,high,xhigh,max --reps 2
-    python3 -m llmchess.quiz run --game chess --ids c01 --efforts medium --reps 1    # 冒烟
-    python3 -m llmchess.quiz run --game xiangqi --ids x01 --dry-run                   # 只打印提示，不调模型
-    python3 -m llmchess.quiz judge --game chess                 # 引擎事后判，写 judged.jsonl
-    python3 -m llmchess.quiz report                             # 两种棋 × 档位的汇总表
+    python3 -m agi_chess.quiz run --game xiangqi                 # 30 局面 × 四档 × 2 遍；断点续跑就是再跑一次同一条
+    python3 -m agi_chess.quiz run --game chess --jobs 4 --efforts medium,high,xhigh,max --reps 2
+    python3 -m agi_chess.quiz run --game chess --ids c01 --efforts medium --reps 1    # 冒烟
+    python3 -m agi_chess.quiz run --game xiangqi --ids x01 --dry-run                   # 只打印提示，不调模型
+    python3 -m agi_chess.quiz judge --game chess                 # 引擎事后判，写 judged.jsonl
+    python3 -m agi_chess.quiz report                             # 两种棋 × 档位的汇总表
     # 分档（第二批块 A）：--arm 起名，--set 改变量（可重复），记录放 runs/quiz-<batch>/<档名>/<棋种>/
-    python3 -m llmchess.quiz run --game xiangqi --batch batch2 --arm threats --set threats=on --efforts xhigh --reps 3
-    python3 -m llmchess.quiz run --game chess --batch batch2 --arm legal --set legal=list --efforts xhigh --reps 2
-    python3 -m llmchess.quiz copy --game xiangqi --batch batch2 --from-arm zh --arm base   # 同局面同提示的旧作答复用过来
-    python3 -m llmchess.quiz judge --batch batch2 [--arm threats]   # 不给 --arm 就判全部档
-    python3 -m llmchess.quiz report --batch batch2                  # 按档分组出表；threats 档另出一张清单打分表
+    python3 -m agi_chess.quiz run --game xiangqi --batch batch2 --arm threats --set threats=on --efforts xhigh --reps 3
+    python3 -m agi_chess.quiz run --game chess --batch batch2 --arm legal --set legal=list --efforts xhigh --reps 2
+    python3 -m agi_chess.quiz copy --game xiangqi --batch batch2 --from-arm zh --arm base   # 同局面同提示的旧作答复用过来
+    python3 -m agi_chess.quiz judge --batch batch2 [--arm threats]   # 不给 --arm 就判全部档
+    python3 -m agi_chess.quiz report --batch batch2                  # 按档分组出表；threats 档另出一张清单打分表
     # 第三批块 A：batch2 的局面（剔除 x2-25）、reason 档，记录另放一个根目录（--out，judge / report 给同一个 --out）
-    python3 -m llmchess.quiz run --game chess --batch batch2 --out runs/quiz-batch3 --arm reason --set reason=on --efforts xhigh --reps 2
+    python3 -m agi_chess.quiz run --game chess --batch batch2 --out runs/quiz-batch3 --arm reason --set reason=on --efforts xhigh --reps 2
 
 --set 可改的变量：view、show all|board|pieces|fen|boardpieces、legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、
   threats on|off、attackmap on|off、reason on|off。
@@ -513,7 +513,7 @@ def cmd_run(a):
     meta = read_meta(out)
     if meta is None:
         # claude 的运行目录：仓库外的空临时目录（design.md P7、P17），一批共用一个，记下来续跑沿用
-        meta = {'claude_cwd': os.path.join(os.path.realpath(tempfile.gettempdir()), 'llmchess-cwd',
+        meta = {'claude_cwd': os.path.join(os.path.realpath(tempfile.gettempdir()), 'agi-chess-cwd',
                                            'quiz-%s-%s%s-%s' % (a.batch, (a.arm + '-') if a.arm else '', game,
                                                                 uuid.uuid4().hex[:8])),
                 'first_commit': commit(), 'claude_version': claude_cli.version(),
@@ -1147,7 +1147,7 @@ def cmd_report(a):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog='python3 -m llmchess.quiz', description=__doc__.split('\n')[0],
+    ap = argparse.ArgumentParser(prog='python3 -m agi_chess.quiz', description=__doc__.split('\n')[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
     sub = ap.add_subparsers(dest='cmd', required=True)
     r = sub.add_parser('run', help='作答（断点续跑：再跑同一条）')

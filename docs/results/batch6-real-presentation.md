@@ -1,7 +1,7 @@
 # 第六批：新协议下的给法复测（opus / sol，局面题）
 
 - 日期：2026-09-28（19:13–21:03）。目的：整盘提示改成「模型就是真实棋手」协议（design.md 第九节）后，棋手拿到的信息实质少了——**不再说「你现在正被将军 / 没有被将军」**，子力清单不写子数，国际象棋对方上一步只写 UCI（不带 SAN 的 +），不要求中文、不要求理由。第四、五批定默认给法时都是旧提示，这批在新协议下补一轮小规模复测，看默认给法（中国象棋 pieces，国际象棋 all = FEN + 字母棋盘）要不要改。
-- 条件：`python3 -m llmchess.quiz run --set protocol=real --set show=<档>`，程序在 real-player 分支提交 68a76bc，claude 2.1.283。**high**，stateless，history=0。题库同第四、五批（`data/batch2/`）：中国象棋 29 个局面（已剔除 x2-25，22 个 group），国际象棋 21 个局面（20 个 group）。
+- 条件：`python3 -m agi_chess.quiz run --set protocol=real --set show=<档>`，程序在 real-player 分支提交 68a76bc，claude 2.1.283。**high**，stateless，history=0。题库同第四、五批（`data/batch2/`）：中国象棋 29 个局面（已剔除 x2-25，22 个 group），国际象棋 21 个局面（20 个 group）。
   - **opus**（`claude -p`）：中国象棋 pieces / all / boardpieces，国际象棋 all / board，**每题 3 遍**。每档 87 / 63 次作答，共 387 次。记录在 `runs/quiz-6r/r-<档>/<棋种>/`。
   - **sol**（`codex exec`，gpt-6-sol）：只跑中国象棋 pieces / all / boardpieces，**每题 2 遍**，每档 58 次，共 174 次。记录在 `runs/quiz-6r-sol/r-<档>/xiangqi/`。和第五批一样，Codex 会把用户级 `~/.codex/AGENTS.md` 当一条用户消息带进去，按固定噪声处理。
   - DeepSeek 没跑。

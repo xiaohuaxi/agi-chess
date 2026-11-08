@@ -1,5 +1,5 @@
 [Game "Chinese Chess"]
-[Event "llm-chess b1-xq-session-1"]
+[Event "agi-chess b1-xq-session-1"]
 [Red "claude:opus"]
 [Black "engine:fsf:nodes=100"]
 [RedEffort "high"]

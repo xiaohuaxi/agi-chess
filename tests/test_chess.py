@@ -1,4 +1,4 @@
-"""离线单元测试：国际象棋规则模块（llmchess/chess_.py）。
+"""离线单元测试：国际象棋规则模块（agi_chess/chess_.py）。
 
 不调 claude；局面用 python-chess 的 FEN 直接构造（parse() 只用得到 st['board']，
 不需要凑齐 start() 返回的完整状态）。
@@ -7,7 +7,7 @@ import unittest
 
 import chess
 
-from llmchess import chess_ as C
+from agi_chess import chess_ as C
 
 
 def mkst(fen):

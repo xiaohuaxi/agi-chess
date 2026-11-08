@@ -10,9 +10,9 @@ import tempfile
 import unittest
 from unittest import mock
 
-from llmchess import chess_ as C, claude_cli, cli, codex_cli, quiz, records, runner
-from llmchess import xiangqi as X
-from llmchess.claude_cli import Paused
+from agi_chess import chess_ as C, claude_cli, cli, codex_cli, quiz, records, runner
+from agi_chess import xiangqi as X
+from agi_chess.claude_cli import Paused
 
 FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
 
@@ -27,7 +27,7 @@ def run_quiet(argv):
 
 class WholeGameOffline(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     def test_legacy_direct_refusal_stops_without_forfeit(self):
@@ -103,7 +103,7 @@ class ResumeReproducesRandomSeed(unittest.TestCase):
     和"中途暂停再续跑"应该走出完全一样的着法序列。"""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     def _moves_of(self, run_dir):
@@ -148,7 +148,7 @@ class RepeatedPositionDetectedAfterReload(unittest.TestCase):
     ending() 靠的是完整着法历史，和当时给模型看了多少 history 无关。"""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     def test_xiangqi_repetition_survives_reload(self):
@@ -185,7 +185,7 @@ class SessionCostIsCumulative(unittest.TestCase):
     续跑时从记录里接上一次的累计值；stateless 原样记。claude 调用打桩，不真调。"""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     def make_ctx(self, mem):
@@ -345,7 +345,7 @@ class GameShow(unittest.TestCase):
     --show / --view 二选一，一方单设覆盖公共的；每方实际用的 show 记进 config。"""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     def sides(self, game, *extra):

@@ -89,7 +89,7 @@ export const TEXT = {
 
 export const T = (lang) => TEXT[lang] || TEXT.zh;
 
-// 结束原因（PGN 的 Termination）。导出端写的是中文（llmchess/chess_.py 的 TERMINATION 与 outcome、xiangqi.py 的终局判定、
+// 结束原因（PGN 的 Termination）。导出端写的是中文（agi_chess/chess_.py 的 TERMINATION 与 outcome、xiangqi.py 的终局判定、
 // runner.py 的半回合上限与连续非法判负、analyze.py 的上限评分裁决），英文界面按这张表换；新增结束原因时这里同步加一条。
 // 表里没有的：不含中文的（别人的英文棋谱）照原样，含中文的不显示（横幅只留「Red wins」这类结果），免得英文画面上冒出中文。
 const SIDE_EN = { 红方: 'Red', 白方: 'White', 黑方: 'Black' };

@@ -2,4 +2,5 @@
 # 哪个用例漏了替身就会直接失败，而不是悄悄花额度。用假脚本的用例（test_chat）自己替换 chat.SCRIPT。
 import os
 
-os.environ['LLMCHESS_LLM_CHAT'] = '/nonexistent/llm-chess-tests-must-not-call-llm-chat.py'
+for _var in ('AGI_CHESS_LLM_CHAT', 'AGICHESS_LLM_CHAT', 'LLMCHESS_LLM_CHAT'):
+    os.environ[_var] = '/nonexistent/agi-chess-tests-must-not-call-llm-chat.py'

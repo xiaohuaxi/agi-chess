@@ -1,9 +1,9 @@
-"""离线单元测试：思考延续三种模式的文字处理（llmchess/memory.py）。全是纯函数，手写假回复即可。"""
+"""离线单元测试：思考延续三种模式的文字处理（agi_chess/memory.py）。全是纯函数，手写假回复即可。"""
 import unittest
 
 import chess
 
-from llmchess import chess_ as C, memory as M, xiangqi as X
+from agi_chess import chess_ as C, memory as M, xiangqi as X
 
 # 第二批 B1 的原样回复（b2B1 parsebug）：先写「着法: e3」，又改口「应当写皇后的着法：」，再写「着法: g3e3」
 REVISED_CHESS = """**思路：** 黑后在 g4 受 e6 象保护。如果 Qxg4 Bxg4 换后，白方少三个兵进入残局，基本没有机会，所以要保留皇后。

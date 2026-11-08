@@ -6,4 +6,4 @@
 
 ## 本地改动（只此一处）
 
-- `src/Chessboard.js` 默认棋子文件由 `pieces/standard.svg` 改成 `pieces/cburnett.svg`（行内注释标了 `llm-chess:`）。原因：原文件已移除，默认值不改的话，谁忘了传参数就会去取一个不存在的文件。升级 cm-chessboard 时记得重做这一处。
+- `src/Chessboard.js` 默认棋子文件由 `pieces/standard.svg` 改成 `pieces/cburnett.svg`（行内注释标了 `agi-chess:`）。原因：原文件已移除，默认值不改的话，谁忘了传参数就会去取一个不存在的文件。升级 cm-chessboard 时记得重做这一处。

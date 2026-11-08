@@ -1,7 +1,7 @@
 """整盘棋手的模型调用走仓内 skill llm-chat 的脚本（Claude / GPT / DeepSeek / Gemini / agy 一个入口，会话能续接）。
 
 脚本默认在仓内 .agents/skills/llm-chat/scripts/llm_chat.py（不存在则回退 ~/.claude/skills/llm-chat/scripts/llm_chat.py），
-环境变量 LLMCHESS_LLM_CHAT 可以改。这里只调用、
+环境变量 AGI_CHESS_LLM_CHAT（兼容 AGICHESS_LLM_CHAT / LLMCHESS_LLM_CHAT）可以改。这里只调用、
 不改：用户提示走 stdin，回答在 stdout，stderr 最后一行是 `LLM_CHAT_META {json}`；失败时 stderr 写 `llm-chat: error: …`、
 退出码 1（信号取消 130）。第一次调用给 --system，之后 --session <id> 续接同一段对话（Claude 是 claude -p --resume，
 GPT 是 codex exec resume，DeepSeek 是脚本自己回放历史正文，Gemini / agy 是 agy 续接）。隔离与跨轮思考的实测见 docs/results/llm-chat-isolation.md。
@@ -22,7 +22,10 @@ _USER_SCRIPT = pathlib.Path.home() / '.claude' / 'skills' / 'llm-chat' / 'script
 
 
 def _default_script():
-    return os.environ.get('LLMCHESS_LLM_CHAT') or str(_REPO_SCRIPT if _REPO_SCRIPT.is_file() else _USER_SCRIPT)
+    env = (os.environ.get('AGI_CHESS_LLM_CHAT')
+           or os.environ.get('AGICHESS_LLM_CHAT')
+           or os.environ.get('LLMCHESS_LLM_CHAT'))
+    return env or str(_REPO_SCRIPT if _REPO_SCRIPT.is_file() else _USER_SCRIPT)
 
 
 SCRIPT = _default_script()

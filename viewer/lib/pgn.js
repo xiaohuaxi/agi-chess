@@ -12,7 +12,7 @@ export function decodeText(bytes) {
 }
 
 // ---------------------------------------------------------------- 全角判断与评注断行还原
-// 导出端（llmchess/records.py 的 wide / chunks）只在两个全角字符之间断中文长句，全角 = Unicode 东亚宽度 W / F。
+// 导出端（agi_chess/records.py 的 wide / chunks）只在两个全角字符之间断中文长句，全角 = Unicode 东亚宽度 W / F。
 // JS 没有东亚宽度表，这里列出 W / F 的主要区段（中日韩表意文字、假名、谚文、全角标点与数字、常见 emoji），
 // 是近似：漏判只会让断行处多一个或少一个空格，不影响内容。
 const WIDE = [

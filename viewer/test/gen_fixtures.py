@@ -1,7 +1,7 @@
 """生成 viewer/test/fixtures/ 下的测试数据（入库）。在仓库根目录跑：python3 viewer/test/gen_fixtures.py
 
 - xq-roundtrip.json：象棋记谱往返。一批局面（多路兵、同线多子、仕相同线、随机对局途中、兵多的随机局面），
-  每个局面的全部合法着法由导出端 llmchess.xiangqi.pgn_move 写成中文记谱，并带 pyffish 判的「走完是否将军」。
+  每个局面的全部合法着法由导出端 agi_chess.xiangqi.pgn_move 写成中文记谱，并带 pyffish 判的「走完是否将军」。
   JS 端解析回坐标、判将军，应与这里逐条一致。
 - 两盘样例（有 runs/ 时才重取）：从本机对局截一盘象棋、一盘国际象棋的 game.pgn，
   连同 game.jsonl 里每步的坐标与将军标记。
@@ -17,7 +17,7 @@ sys.path.insert(0, ROOT)
 
 import pyffish as sf  # noqa: E402
 
-from llmchess import xiangqi as X  # noqa: E402
+from agi_chess import xiangqi as X  # noqa: E402
 
 OUT = os.path.join(ROOT, 'viewer', 'test', 'fixtures')
 # 对局记录目录：环境变量 VIEWER_RUNS 优先；worktree（.agents/worktrees/<名>）里没有 runs/，默认用主检出的

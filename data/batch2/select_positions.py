@@ -52,10 +52,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, ROOT)
 
-from llmchess import xiangqi as X          # noqa: E402
-from llmchess import quiz as Q             # noqa: E402
-from llmchess import analyze as A          # noqa: E402
-from llmchess import records               # noqa: E402
+from agi_chess import xiangqi as X          # noqa: E402
+from agi_chess import quiz as Q             # noqa: E402
+from agi_chess import analyze as A          # noqa: E402
+from agi_chess import records               # noqa: E402
 
 B1 = os.path.join(ROOT, 'data', 'batch1')
 RUNS = os.path.join(ROOT, 'runs')

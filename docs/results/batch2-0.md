@@ -1,6 +1,6 @@
 # 第二批块 0：中文复测
 
-- 日期：2026-09-26。条件：opus（服务端 `claude-opus-5-5`，Claude Code 2.1.283，`claude -p` 走订阅），xhigh，stateless，history=0，局面和提示格式同第一批局面题（`llmchess/quiz.py`，commit d7641d3），系统提示新增「请用中文回答。」（8f639bf，两种棋统一加了这句，不分档；`zh` 只是本次记录用的档名）。
+- 日期：2026-09-26。条件：opus（服务端 `claude-opus-5-5`，Claude Code 2.1.283，`claude -p` 走订阅），xhigh，stateless，history=0，局面和提示格式同第一批局面题（`agi_chess/quiz.py`，commit d7641d3），系统提示新增「请用中文回答。」（8f639bf，两种棋统一加了这句，不分档；`zh` 只是本次记录用的档名）。
 - 样本：复用第一批的 30 个中国象棋局面、30 个国际象棋局面（`data/batch1/{xiangqi,chess}.jsonl`），每局面 **3 遍**（比 `plan-batch2.md` 块 0 写的 2 遍多跑一遍，额度不用省），共 **90 次 × 2 种棋 = 180 次调用**。原始记录在 `runs/quiz-batch2/zh/{xiangqi,chess}/`（被 git 忽略，不入库），逐题判定在同目录 `judged.jsonl`，汇总表 `runs/quiz-batch2/report.txt`。180 次调用零超时、零调不通、零撞额度等待、零拦截、零空回复。
 - 对照数据：第一批 xhigh（`runs/quiz-batch1/{xiangqi,chess}/judged.jsonl`，每局面 2 遍，未加中文提示，`results/batch1-depth.md`）。
 - 引擎判定口径、大失误 / 谁能吃到谁类等指标定义完全沿用第一批，见 `results/batch1-depth.md`「口径与局限」或 `quiz.py` 开头注释。
@@ -73,5 +73,5 @@
 
 ## 对后续实验的含义
 
-- **英文作答已经压下去，块 A 的 base 档可以直接复用这批数据**：块 A 的 base 档（`plan-batch2.md`）条件和这批完全一致（opus、xhigh、stateless、history=0、中文提示），可以用 `python3 -m llmchess.quiz copy --game <棋种> --batch batch2 --from-arm zh --arm base` 直接把这 180 次记录复制成 base 档的样本，不用重新调用模型。
+- **英文作答已经压下去，块 A 的 base 档可以直接复用这批数据**：块 A 的 base 档（`plan-batch2.md`）条件和这批完全一致（opus、xhigh、stateless、history=0、中文提示），可以用 `python3 -m agi_chess.quiz copy --game <棋种> --batch batch2 --from-arm zh --arm base` 直接把这 180 次记录复制成 base 档的样本，不用重新调用模型。
 - **国际象棋这次的方向性提升要留意**：块 A 用 base 档做对照时，如果发现某个新做法「相对 base 有效」，要留意这批 base 数据本身相对第一批 xhigh 就有一次不明原因的提升，不要把这次提升也算到新做法头上。

@@ -129,7 +129,7 @@ Argon 本盘实际走子整体优于对手，去掉前 15 手和已分胜负局�
 | 前提 | 状态与证据 |
 |---|---|
 | 旧 Opus 型号、effort 可确认 | 已核实：44 盘 game.jsonl 服务端型号均含 `claude-opus-5-5`，config effort 分组见上；原始汇总逐侧记录 |
-| 统计规则可以对齐 | 已核实：历史比较部分 45 盘 analysis-summary 参数一致，评级随机开局 8 半回合已排除；定义见 `llmchess/analyze.py` 的 `decided` 与 summary 聚合 |
+| 统计规则可以对齐 | 已核实：历史比较部分 45 盘 analysis-summary 参数一致，评级随机开局 8 半回合已排除；定义见 `agi_chess/analyze.py` 的 `decided` 与 summary 聚合 |
 | 旧人类锚使用正确版本 | 已核实：`opus-max-rating.md`“按新规则回看”，约 1800 / 1920；历史快照而非当前排名 |
 | Argon 与旧 Opus 已有可迁移的对外胜率 | **未建立**：已有一盘自弈及一盘胜 agy Opus High，但新对手的强度未标定到旧 CLI max；数值范围只作工作假设 |
 | 新 agy Opus High 等同旧 CLI Opus max | **未建立**：型号名称相近不足以对齐 effort、调用路径及表现 |

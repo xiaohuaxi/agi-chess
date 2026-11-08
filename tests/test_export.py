@@ -5,8 +5,8 @@ import unittest
 
 import chess.pgn
 
-from llmchess import chess_ as C, records
-from llmchess import xiangqi as X
+from agi_chess import chess_ as C, records
+from agi_chess import xiangqi as X
 
 
 def unwrap(text):
@@ -140,7 +140,7 @@ class XiangqiPgn(unittest.TestCase):
         _, files = self.export()
         self.assertIn('record.txt', files)
         head = files['game.pgn'].split('\n\n')[0].split('\n')
-        self.assertEqual(head, ['[Game "Chinese Chess"]', '[Event "llm-chess x9"]', '[Red "claude:opus"]',
+        self.assertEqual(head, ['[Game "Chinese Chess"]', '[Event "agi-chess x9"]', '[Red "claude:opus"]',
                                 '[Black "codex:astra"]', '[RedEffort "xhigh"]', '[BlackEffort "xhigh"]',
                                 '[Result "1-0"]', '[Termination "将死"]'])
 

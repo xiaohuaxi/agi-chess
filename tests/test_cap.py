@@ -7,7 +7,7 @@ import shutil
 import tempfile
 import unittest
 
-from llmchess import analyze, cli, records, runner
+from agi_chess import analyze, cli, records, runner
 
 FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
 STOCKFISH_MISSING = shutil.which('stockfish') is None and not os.path.exists('/opt/homebrew/bin/stockfish')
@@ -32,7 +32,7 @@ class CapVerdict(unittest.TestCase):
 
 class CapRuleInGames(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='llmchess-test-cap-')
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-test-cap-')
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.out = os.path.join(self.tmp, 'runs')
 

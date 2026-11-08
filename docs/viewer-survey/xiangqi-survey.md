@@ -95,7 +95,7 @@
 | `move` 行有 ICCS、中文记谱、将军标记、本步统计 | 已核实 | 抽看 `runs/g1-x-opus-sol/game.jsonl` |
 | `end` 行有胜方与终局原因 | 已核实 | 同上，`end.end = {winner, reason}` |
 | `config` 有双方模型和思考深度 | 已核实 | `cfg.players`、`cfg.sides.w.effort` |
-| 每步理由与 token 合计可直接拿到 | 已核实 | `llmchess/records.py` 的 `move_meta`（`why` 取自落定那次回复） |
+| 每步理由与 token 合计可直接拿到 | 已核实 | `agi_chess/records.py` 的 `move_meta`（`why` 取自落定那次回复） |
 | ICCS → DhtmlXQ 坐标 `y = 9 − 行` | 已核实 | 东萍演示页「炮二平五 = 7747」、vschess 样例 `binit` |
 | vschess PGN 解析会删评注内容 | 已核实（读源码） | `vschess` 源码 `function.dataToNode.js:179` 起 |
 | 逐帧截图 + ffmpeg 节奏确定、可出高清 | 已核实（本机小实验，非本单） | `recording.md` 第一、二节 |

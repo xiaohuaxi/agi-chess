@@ -2,7 +2,7 @@
 
 # 棋谱浏览与视频录制
 
-阅读器直接读取 PGN：国际象棋用标准 PGN，中国象棋用 xqbase PGN。可以直接浏览随仓入库的 180 盘正式模型对局（`runs/<tag>/game.pgn`）、测试样例和自己的棋谱，不需要模型账号或棋类引擎。
+阅读器直接读取 PGN：国际象棋用标准 PGN，中国象棋用 xqbase PGN。可以直接浏览随仓入库的 171 盘正式模型对局（`runs/<tag>/game.pgn`）、测试样例和自己的棋谱，不需要模型账号或棋类引擎。
 
 阅读器默认中文，网址加 `lang=en` 可切换英文。安装总览见[安装与运行](setup.md)，实现与完整参数说明见[阅读器设计](viewer.md)，素材与工具许可见[依赖说明](dependencies.md)。
 
@@ -22,7 +22,7 @@ python3 -m http.server --bind 127.0.0.1 8000
 - [中国象棋测试样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
 - [两种棋样例连播](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1)
 
-仓库 `runs/` 目录已包含全部 65 个正式模型对局目录（共 180 盘）的 `game.pgn`，只需将网址中的 `files=` 改为任意 `/runs/<tag>/game.pgn` 即可查看对应对局与每步思考理由。服务必须从仓库根目录启动，URL 中的路径相对站点根目录。只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8000 被占用时换一个端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
+仓库 `runs/` 目录已包含全部 65 个正式模型对局目录（共 171 盘）的 `game.pgn`，只需将网址中的 `files=` 改为任意 `/runs/<tag>/game.pgn` 即可查看对应对局与每步思考理由。服务必须从仓库根目录启动，URL 中的路径相对站点根目录。只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8000 被占用时换一个端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
 
 ## 浏览自己的棋谱
 
@@ -103,6 +103,6 @@ ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,profile,pix
 
 默认应为 H.264 High、yuv420p、1080×1440、30/1。再实际打开视频，检查开头、几步走子、中文和终局横幅；中国象棋使用系统字体，不同机器的中文字形可能不同。
 
-已入库 `runs/<tag>/game.pgn` 已是最新导出的完整棋谱，可直接浏览或录制（无需也不可对其运行 `export`，因为体积庞大的底层 `game.jsonl` 未入库）。若录制自己新跑的模型对局，先确认对局已结束（本机 `game.jsonl` 最后一条为 `type=end`），再用 `python -m llmchess export runs/<tag>` 导出或更新棋谱。
+已入库 `runs/<tag>/game.pgn` 已是最新导出的完整棋谱，可直接浏览或录制（无需也不可对其运行 `export`，因为体积庞大的底层 `game.jsonl` 未入库）。若录制自己新跑的模型对局，先确认对局已结束（本机 `game.jsonl` 最后一条为 `type=end`），再用 `python -m agi_chess export runs/<tag>` 导出或更新棋谱。
 
 英文录制在原命令后加 `--set lang=en --set "names=opus=Claude Opus,astra=GPT astra"`，也可同时用 `--openhold 0.5`。象棋英文着法为 WXF 显示，输入棋谱仍用 xqbase 格式。

@@ -748,7 +748,7 @@ def pgn(st, cfg, end, meta):
     起始局面都是标准开局（随机开局那几步也是着法），所以不写 FEN 标签。"""
     res = '1-0' if end['winner'] == 'w' else '0-1' if end['winner'] == 'b' else '1/2-1/2'
     eff = records.efforts(cfg)
-    tags = [('Game', 'Chinese Chess'), ('Event', 'llm-chess %s' % cfg['tag']),
+    tags = [('Game', 'Chinese Chess'), ('Event', 'agi-chess %s' % cfg['tag']),
             ('Red', cfg['players']['w']), ('Black', cfg['players']['b'])]
     tags += [(('RedEffort' if side == 'w' else 'BlackEffort'), eff[side]) for side in 'wb' if side in eff]
     tags += [('Result', res), ('Termination', end['reason'])]

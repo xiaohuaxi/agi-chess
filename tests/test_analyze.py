@@ -1,9 +1,9 @@
-"""离线单元测试：事后引擎分析（llmchess/analyze.py）。不调 claude；重放用例起本机引擎，深度压低保证快。
+"""离线单元测试：事后引擎分析（agi_chess/analyze.py）。不调 claude；重放用例起本机引擎，深度压低保证快。
 记录文件是人造的，放在每个用例自建的临时目录里（名字带随机后缀），用完删掉。
 """
 import contextlib, io, json, os, shutil, tempfile, unittest
 
-from llmchess import analyze as A
+from agi_chess import analyze as A
 
 FSF_MISSING = shutil.which('fairy-stockfish') is None and not os.path.exists('/opt/homebrew/bin/fairy-stockfish')
 STOCKFISH_MISSING = shutil.which('stockfish') is None and not os.path.exists('/opt/homebrew/bin/stockfish')
@@ -58,7 +58,7 @@ def read_rows(d):
 
 class TmpCase(unittest.TestCase):
     def setUp(self):
-        self.root = tempfile.mkdtemp(prefix='llmchess-analyze-test-')
+        self.root = tempfile.mkdtemp(prefix='agi-chess-analyze-test-')
 
     def tearDown(self):
         shutil.rmtree(self.root, ignore_errors=True)

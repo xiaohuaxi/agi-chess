@@ -1,4 +1,4 @@
-"""离线单元测试：中国象棋规则模块（llmchess/xiangqi.py）。
+"""离线单元测试：中国象棋规则模块（agi_chess/xiangqi.py）。
 
 不调 claude、不起子进程；棋规判定用 pyffish 直接核实（它就是 xiangqi.py 包装的库），
 局面用 xiangqi.board_fen() 手搭（只涉及棋子摆放，和被测的着法解析 / 终局逻辑是两回事）。
@@ -7,7 +7,7 @@ import unittest
 
 import pyffish as sf
 
-from llmchess import xiangqi as X
+from agi_chess import xiangqi as X
 
 XQ = 'xiangqi'
 

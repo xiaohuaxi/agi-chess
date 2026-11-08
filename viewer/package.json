@@ -1,5 +1,5 @@
 {
-  "name": "llm-chess-viewer",
+  "name": "agi-chess-viewer",
   "private": true,
   "type": "module",
   "description": "Dev-only deps for the game record viewer: headless screenshots and recording. The page itself needs none of this.",

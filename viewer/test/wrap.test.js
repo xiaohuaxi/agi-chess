@@ -1,6 +1,6 @@
-// 评注折行往返：导出端（llmchess，python3 现场生成）写进 game.pgn 的理由文字，经本页分词器读回来要逐字一致。
+// 评注折行往返：导出端（agi_chess，python3 现场生成）写进 game.pgn 的理由文字，经本页分词器读回来要逐字一致。
 // 重点是「中文 空格 中文」：导出端永不在这种空格处断行，否则按「换行两边都是全角字符不补空格」读回来会少一个空格
-// （docs/viewer.md「中文折行」）。本机没有 python3 或 llmchess 依赖时跳过。
+// （docs/viewer.md「中文折行」）。本机没有 python3 或 agi_chess 依赖时跳过。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -13,7 +13,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 // 随机拼 200 条理由（固定种子）：中文词、英文词、着法、全角标点，词间随机加或不加空格；两种棋各导一盘，每步一条理由。
 const PY = `
 import json, random
-from llmchess import chess_ as C, records, xiangqi as X
+from agi_chess import chess_ as C, records, xiangqi as X
 rng = random.Random(7)
 zh = ['红方', '中炮', '过河', '黑方', '必须', '马上', '应对', '中卒', '丢掉', '被动', '先手', '兑子', '控制', '肋道']
 en = ['Nf3', 'e5', 'h2e2', 'the', 'centre', 'is', 'open', 'x']

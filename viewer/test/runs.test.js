@@ -5,7 +5,7 @@
 //   若同目录有 analysis.jsonl 则进一步核对每步坐标一致。
 // 还在下的盘（没有 end 行或 Result 为 *）一律不读。导出不是本代码写法的盘跳过并计数、不算失败：game.pgn 缺失、比 game.jsonl 旧，
 // 或与本代码现场导出的（runner.render_exports）不一致——对局可能在本检出之外刚结束，用的是那边的旧导出写法。
-// 这样跳过的盘在输出里报数；要读它们，先用本检出的代码 `python3 -m llmchess export <目录>` 重导。
+// 这样跳过的盘在输出里报数；要读它们，先用本检出的代码 `python3 -m agi_chess export <目录>` 重导。
 // 对局目录：环境变量 VIEWER_RUNS 优先；worktree（.agents/worktrees/<名>）里默认用主检出的 runs/。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -56,15 +56,15 @@ const RESULT = { w: '1-0', b: '0-1' };
 // 导出端眼里的每一盘：{目录: {why: {半回合号: 文字}, current: 盘上 game.pgn 是否与本代码现场导出的一致}}
 // （理由文字空白压成一个空格，和 parseComment 的 text 同一口径）。python3 跑不起来时为 null，只跳过这两项核对。
 const PY_WHY = `
-import json, sys
-from llmchess import cli, records, runner
+import json, re, sys
+from agi_chess import cli, records, runner
 out = {}
 for d in json.load(sys.stdin):
     meta = records.move_meta(records.read(d + '/game.jsonl'))
     cfg = records.read(d + '/game.jsonl')[0]['cfg']
     fresh = runner.render_exports(runner.load(cli.game_module(cfg['game']), d))['game.pgn']
     with open(d + '/game.pgn', encoding='utf-8') as f:
-        current = f.read() == fresh
+        current = re.sub(r'^\\[Event "(?:llm|agi)-chess ', '[Event "agi-chess ', f.read(), count=1, flags=re.M) == fresh
     out[d] = {'why': {p: ' '.join(records.comment_text(m.get('why') or '').split()) for p, m in meta.items()},
               'current': current}
 print(json.dumps(out, ensure_ascii=False))

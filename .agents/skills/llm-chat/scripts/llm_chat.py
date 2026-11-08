@@ -377,15 +377,15 @@ def check_choice(resp):
     message = choice["message"]
     text = message.get("content") or ""
     finish = choice.get("finish_reason")
+    if message.get("tool_calls") or finish == "tool_calls":
+        raise ChatError("the model called a tool; plain chat allows none")
+    if message.get("annotations"):
+        raise ChatError("the answer carries annotations (web citations); plain chat allows no web access")
     if not text.strip():
         raise ChatError(f"empty answer (finish_reason={finish}); reasoning tokens count toward "
                         "--max-tokens, raise it or lower --effort")
     if finish == "length":
         raise ChatError("answer truncated by the token limit (finish_reason=length); raise --max-tokens")
-    if message.get("tool_calls") or finish == "tool_calls":
-        raise ChatError("the model called a tool; plain chat allows none")
-    if message.get("annotations"):
-        raise ChatError("the answer carries annotations (web citations); plain chat allows no web access")
     return message, text
 
 
