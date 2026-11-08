@@ -343,6 +343,13 @@ def cmd_run(a):
         names = [g[0] for g in games]
         if len(set(names)) != len(names):
             raise SystemExit('有两个对手的目录名撞了：%s' % names)
+        exported_only = [n for n in names
+                         if not os.path.exists(os.path.join(bdir, n, 'game.jsonl'))
+                         and any(os.path.exists(os.path.join(bdir, n, f))
+                                 for f in ('game.pgn', 'analysis.jsonl', 'analysis-summary.json'))]
+        if exported_only:
+            raise SystemExit('批次 %s 下已有已入库或已导出的对局目录（%s，无原始 game.jsonl），请换个 --batch'
+                             % (bdir, '、'.join(exported_only[:3])))
         print('批次 %s：%d 盘，%d 路并发' % (bdir, len(games), a.jobs), flush=True)
         drv = Driver(a, bdir, a.jobs)
         # 和 play 同一套停止处理：第一次信号置 STOP 并由 request_stop 转告各盘；第二次打断在跑的盘（不强退驱动自己）
@@ -358,11 +365,15 @@ def cmd_run(a):
         os.remove(lock)
     rows = summarize([bdir])
     md = markdown(rows)
-    write_atomic(os.path.join(bdir, 'summary.md'), md)
-    write_atomic(os.path.join(bdir, 'summary.json'), json.dumps(rows, ensure_ascii=False, indent=1) + '\n')
-    print(md)
+    sum_md, sum_json = os.path.join(bdir, 'summary.md'), os.path.join(bdir, 'summary.json')
     counts = {k: sum(v == k for v in res.values()) for k in sorted(set(res.values()))}
-    print('本次：%s；汇总已写 %s' % (json.dumps(counts, ensure_ascii=False), os.path.join(bdir, 'summary.md')))
+    if rows['games'] or not (os.path.exists(sum_md) or os.path.exists(sum_json)):
+        write_atomic(sum_md, md)
+        write_atomic(sum_json, json.dumps(rows, ensure_ascii=False, indent=1) + '\n')
+        print(md)
+        print('本次：%s；汇总已写 %s' % (json.dumps(counts, ensure_ascii=False), sum_md))
+    else:
+        print('本次：%s；未找到已完成的本地 game.jsonl，保留既有 %s 不覆盖' % (json.dumps(counts, ensure_ascii=False), sum_md))
     if any(v in ('paused', 'not started') for v in res.values()):
         print('有盘暂停，请先查看各盘原因；拒答、工具尝试或调用结果不确定的盘禁止自动续跑')
         return 3

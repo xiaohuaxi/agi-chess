@@ -336,6 +336,7 @@ export async function record(o, log = (s) => process.stderr.write(s + '\n')) {
     await runFfmpeg(cfg.ffmpeg, [
       '-hide_banner', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', listFile, ...audioIn,
       // 截图是全范围 RGB：转 bt709 矩阵的有限范围 yuv420p，并在码流里如实标注。
+      // 总帧数在 -vf 用 trim=end_frame 截齐，不用输出侧 -frames:v（Ubuntu 22.04 FFmpeg 4.4 下 -frames:v 会在编码缓冲排空前提前关闭输出流，导致音轨末尾被截断约 3 秒）。
       '-vf', `fps=${FPS},trim=end_frame=${frames},scale=in_range=full:out_range=tv:out_color_matrix=bt709,format=yuv420p,setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709`,
       '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
       '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-color_range', 'tv',

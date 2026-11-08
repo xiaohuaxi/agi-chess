@@ -62,12 +62,29 @@ test('serve CLI 与可执行文件查找：端口 0 保留、非法参数报错�
   assert.throws(() => parseServeCli(['--unknown']), /unknown/i);
   assert.throws(() => parseServeCli(['extra']), /位置参数/);
   assert.ok(resolveFfmpeg('sh').endsWith('/sh'));
-  assert.ok(resolveFfprobe('sh').endsWith('/sh'));
+  assert.ok(resolveFfprobe(undefined, 'sh').endsWith('/sh'));
   assert.ok(resolveChromium('sh', {}).endsWith('/sh'));
   assert.throws(() => resolveFfmpeg('nonexistent-ffmpeg-cmd'), /nonexistent-ffmpeg-cmd/);
-  assert.throws(() => resolveFfprobe('nonexistent-ffprobe-cmd'), /nonexistent-ffprobe-cmd/);
+  assert.throws(() => resolveFfprobe(undefined, 'nonexistent-ffprobe-cmd'), /nonexistent-ffprobe-cmd/);
   assert.throws(() => resolveChromium('nonexistent-browser-cmd', {}), /nonexistent-browser-cmd/);
   assert.throws(() => resolveBrowser('nonexistent-browser-cmd', {}), /nonexistent-browser-cmd/);
+  // 首参 ffmpegPath 仅作同目录查找提示：自定义命名的 ffmpeg-4.4 不会被误当成 ffprobe，且 VIEWER_FFPROBE 优先
+  const customDir = join(TMP, 'custom-ffmpeg-bin');
+  mkdirSync(customDir, { recursive: true });
+  const customFfmpeg = join(customDir, 'ffmpeg-4.4');
+  writeFileSync(customFfmpeg, '#!/bin/sh\n');
+  chmodSync(customFfmpeg, 0o755);
+  assert.notEqual(resolveFfprobe(customFfmpeg), customFfmpeg);
+  const oldFfprobeEnv = process.env.VIEWER_FFPROBE;
+  try {
+    process.env.VIEWER_FFPROBE = 'sh';
+    assert.ok(resolveFfprobe(customFfmpeg).endsWith('/sh'));
+    process.env.VIEWER_FFPROBE = 'nonexistent-ffprobe-env';
+    assert.throws(() => resolveFfprobe(customFfmpeg), /nonexistent-ffprobe-env/);
+  } finally {
+    if (oldFfprobeEnv === undefined) delete process.env.VIEWER_FFPROBE;
+    else process.env.VIEWER_FFPROBE = oldFfprobeEnv;
+  }
   // Windows 扩展名补全：在 PATH 中找到 .exe
   const fakeBinDir = join(TMP, 'win-bin');
   mkdirSync(fakeBinDir, { recursive: true });

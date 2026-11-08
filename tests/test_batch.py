@@ -264,8 +264,8 @@ class PassThrough(unittest.TestCase):
         self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
         # 1) batch summary 无 game.jsonl 时拒绝覆盖已有的 summary.md / summary.json
         bdir = os.path.join(tmp, 'zc')
-        os.makedirs(os.path.join(bdir, 'maia-1900-s1-w'))
-        with open(os.path.join(bdir, 'maia-1900-s1-w', 'game.pgn'), 'w') as f:
+        os.makedirs(os.path.join(bdir, 'random-s1-w'))
+        with open(os.path.join(bdir, 'random-s1-w', 'game.pgn'), 'w') as f:
             f.write('[Result "1-0"]\n\n1. e4 e5 1-0\n')
         for ext in ('.md', '.json'):
             with open(os.path.join(bdir, 'summary' + ext), 'w') as f:
@@ -273,6 +273,20 @@ class PassThrough(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             B.main(['summary', bdir])
         self.assertIn('game.jsonl', str(ctx.exception))
+        for ext in ('.md', '.json'):
+            with open(os.path.join(bdir, 'summary' + ext)) as f:
+                self.assertEqual(f.read(), 'KEEP')
+        # 1b) batch run 对仅有公开入库产物（game.pgn / summary.*，无 game.jsonl）的批次拒绝启动，且收尾时若有既有 summary.* 而无完成盘也不覆盖
+        with self.assertRaises(SystemExit) as ctx:
+            B.main(['run', '--game', 'chess', '--batch', 'zc', '--out', tmp,
+                    '--player', 'random', '--opp', 'random', '--seeds', '1', '--colors', 'w',
+                    '--opening', 'none', '--max-plies', '2', '--no-analyze'])
+        self.assertIn('换个 --batch', str(ctx.exception))
+        with mock.patch.object(B.Driver, 'run', return_value={'random-s2-w': 'error'}), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(B.main(['run', '--game', 'chess', '--batch', 'zc', '--out', tmp,
+                                     '--player', 'random', '--opp', 'random', '--seeds', '2', '--colors', 'w',
+                                     '--opening', 'none', '--max-plies', '2', '--no-analyze']), 1)
         for ext in ('.md', '.json'):
             with open(os.path.join(bdir, 'summary' + ext)) as f:
                 self.assertEqual(f.read(), 'KEEP')

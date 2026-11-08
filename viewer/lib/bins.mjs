@@ -57,8 +57,7 @@ export function resolveFfmpeg(explicit) {
 }
 
 export function resolveFfprobe(ffmpegPath, explicit) {
-  const isFfmpegSiblingHint = ffmpegPath && !explicit && /^ffmpeg(\.exe)?$/i.test(path.basename(ffmpegPath));
-  const pick = (explicit || (!isFfmpegSiblingHint ? ffmpegPath : '') || process.env.VIEWER_FFPROBE || '').trim();
+  const pick = (explicit || process.env.VIEWER_FFPROBE || '').trim();
   if (pick) {
     const found = isBareCommand(pick) ? findExecutable([pick], []) : (isExecutableFile(pick) ? pick : null);
     if (!found) throw new Error(`找不到可执行的 ffprobe：${pick}`);
