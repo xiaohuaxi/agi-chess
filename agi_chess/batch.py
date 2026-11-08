@@ -151,6 +151,19 @@ def take_lock(bdir):
 
 
 # ---------------------------------------------------------------- 跑一盘
+def exported_without_raw(bdir):
+    """bdir 下仅有公开导出产物（game.pgn / analysis*.json*）而缺少原始 game.jsonl 的子盘目录名列表。"""
+    if not os.path.isdir(bdir):
+        return []
+    out = []
+    for name in sorted(os.listdir(bdir)):
+        gdir = os.path.join(bdir, name)
+        if os.path.isdir(gdir) and not os.path.exists(os.path.join(gdir, 'game.jsonl')) and any(
+                os.path.exists(os.path.join(gdir, f)) for f in ('game.pgn', 'analysis.jsonl', 'analysis-summary.json')):
+            out.append(name)
+    return out
+
+
 def game_state(gdir):
     """'new' / 'unfinished' / 'done'。"""
     log = os.path.join(gdir, 'game.jsonl')
@@ -332,6 +345,15 @@ def cmd_run(a):
     seeds = parse_seeds(a.seeds)
     colors = {'both': 'wb', 'w': 'w', 'b': 'b'}[a.colors]
     bdir = os.path.join(a.out or str(cli.RUNS), a.batch)
+    games = [('%s-s%d-%s' % (slug(o), s, c), o, s, c) for o in opps for s in seeds for c in colors]
+    names = [g[0] for g in games]
+    if len(set(names)) != len(names):
+        raise SystemExit('有两个对手的目录名撞了：%s' % names)
+    exported_only = exported_without_raw(bdir)
+    if exported_only or (not os.path.exists(os.path.join(bdir, 'batch.json'))
+                         and any(os.path.exists(os.path.join(bdir, f)) for f in ('summary.md', 'summary.json'))):
+        raise SystemExit('批次 %s 下已有已入库或已导出的对局目录（%s，无原始 game.jsonl），请换个 --batch'
+                         % (bdir, '、'.join(exported_only[:3]) or 'summary.*'))
     os.makedirs(bdir, exist_ok=True)
     lock = take_lock(bdir)
     try:
@@ -339,17 +361,6 @@ def cmd_run(a):
         stop = os.path.join(bdir, STOP)
         if os.path.exists(stop):
             os.remove(stop)                      # 上次暂停留下的停止标记（本驱动自己建的）
-        games = [('%s-s%d-%s' % (slug(o), s, c), o, s, c) for o in opps for s in seeds for c in colors]
-        names = [g[0] for g in games]
-        if len(set(names)) != len(names):
-            raise SystemExit('有两个对手的目录名撞了：%s' % names)
-        exported_only = [n for n in names
-                         if not os.path.exists(os.path.join(bdir, n, 'game.jsonl'))
-                         and any(os.path.exists(os.path.join(bdir, n, f))
-                                 for f in ('game.pgn', 'analysis.jsonl', 'analysis-summary.json'))]
-        if exported_only:
-            raise SystemExit('批次 %s 下已有已入库或已导出的对局目录（%s，无原始 game.jsonl），请换个 --batch'
-                             % (bdir, '、'.join(exported_only[:3])))
         print('批次 %s：%d 盘，%d 路并发' % (bdir, len(games), a.jobs), flush=True)
         drv = Driver(a, bdir, a.jobs)
         # 和 play 同一套停止处理：第一次信号置 STOP 并由 request_stop 转告各盘；第二次打断在跑的盘（不强退驱动自己）
@@ -507,6 +518,10 @@ def cmd_summary(a):
     for d in a.dirs:
         if not os.path.isdir(d):
             raise SystemExit('没有这个批次目录：%s' % d)
+        exported_only = exported_without_raw(d)
+        if exported_only:
+            raise SystemExit('批次 %s 含缺少原始 game.jsonl 的公开归档子目录（%s）；重算汇总依赖全部子盘的 game.jsonl，'
+                             '公开克隆可直接查看已入库的 summary.md / summary.json。' % (d, '、'.join(exported_only[:3])))
     if a.analyze:
         for d in a.dirs:
             for name in sorted(os.listdir(d)):
