@@ -16,7 +16,7 @@ All commands in this guide run from the repository root. For experimental conclu
 | Verify position banks & run Python tests | `python3 data/batch1/select_positions.py check && python3 data/batch2/select_positions.py check && python3 -m unittest discover -s tests -t . -v` | Python 3, `chess`, `pyffish`; 21 live-engine tests also require local `stockfish` and `fairy-stockfish` (auto-skipped if absent) | No |
 | Run a zero-cost first match locally | `python3 -m agi_chess play --game chess --tag demo-random --white random --black random --max-plies 20 --seed 42` | Python 3, `chess`, `pyffish` (writes `runs/demo-random/game.pgn` in 0.1s) | No |
 | Run post-game engine blunder analysis | `python3 -m agi_chess.analyze runs/demo-random` (add `--table` for multi-game summary; writes `analysis.jsonl` & `analysis-summary.json`) | Python rule libraries, local engine (`stockfish` for Chess, `fairy-stockfish` for Xiangqi), and a run directory containing `game.jsonl` | No |
-| Run Viewer JS tests | `node --test 'viewer/test/*.test.js'` | Node.js; 32 browser tests also require `playwright-core` + Chromium (auto-skipped if absent), and round-trip tests require Python rule libraries | No |
+| Run Viewer JS tests | `node --test 'viewer/test/*.test.js'` | Node.js; 29 browser tests also require `playwright-core` + Chromium, and 3 round-trip tests require Python rule libraries (32 in total, auto-skipped if absent) | No |
 | Record PGNs to MP4 video | `npm --prefix viewer ci && node viewer/record.mjs runs/g7-c-opus-astra-1 -o /tmp/g7-c-1.mp4 --gap 1.5 --openhold 0.5` | Node.js, `playwright-core`, Chromium, FFmpeg; video verification also uses FFprobe | No |
 | Run full-game model matches | `python3 -m agi_chess play --game chess --tag c1 --white claude:opus --black random --effort medium --max-plies 6 --on-limit pause` | macOS / Linux (including WSL2; `llm_chat.py` relies on `fcntl` and POSIX process groups), Python rule libraries, built-in `llm-chat` (`.agents/skills/llm-chat/`), and either a local model CLI (`claude` / `codex` / `agy`) or an HTTP API key (`API_KEY_OPENROUTER` / `API_KEY_DEEPSEEK`); engine opponents also require engines | Yes |
 
@@ -92,7 +92,7 @@ python -m agi_chess play --game xiangqi --tag demo-prompt --dry-run
 python -m agi_chess.analyze runs/demo-random
 ```
 
-> **Note:** `python3 -m agi_chess.analyze` reads the raw `game.jsonl` log in a run directory to replay moves. All 65 official match directories checked into `runs/` already include precomputed `analysis.jsonl` and `analysis-summary.json` files (for blunder classifications, check `lichess: "Blunder"` in International Chess and `cls: "blunder"` in Xiangqi), so you can inspect them directly or print multi-game tables via `python3 -m agi_chess.analyze --table runs/g7-c-opus-astra-*` without re-running the engine.
+> **Note:** `python3 -m agi_chess.analyze` reads the raw `game.jsonl` log in a run directory to replay moves (`--table` also requires local `game.jsonl`). All 65 official match directories checked into `runs/` already include precomputed `analysis.jsonl` and `analysis-summary.json` files (for blunder classifications, check `lichess: "Blunder"` in International Chess and `cls: "blunder"` in Xiangqi), so you can inspect them directly or verify their cached summaries via `python3 -m agi_chess.analyze runs/g7-c-opus-astra-*` without re-running the engine.
 
 ## Model Matches: Built-in `llm-chat`, Local CLI Subscriptions & HTTP API Keys
 
@@ -170,4 +170,4 @@ Browsing PGNs in a web browser requires neither Node.js, Chromium automation, no
 node --test 'viewer/test/*.test.js'   # Quoted globbing requires Node 22+; on Node 18/20, omit single quotes: node --test viewer/test/*.test.js
 ```
 
-The JS test suite (90 tests) validates the PGN parser, UI logic, and all checked-in `game.pgn` files under `runs/`. It explicitly reports skipped tests: when `playwright-core` or a working Chromium binary is absent, the 32 browser playback tests are skipped (while all 58 pure-JS and PGN verification tests run); with `playwright-core`, Chromium, and the Python rule libraries installed, all 90 tests pass (0 fail / 0 skip).
+The JS test suite (90 tests) validates the PGN parser, UI logic, and all checked-in `game.pgn` files under `runs/`. It explicitly reports skipped tests: 58 pure-JS and PGN verification tests run with zero extra dependencies; when `playwright-core`/Chromium or the Python rule libraries are absent, the 29 browser playback tests and 3 Python round-trip tests (32 in total) are skipped accordingly; with `playwright-core`, Chromium, and the Python rule libraries installed, all 90 tests pass (0 fail / 0 skip).

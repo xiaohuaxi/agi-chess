@@ -16,7 +16,7 @@
 | 校验题库与跑 Python 测试 | `python3 data/batch1/select_positions.py check && python3 data/batch2/select_positions.py check && python3 -m unittest discover -s tests -t . -v` | Python、`chess`、`pyffish`；21 项真引擎测试另需本机 `stockfish` 与 `fairy-stockfish`（未装自动 skip） | 否 |
 | 零成本试跑首盘对局 | `python3 -m agi_chess play --game chess --tag demo-random --white random --black random --max-plies 20 --seed 42` | Python、`chess`、`pyffish`（0.1 秒生成 `runs/demo-random/game.pgn`） | 否 |
 | 事后引擎逐手复盘与恶手分析 | `python3 -m agi_chess.analyze runs/demo-random`（多盘汇总加 `--table`；输出 `analysis.jsonl` 与 `analysis-summary.json`） | Python 规则库、本机引擎（国象 `stockfish`，中象 `fairy-stockfish`）及含 `game.jsonl` 的对局目录 | 否 |
-| 跑阅读器 JS 测试 | `node --test 'viewer/test/*.test.js'` | Node.js；32 项浏览器测试另需 `playwright-core` 与 Chromium（未装自动 skip），往返测试需 Python 规则库 | 否 |
+| 跑阅读器 JS 测试 | `node --test 'viewer/test/*.test.js'` | Node.js；29 项浏览器测试另需 `playwright-core` 与 Chromium，3 项往返测试需 Python 规则库（共 32 项，未装自动 skip） | 否 |
 | 把棋谱录成 MP4 | `npm --prefix viewer ci && node viewer/record.mjs runs/g7-c-opus-astra-1 -o /tmp/g7-c-1.mp4 --gap 1.5 --openhold 0.5` | Node.js、`playwright-core`、Chromium、FFmpeg；核对视频另用 FFprobe | 否 |
 | 开模型对弈 | `python3 -m agi_chess play --game chess --tag c1 --white claude:opus --black random --effort medium --max-plies 6 --on-limit pause` | macOS / Linux（含 WSL2；`llm_chat.py` 依赖 `fcntl` 与 POSIX 进程组）、Python 规则库、仓内内置 `llm-chat`（`.agents/skills/llm-chat/`）、本地模型 CLI（`claude`/`codex`/`agy`）或 HTTP API Key（`API_KEY_OPENROUTER` / `API_KEY_DEEPSEEK`）；引擎对手另需引擎 | 是 |
 
@@ -92,7 +92,7 @@ python -m agi_chess play --game xiangqi --tag demo-prompt --dry-run
 python -m agi_chess.analyze runs/demo-random
 ```
 
-> **提示**：`python3 -m agi_chess.analyze` 需读取对局目录下的原始 `game.jsonl` 重放落定着法；仓内已入库的 65 个正式对局目录均已预先算好并随仓提交了 `analysis.jsonl` 与 `analysis-summary.json`（其中恶手字段国际象棋看 `lichess: "Blunder"`，中国象棋看 `cls: "blunder"`），无需重跑引擎即可直接分析或用 `python3 -m agi_chess.analyze --table runs/g7-c-opus-astra-*` 汇总。
+> **提示**：`python3 -m agi_chess.analyze` 需读取对局目录下的原始 `game.jsonl` 重放落定着法（`--table` 多盘汇总表同样需读取本地 `game.jsonl`）；仓内已入库的 65 个正式对局目录均已预先算好并随仓提交了 `analysis.jsonl` 与 `analysis-summary.json`（其中恶手字段国际象棋看 `lichess: "Blunder"`，中国象棋看 `cls: "blunder"`），无需重跑引擎即可直接分析或用 `python3 -m agi_chess.analyze runs/g7-c-opus-astra-*` 核对已入库分析摘要。
 
 ## 模型对弈：内置 `llm-chat`、本地 CLI 订阅与 HTTP API 配置
 
@@ -170,4 +170,4 @@ python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --b
 node --test 'viewer/test/*.test.js'   # 引号通配需 Node 22+；Node 18/20 请去掉单引号运行 node --test viewer/test/*.test.js
 ```
 
-JS 测试（共 90 项）会校验阅读器解析及已入库 `runs/` 下全部正式对局 `game.pgn`，并说明跳过的项目：未安装 `playwright-core` 或无可用 Chromium 时，32 项浏览器测试会自动跳过（其余 58 项纯 JS 与棋谱校验正常执行）；安装依赖并具备 Chromium 与 Python 规则库后，90 项测试全部通过（0 fail / 0 skip）。跳过不表示该部分已验证。
+JS 测试（共 90 项）会校验阅读器解析及已入库 `runs/` 下全部正式对局 `game.pgn`，并说明跳过的项目：58 项纯 JS 与棋谱校验无需额外依赖；未安装 `playwright-core`/Chromium 或未安装 Python 规则库时，29 项浏览器测试与 3 项 Python 往返测试（共 32 项）会按缺失项自动跳过；安装依赖并具备 Chromium 与 Python 规则库后，90 项测试全部通过（0 fail / 0 skip）。跳过不表示该部分已验证。
