@@ -38,7 +38,7 @@
   退出码 3，再跑同一条命令接着来；再按一次强退。
 
 局面在 data/<batch>/<棋种>.jsonl（选取脚本同目录），或用 --positions 指定。标了 excluded（剔除理由）的局面 run / copy
-跳过，judge / report 照样判已有记录（目前只有 x2-25）。记录在 runs/quiz-<batch>/[<档名>/]<棋种>/（不入库）：
+跳过，judge / report 照样判已有记录（目前只有 x2-25）。记录在 runs/quiz-<batch>/[<档名>/]<棋种>/（单题原始 *.jsonl 默认不入库）：
   每次作答一个文件 <局面id>-<effort>-r<遍>.jsonl：config、attempt（和整盘同一格式，由 runner.model_turn 写）、
   call_fail（超时 / 调不通）、limit_wait（撞额度等解除的起止）、pause（暂停）、最后一行 result。有 result 的就算答完，再跑时跳过；只有 attempt 没 result 的
   （中途撞额度），续跑时接上已用掉的尝试次数（runner.pending_ply），和整盘续跑一样。
@@ -522,8 +522,12 @@ def cmd_run(a):
         return 0
     out_root = a.out or str(ROOT / 'runs' / ('quiz-' + a.batch))
     out = unit_dir(out_root, a.arm, game)
-    os.makedirs(out, exist_ok=True)
     meta = read_meta(out)
+    if meta is None and (os.path.isfile(os.path.join(out, 'judged.jsonl')) or os.path.isfile(os.path.join(out_root, 'report.txt'))):
+        existing_raw = {(r.get('pos'), r.get('effort'), r.get('rep')) for r in raw_results(out)}
+        if not existing_raw or (judged_keys(out) - existing_raw):
+            raise SystemExit('%s 已有已入库判卷记录（judged.jsonl / report.txt）且缺少完整单题原始记录，请换个 --batch 或 --out' % out)
+    os.makedirs(out, exist_ok=True)
     if meta is None:
         # claude 的运行目录：仓库外的空临时目录（design.md P7、P17），一批共用一个，记下来续跑沿用
         meta = {'claude_cwd': os.path.join(os.path.realpath(tempfile.gettempdir()), 'agi-chess-cwd',
@@ -630,6 +634,10 @@ def cmd_copy(a):
     sets = smeta.get('set') or {}
     pos_file = a.positions or str(positions_path(a.batch, game))
     dmeta = read_meta(dst)
+    if dmeta is None and (os.path.isfile(os.path.join(dst, 'judged.jsonl')) or os.path.isfile(os.path.join(out_root, 'report.txt'))):
+        existing_raw = {(r.get('pos'), r.get('effort'), r.get('rep')) for r in raw_results(dst)}
+        if not existing_raw or (judged_keys(dst) - existing_raw):
+            raise SystemExit('%s 已有已入库判卷记录（judged.jsonl / report.txt）且缺少完整单题原始记录，请换个 --batch 或 --out' % dst)
     if dmeta is not None and (dmeta.get('set') or {}) != sets:
         raise SystemExit('%s 的 --set 是 %s，和来源 %s 的 %s 不同，不能复制' % (
             dst, json.dumps(dmeta.get('set') or {}), src, json.dumps(sets)))
@@ -934,19 +942,35 @@ def judge_units(out_root, arm=None, game='all'):
     return out
 
 
-def judge_game(game, batch, out_root, positions=None, arm=None):
-    ans_dir = unit_dir(out_root, arm, game)
-    meta = read_meta(ans_dir)
-    pos_by = merge_positions([positions] if positions else meta_positions(meta, batch, game))
-    show = show_of((meta or {}).get('set'))
+def raw_results(ans_dir):
     results = []
     for name in sorted(os.listdir(ans_dir)) if os.path.isdir(ans_dir) else []:
         if name.endswith('.jsonl') and name != 'judged.jsonl':
             r = result_of(os.path.join(ans_dir, name))
             if r:
                 results.append(r)
+    return results
+
+
+def judged_keys(ans_dir):
+    path = os.path.join(ans_dir, 'judged.jsonl')
+    if not os.path.isfile(path):
+        return set()
+    return {(r.get('pos'), r.get('effort'), r.get('rep')) for r in records.read(path)}
+
+
+def judge_game(game, batch, out_root, positions=None, arm=None):
+    ans_dir = unit_dir(out_root, arm, game)
+    meta = read_meta(ans_dir)
+    pos_by = merge_positions([positions] if positions else meta_positions(meta, batch, game))
+    show = show_of((meta or {}).get('set'))
+    results = raw_results(ans_dir)
     if not results:
         raise SystemExit('%s 下未找到单题原始作答记录（*.jsonl，不含 judged.jsonl）；重判依赖未入库的单题作答记录，公开克隆可直接用 quiz report 查看已入库的 judged.jsonl。' % ans_dir)
+    missing_judged = judged_keys(ans_dir) - {(r.get('pos'), r.get('effort'), r.get('rep')) for r in results}
+    if missing_judged:
+        raise SystemExit('%s 下单题原始作答记录不完整（缺少已有 judged.jsonl 中的 %d 条），拒绝覆盖已入库判卷记录。'
+                         % (ans_dir, len(missing_judged)))
     R = rules_for(game)
     eng = engine_for(game)
     cache, rows = {}, []

@@ -10,7 +10,7 @@
 用法（在仓库根目录）：
   python3 analysis/rating/rate.py report       # 复算结论文档里的全部刻度数字（自助法 1,000 次，约两三分钟）
   python3 analysis/rating/rate.py fit --game chess [--opus-only maia|stockfish] [--cap draw|eval|loss] [--boot N]
-  python3 analysis/rating/rate.py export       # 从本机 runs/ 重新导出两个 csv（runs/ 不入库，只有原机器上有）
+  python3 analysis/rating/rate.py export       # 从本机 runs/ 重新导出两个 csv（原始 game.jsonl 与标定目录不入库，只有原机器上有）
 
 口径（同结论文档「刻度怎么搭」）：
   - Elo 逻辑模型最大似然，引擎标定对局和 opus 对局放在一起拟合；国际象棋以 Maia-1900 为 0，中国象棋以 nodes=100 为 0。
@@ -326,6 +326,8 @@ def export():
         for b in dirs:
             d = os.path.join(ROOT, 'runs', b)
             games = [g for g in batch.summarize([d])['games'] if g['finished']]
+            if not games:
+                raise SystemExit('未在 runs/%s 下找到已完成的本地对局记录（game.jsonl 缺少 end），拒绝覆盖已入库 CSV' % b)
             if b == OPUS_BATCH[game]:
                 for g in games:
                     capped = str(g['reason']).startswith('满 ')

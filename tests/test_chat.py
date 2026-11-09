@@ -832,6 +832,27 @@ class RealProtocolPrompts(unittest.TestCase):
             with self.assertRaises(mod.ChatError) as ctx:
                 mod.check_choice(resp)
             self.assertIn('the model used server-side tools', str(ctx.exception))
+        with tempfile.TemporaryDirectory(prefix='llm-chat-claude-tools-') as tmp_root:
+            root = mod.Path(tmp_root)
+            (root / 'empty').mkdir()
+            opts = mod.argparse.Namespace(effort='high', max_tokens=None, timeout=10)
+            for rc, payload, expected in (
+                (0, {'subtype': 'success', 'is_error': False, 'result': '着法: e2e4',
+                     'permission_denials': [{'tool': 'Bash'}], 'usage': {'input_tokens': 1, 'output_tokens': 1}},
+                 'the model called a tool; plain chat allows none'),
+                (0, {'subtype': 'success', 'is_error': False, 'result': '着法: e2e4',
+                     'content': [{'type': 'mcp_tool_use', 'name': 'x'}], 'usage': {'input_tokens': 1, 'output_tokens': 1}},
+                 'the model called a tool; plain chat allows none'),
+                (1, {'subtype': 'error_max_turns', 'is_error': True, 'result': 'temporary failure',
+                     'usage': {'server_tool_use': {'web_search_requests': 1}}},
+                 'the model used server-side tools'),
+            ):
+                sess = {'model': 'claude-opus-5-5', 'system': 'sys'}
+                with mock.patch.object(mod, 'run_process', return_value=(rc, json.dumps(payload), '')):
+                    with self.assertRaises(mod.ChatError) as ctx:
+                        mod.call_claude(sess, 'hi', opts, root)
+                self.assertIn(expected, str(ctx.exception))
+                self.assertTrue(runner.claude_cli.tool_error_text(str(ctx.exception)))
         self.assertEqual(mod.AGY_CORE_DIR, chat._REPO_SCRIPT.parent)
         with mock.patch.object(sys, 'path', list(sys.path)), mock.patch.dict(sys.modules):
             sys.modules.pop('agy_core', None)

@@ -125,7 +125,6 @@ async function main() {
     process.exit(1);
   }
   const { out, runs, measure, size, shots } = o;
-  mkdirSync(out, { recursive: true });
   const server = await serve(root, runs ? { '/runs/': runs } : {});
   let browser;
   try {
@@ -135,6 +134,7 @@ async function main() {
     console.error(`起不来浏览器：${e.message.split('\n')[0]}（用环境变量 VIEWER_CHROMIUM 指到 Chromium / Chrome）`);
     process.exit(1);
   }
+  mkdirSync(out, { recursive: true });
   let failed = 0;
   try {
     const ctx = await browser.newContext({ viewport: { width: size[0], height: size[1] }, deviceScaleFactor: 2 });

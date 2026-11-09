@@ -7,7 +7,7 @@
 输入都只读：data/batch1/*.jsonl、runs/quiz-batch1/<棋种>/judged.jsonl（第一批局面题判分）、
 runs/b1-{xq,ch}-*/game.jsonl + analysis.jsonl（第一批 B 块整盘，Fairy-Stockfish depth 16 / Stockfish depth 18 逐步分析），
 上一轮的 ~/repos/ai-research/topics/llm-xiangqi-play/ 和 ~/repos/jev-study/artifacts/xiangqi_llm/（只在补位时用，路径和
-「同一件事」的段落沿用 data/batch1/select_positions.py）。runs/ 不入库，所以入库的 jsonl 才是这批题的真身，重跑本脚本
+「同一件事」的段落沿用 data/batch1/select_positions.py）。runs/b1-* 原始对局记录不入库，所以入库的 jsonl 才是这批题的真身，重跑本脚本
 只用来说明怎么选的。
 
 中国象棋（目标约 30 个），按下面顺序取，编号 x2-01 起：
@@ -52,7 +52,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, ROOT)
 
-from agi_chess import xiangqi as X          # noqa: E402
 from agi_chess import quiz as Q             # noqa: E402
 from agi_chess import analyze as A          # noqa: E402
 from agi_chess import records               # noqa: E402
@@ -144,6 +143,7 @@ def assign_groups(rows):
 
 # ---------------------------------------------------------------- 中国象棋
 def xq_state(moves):
+    from agi_chess import xiangqi as X
     st = X.start()
     for m in moves:
         X.push(st, m)
@@ -182,6 +182,7 @@ def xq_b1_quiz():
 
 
 def xq_game_row(run, cfg, mv, ana, ply):
+    from agi_chess import xiangqi as X
     a = ana[ply - 1]
     st = xq_state(mv[:ply - 1])
     fen = st['fens'][-1]
@@ -199,6 +200,7 @@ def xq_game_row(run, cfg, mv, ana, ply):
 
 
 def xq_blunders(games):
+    from agi_chess import xiangqi as X
     seen, rows = {}, []
     for run, (cfg, mv, ana, end) in games.items():
         for a in ana:
@@ -223,6 +225,7 @@ def xq_blunders(games):
 
 def mate_check(eng, st):
     """对每个合法着法（去掉禁着）看走完后对方有没有杀。返回 (合法着数, 不被杀的着法, 被杀的着法数)。"""
+    from agi_chess import xiangqi as X
     legal = X.legal(st)
     ban = X.banned(st, legal)
     legal = [m for m in legal if m not in ban]
@@ -311,6 +314,7 @@ def xq_fill(taken_rows, need):
     """上一轮三段同一件事里第一批没取的，三段轮流补 need 个。"""
     if need <= 0:
         return []
+    from agi_chess import xiangqi as X
     b1 = load_b1_select()
     cases = list(csv.DictReader(open(os.path.join(b1.XQ_DIR, 'blunder_cases.tsv'), encoding='utf-8'), delimiter='\t'))
     plies = {(r['game'], int(r['ply'])): r
@@ -477,6 +481,7 @@ def carry_excluded(path, rows):
 # ---------------------------------------------------------------- 只读检查
 def check():
     import chess
+    from agi_chess import xiangqi as X
     bad = 0
     for game in ('xiangqi', 'chess'):
         path = os.path.join(HERE, '%s.jsonl' % game)

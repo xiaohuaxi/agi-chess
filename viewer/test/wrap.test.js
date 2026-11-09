@@ -4,11 +4,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { moveNote, parsePgn } from '../lib/pgn.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const venvPy = join(ROOT, '.venv', 'bin', 'python3');
+const PY_BIN = existsSync(venvPy) ? venvPy : 'python3';
 
 // 随机拼 200 条理由（固定种子）：中文词、英文词、着法、全角标点，词间随机加或不加空格；两种棋各导一盘，每步一条理由。
 const PY = `
@@ -40,9 +43,9 @@ for name, G, moves in (('chess', C, ['g1f3', 'g8f6', 'f3g1', 'f6g8'] * 25),
 print(json.dumps(res, ensure_ascii=False))
 `;
 
-const available = spawnSync('python3', ['-c', 'import chess, pyffish'], { cwd: ROOT, encoding: 'utf8' });
+const available = spawnSync(PY_BIN, ['-c', 'import chess, pyffish'], { cwd: ROOT, encoding: 'utf8' });
 const skip = available.status === 0 ? false : 'python3 缺少规则库';
-const py = skip ? null : spawnSync('python3', ['-c', PY], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+const py = skip ? null : spawnSync(PY_BIN, ['-c', PY], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
 
 for (const kind of ['chess', 'xiangqi']) {
   test(`折行往返：${kind} 理由文字逐字一致（含「中文 空格 中文」）`, { skip }, () => {

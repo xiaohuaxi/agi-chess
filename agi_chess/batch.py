@@ -351,7 +351,9 @@ def cmd_run(a):
         raise SystemExit('有两个对手的目录名撞了：%s' % names)
     exported_only = exported_without_raw(bdir)
     if exported_only or (not os.path.exists(os.path.join(bdir, 'batch.json'))
-                         and any(os.path.exists(os.path.join(bdir, f)) for f in ('summary.md', 'summary.json'))):
+                         and any(os.path.exists(os.path.join(bdir, f)) for f in (
+                             'game.pgn', 'analysis.jsonl', 'analysis-summary.json',
+                             'summary.md', 'summary.json', 'judged.jsonl', 'report.txt'))):
         raise SystemExit('批次 %s 下已有已入库或已导出的对局目录（%s，无原始 game.jsonl），请换个 --batch'
                          % (bdir, '、'.join(exported_only[:3]) or 'summary.*'))
     os.makedirs(bdir, exist_ok=True)

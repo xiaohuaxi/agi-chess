@@ -32,7 +32,7 @@
   两个都给报错，一方单设的覆盖公共的那个。每方实际用的 show 记在 config 的 sides 里（自定义 view 记 null）。
 随机开局 --opening random:N：前 N 个半回合由程序替双方走（引擎浅搜 MultiPV 3、分差 ≤50 厘兵的着法按 --opening-seed 抽），
   开局写进 config、续跑照记录重放；模型只在着法历史里看到这几步。--dry-run 打印的是开局走完后模型方第一步的提示。
-记录在 runs/<tag>/（不入库）：game.jsonl、record.txt、game.pgn（中国象棋是 xqbase PGN）。棋谱里每步带评注
+记录在 runs/<tag>/（原始 game.jsonl 等默认不入库）：game.jsonl、record.txt、game.pgn（中国象棋是 xqbase PGN）。棋谱里每步带评注
   {[%emt 用时] [%think 思考 token] [%out 输出 token] …}（design.md 第四节）。
 暂停（--on-limit pause 时撞额度、连续调不通、--stop-after、停止信号）退出码 3。
 --timeout：单次 claude -p 调用的超时秒数（默认 3600），记进 config，resume 沿用（resume --timeout 只改这次续跑）；
@@ -283,7 +283,7 @@ def cmd_play(a):
     if (run_dir / 'game.jsonl').exists():
         raise SystemExit('%s 已有记录，换个 --tag 或用 resume' % run_dir)
     if run_dir.exists() and any((run_dir / f).exists() for f in (
-            'game.pgn', 'analysis.jsonl', 'analysis-summary.json', 'summary.json', 'summary.md', 'judged.jsonl')):
+            'game.pgn', 'analysis.jsonl', 'analysis-summary.json', 'summary.json', 'summary.md', 'judged.jsonl', 'report.txt')):
         raise SystemExit('%s 已有已入库或已导出的记录，请换个 --tag' % run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     cfg['claude_version'] = claude_cli.version()

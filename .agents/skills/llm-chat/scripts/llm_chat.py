@@ -645,9 +645,18 @@ def call_claude(session, user_text, opts, root):
         data = json.loads(out.strip())
     except ValueError:
         raise ChatError(f"claude exited {code} without JSON output: {clip(err or out)}")
+    if not isinstance(data, dict):
+        raise ChatError(f"claude exited {code} without JSON object: {clip(err or out)}")
+    check_no_tools(data.get("usage"))
+    content = data.get("content")
+    if (data.get("stop_reason") == "tool_call"
+            or any(data.get(k) for k in ("permission_denials", "denied_actions", "tool_calls"))
+            or (isinstance(content, list) and any(
+                isinstance(b, dict) and b.get("type") in ("tool_use", "server_tool_use", "mcp_tool_use")
+                for b in content))):
+        raise ChatError("the model called a tool; plain chat allows none")
     if code != 0 or data.get("is_error") or data.get("subtype") != "success":
         raise ChatError(f"claude failed (exit {code}): {clip(data.get('result') or err or out)}")
-    check_no_tools(data.get("usage"))
     text = data.get("result") or ""
     if not text.strip():
         raise ChatError("claude returned an empty answer")

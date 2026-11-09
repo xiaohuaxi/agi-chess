@@ -14,11 +14,11 @@ export function isExecutableFile(p) {
 
 export function findExecutable(names, extraPaths = [], platform = process.platform) {
   const list = Array.isArray(names) ? names : [names];
-  const exts = platform === 'win32' ? ['', '.exe', '.cmd', '.bat'] : [''];
+  const exts = platform === 'win32' ? ['', '.exe'] : [''];
   const dirs = (process.env.PATH || '').split(path.delimiter).filter(Boolean);
   for (const dir of dirs) {
     for (const name of list) {
-      const hasExt = /\.(exe|cmd|bat|com)$/i.test(name);
+      const hasExt = /\.exe$/i.test(name);
       for (const ext of (hasExt ? [''] : exts)) {
         const candidate = path.join(dir, name + ext);
         if (isExecutableFile(candidate)) return candidate;

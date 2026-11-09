@@ -2,17 +2,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parsePgn } from '../lib/pgn.js';
 import { reasonEn } from '../lib/i18n.js';
 import { resultText } from '../lib/match.js';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-const available = spawnSync('python3', ['-c', 'import chess, pyffish'], { encoding: 'utf8' });
+const venvPy = join(root, '.venv', 'bin', 'python3');
+const PY_BIN = existsSync(venvPy) ? venvPy : 'python3';
+const available = spawnSync(PY_BIN, ['-c', 'import chess, pyffish'], { encoding: 'utf8' });
 test('上限裁决：真实文案与 PGN 往返涵盖两棋种、双方走子、正负评分与零分', {
   skip: available.status === 0 ? false : 'python3 缺少规则库',
 }, () => {
-  const py = spawnSync('python3', ['-c', `
+  const py = spawnSync(PY_BIN, ['-c', `
 import json
 from unittest.mock import patch
 from agi_chess import analyze, chess_ as C, xiangqi as X

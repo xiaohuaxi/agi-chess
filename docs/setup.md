@@ -47,7 +47,7 @@ python3 -m http.server --bind 127.0.0.1 8000
 - 国际象棋测试样例：<http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn>
 - 中国象棋测试样例：<http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn>
 
-仓库 `runs/` 已随仓包含全部 65 个正式模型对局目录（共 171 盘）的 `game.pgn`（内含每步完整思考理由批注、耗时与 token 统计）：其中 **58 个单盘目录**（43 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）路径为 `/runs/<tag>/game.pgn`，**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `/runs/<batch>/<game>/game.pgn`（如 `/runs/zc/maia-1900-s1-w/game.pgn`）；可直接替换网址中的 `files=`（也可同时传入同目录的 `analysis.jsonl` 叠加恶手徽章）浏览。按空格播放，左右键逐步看；用完在服务终端按 Ctrl-C。服务只绑定本机；若 8000 端口已占用，换个端口并同步修改网址。页面不能直接用 `file://` 打开。更多操作见[棋谱浏览与视频录制](viewer-guide.md)。
+仓库 `runs/` 已随仓包含全部 65 个正式模型对局目录（共 171 盘）的 `game.pgn`（包含原记录中各模型步的可见思考理由、耗时与 token 元数据）：其中 **58 个单盘目录**（43 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）路径为 `/runs/<tag>/game.pgn`，**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `/runs/<batch>/<game>/game.pgn`（如 `/runs/zc/maia-1900-s1-w/game.pgn`）；可直接替换网址中的 `files=`（也可同时传入同目录的 `analysis.jsonl` 叠加恶手徽章）浏览。按空格播放，左右键逐步看；用完在服务终端按 Ctrl-C。服务只绑定本机；若 8000 端口已占用，换个端口并同步修改网址。页面不能直接用 `file://` 打开。更多操作见[棋谱浏览与视频录制](viewer-guide.md)。
 
 阅读器默认中文；在网址后加 `&lang=en` 切换英文，`names=` 可覆盖棋手显示名。具体写法见[阅读器指南](viewer-guide.md)。
 
@@ -140,7 +140,7 @@ python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --b
 
 先看 CLI 帮助与[对弈协议](design.md)第九节。上面的 `--max-plies 6` 配 `random` 对手只是短冒烟，不用于评测棋力。每盘用新的 `--tag`，输出写入 `runs/<tag>/`（新建本地运行目录默认仅入库指定的已提交正式批次，底层 `game.jsonl` 被 git 忽略）。真实评测条件与停止规则见设计文档；不要给模型棋手开放引擎或规则库工具。工具调用或明确的防思维链泄露类拒答应立即停盘分析，不自动重问续跑。
 
-若改用引擎对手，国际象棋支持 Stockfish，或 lc0 配 Maia 权重；Maia 权重默认在 `~/.local/share/maia/maia-1100.pb.gz` 等文件中，仓库不提供。中国象棋使用 Fairy-Stockfish。引擎按环境变量（`STOCKFISH`、`LC0`、`FAIRY_STOCKFISH`）、`PATH` 以及 `/usr/games`、`/usr/local/games`、`/usr/local/bin`、`/usr/bin`、`/opt/homebrew/bin` 顺序查找。引擎只当对手或事后裁判，不替模型选着。
+若改用引擎对手，国际象棋支持 Stockfish，或 lc0 配 Maia 权重；Maia 权重默认在 `~/.local/share/maia/maia-1100.pb.gz` 等文件中，仓库不提供。中国象棋使用 Fairy-Stockfish。引擎按环境变量（`STOCKFISH`、`LC0`、`FAIRY_STOCKFISH`）、`PATH` 以及 `~/.local/bin`、`/usr/games`、`/usr/local/games`、`/usr/local/bin`、`/usr/bin`、`/opt/homebrew/bin` 顺序查找。引擎只当对手或事后裁判，不替模型选着。
 
 ## 阅读器测试与录制
 

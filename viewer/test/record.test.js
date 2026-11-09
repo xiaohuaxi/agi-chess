@@ -61,9 +61,6 @@ test('serve CLI 与可执行文件查找：端口 0 保留、非法参数报错�
   assert.throws(() => parseServeCli(['--port', '70000']), /--port/);
   assert.throws(() => parseServeCli(['--unknown']), /unknown/i);
   assert.throws(() => parseServeCli(['extra']), /位置参数/);
-  assert.ok(resolveFfmpeg('sh').endsWith('/sh'));
-  assert.ok(resolveFfprobe(undefined, 'sh').endsWith('/sh'));
-  assert.ok(resolveChromium('sh', {}).endsWith('/sh'));
   assert.throws(() => resolveFfmpeg('nonexistent-ffmpeg-cmd'), /nonexistent-ffmpeg-cmd/);
   assert.throws(() => resolveFfprobe(undefined, 'nonexistent-ffprobe-cmd'), /nonexistent-ffprobe-cmd/);
   assert.throws(() => resolveChromium('nonexistent-browser-cmd', {}), /nonexistent-browser-cmd/);
@@ -76,25 +73,35 @@ test('serve CLI 与可执行文件查找：端口 0 保留、非法参数报错�
   chmodSync(customFfmpeg, 0o755);
   assert.notEqual(resolveFfprobe(customFfmpeg), customFfmpeg);
   const oldFfprobeEnv = process.env.VIEWER_FFPROBE;
+  const oldPath0 = process.env.PATH;
   try {
-    process.env.VIEWER_FFPROBE = 'sh';
-    assert.ok(resolveFfprobe(customFfmpeg).endsWith('/sh'));
+    process.env.PATH = `${customDir}${oldPath0 ? `:${oldPath0}` : ''}`;
+    assert.equal(resolveFfmpeg('ffmpeg-4.4'), customFfmpeg);
+    assert.equal(resolveFfprobe(undefined, 'ffmpeg-4.4'), customFfmpeg);
+    assert.equal(resolveChromium('ffmpeg-4.4', {}), customFfmpeg);
+    process.env.VIEWER_FFPROBE = 'ffmpeg-4.4';
+    assert.equal(resolveFfprobe(customFfmpeg), customFfmpeg);
     process.env.VIEWER_FFPROBE = 'nonexistent-ffprobe-env';
     assert.throws(() => resolveFfprobe(customFfmpeg), /nonexistent-ffprobe-env/);
   } finally {
+    process.env.PATH = oldPath0;
     if (oldFfprobeEnv === undefined) delete process.env.VIEWER_FFPROBE;
     else process.env.VIEWER_FFPROBE = oldFfprobeEnv;
   }
-  // Windows 扩展名补全：在 PATH 中找到 .exe
+  // Windows 扩展名补全：在 PATH 中只认 .exe（不认需 shell 的 .cmd / .bat）
   const fakeBinDir = join(TMP, 'win-bin');
   mkdirSync(fakeBinDir, { recursive: true });
   const fakeExe = join(fakeBinDir, 'my-tool.exe');
+  const fakeCmd = join(fakeBinDir, 'my-cmd.cmd');
   writeFileSync(fakeExe, '#!/bin/sh\n');
+  writeFileSync(fakeCmd, '@echo off\r\n');
   chmodSync(fakeExe, 0o755);
+  chmodSync(fakeCmd, 0o755);
   const oldPath = process.env.PATH;
   try {
     process.env.PATH = fakeBinDir;
     assert.equal(findExecutable('my-tool', [], 'win32'), fakeExe);
+    assert.equal(findExecutable('my-cmd', [], 'win32'), null);
     assert.equal(findExecutable('my-tool', [], 'linux'), null);
   } finally {
     process.env.PATH = oldPath;
