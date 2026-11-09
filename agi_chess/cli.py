@@ -7,6 +7,10 @@
     python3 -m agi_chess play --game chess --tag c3 --black engine:maia-1500 --opening random:8 --opening-seed 1
     python3 -m agi_chess resume runs/x1                                                  # 暂停后接着下
     python3 -m agi_chess export runs/x1                                                  # 已结束的盘重新导出棋谱
+    python3 -m agi_chess.analyze runs/<tag>                                              # 引擎事后逐手复盘与恶手分析
+    python3 -m agi_chess.batch {run,summary}                                             # 多盘批次运行与汇总
+    python3 -m agi_chess.quiz {run,judge,report}                                         # 局面题测试、判卷与汇总表输出
+    python3 analysis/rating/rate.py report [--boot 10]                                   # 复算等级分与 95% 置信区间
 
 协议 --protocol（默认 real）：real 是「模型就是真实棋手」（design.md 第九节）——每方一段连续会话（memory 默认 session），
   只给局面、轮到谁、对方上一步，不报将军、不给合法着法；默认请棋手在着法之前写出理由（reason=off 关掉）；

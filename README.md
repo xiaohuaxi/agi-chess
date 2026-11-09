@@ -8,7 +8,7 @@ This project puts untuned general-purpose models at the board like human players
 
 > **Interactive Game Viewer ([`viewer/`](viewer/)) — Browse All 171 Games Zero-Config**
 >
-> Without installing any chess engine or configuring API keys, run `node viewer/serve.mjs --port 8765 --bind 127.0.0.1` (or `python3 -m http.server 8765 --bind 127.0.0.1`) in the repository root and open [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl&lang=en`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl&lang=en) to immediately see the board, per-move model rationales, engine blunder/mistake annotations, elapsed time, and token stats. You can also open [`http://127.0.0.1:8765/viewer/?lang=en`](http://127.0.0.1:8765/viewer/?lang=en) without query parameters and drag any single-game `runs/<tag>/game.pgn` or multi-game batch `runs/<batch>/<game>/game.pgn` (optionally alongside its `analysis.jsonl`) onto the page; exporting MP4 replay videos requires running `npm ci` in `viewer/` with Chromium and `ffmpeg` available (see [Viewer & Video Guide](docs/viewer-guide.en.md)).
+> Without installing any chess engine or configuring API keys, run `node viewer/serve.mjs` in the repository root (listening on `127.0.0.1:8765` by default; or `python3 -m http.server 8765 --bind 127.0.0.1` if Node.js is unavailable), then open [`http://127.0.0.1:8765/viewer/?lang=en`](http://127.0.0.1:8765/viewer/?lang=en) to click a built-in featured game or go straight to [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1&lang=en`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1&lang=en) (passing a run directory or `game.pgn` automatically loads the companion `analysis.jsonl` blunder annotations) to see the board, per-move model rationales, engine blunder/mistake badges, elapsed time, and token stats. You can also drag any `runs/<tag>/game.pgn` or `runs/<batch>/<game>/game.pgn` (optionally alongside its `analysis.jsonl`) onto the page; exporting MP4 replay videos requires running `npm --prefix viewer ci` with Chromium and `ffmpeg` available (see [Viewer & Video Guide](docs/viewer-guide.en.md)).
 
 ## Start Here
 
@@ -21,59 +21,88 @@ This project puts untuned general-purpose models at the board like human players
 | Understand prompts, match protocols, record formats, and failure handling | [System Design (zh-CN)](docs/design.md) |
 | Track maintenance logs and open decisions | [Project Status (zh-CN)](docs/status.md) |
 
-## Two Model-Free Quick Starts
+## Quick Starts (No Model Accounts or Engines Needed)
 
-All commands below run from the repository root and require neither model credentials nor chess engines. Recomputing ratings (`analysis/rating`) and browsing games (`viewer/`) do not require installing additional Python rule libraries.
+All commands below run from the repository root and require neither model credentials nor chess engines.
 
-### Install Python Rule Libraries (Optional)
+### Part 1: Zero-Dependency 30-Second Experience (Only Python 3 Stdlib or Node.js)
 
-If you want to run command-line matches, re-export game records, verify checked-in quiz banks offline, or run the Python offline test suite, install the rule libraries from `requirements.txt`:
+1. **Browse 171 Official Games & Engine Blunder Reviews**:
 
-```sh
-python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
-python3 data/batch1/select_positions.py check
-python3 data/batch2/select_positions.py check
-```
+   ```sh
+   node viewer/serve.mjs
+   # Or without Node.js: python3 -m http.server 8765 --bind 127.0.0.1
+   ```
 
-`select_positions.py check` verifies the checked-in Batch 1 and Batch 2 position banks (`data/batch1/` and `data/batch2/`) offline without engines or model accounts. For full environment setup and engine opponent installation, see [Setup & Running](docs/setup.en.md).
+   Open in your browser (passing a directory path or `game.pgn` automatically overlays blunder badges from the same directory's `analysis.jsonl`):
+   - [Blank Viewer (with 4 clickable featured games)](http://127.0.0.1:8765/viewer/?lang=en)
+   - [Chess Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1&lang=en)
+   - [Xiangqi Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8765/viewer/?files=/runs/g7-x-opus-astra-1&lang=en)
+   - [Chess: Argon High vs Opus High (Game 1)](http://127.0.0.1:8765/viewer/?files=/runs/argon-vs-agy-opus-high-20261019&lang=en)
+   - [Chess Rating Calibration Match (Opus Max vs Maia-1900)](http://127.0.0.1:8765/viewer/?files=/runs/zc/maia-1900-s1-w&lang=en)
+   - [Chess Test Sample](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en) · [Xiangqi Test Sample](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en)
 
-### Recompute Published Ratings
+   Use Left/Right arrow keys to step through moves and Space to play or pause; replace `files=` with any single-game directory `/runs/<tag>` (58 single-game directories) or multi-game batch subdirectory `/runs/<batch>/<game>` (7 multi-game batch directories `b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`). The viewer defaults to Chinese (`lang=zh`); append `&lang=en` for English, and use `names=` to override displayed player names (see [Viewer & Video Guide](docs/viewer-guide.en.md)).
 
-Requires only the Python 3 standard library:
+2. **Recompute Rating Scales in Seconds** (requires only the Python 3 standard library):
 
-```sh
-python3 analysis/rating/rate.py report
-```
+   ```sh
+   python3 analysis/rating/rate.py report --boot 10   # ~1.5s quick table (10 bootstrap resamples)
+   python3 analysis/rating/rate.py report             # Full 1,000 bootstrap resamples (~1.5 min, reproduces exact report CIs)
+   ```
 
-The script reads checked-in match scores and human-scale anchor data and runs 1,000 bootstrap resamples (taking a few minutes). Its output reproduces the scales and intervals in the [Opus Max Rating Report](docs/results/opus-max-rating.md). It recomputes the statistical fit rather than re-playing raw games or re-running per-move engine evaluations.
+   Reads checked-in match scores and human-scale anchor data to reproduce the scales and intervals in the [Opus Max Rating Report](docs/results/opus-max-rating.md). It recomputes the statistical fit rather than re-playing raw games or re-running per-move engine evaluations.
 
-### Replay Official Model Games and Sample PGNs
+3. **Recompute All 9 Position-Quiz Summary Tables in 0.1s** (requires only the Python 3 standard library):
 
-Start a local static HTTP server with Python 3:
+   ```sh
+   python3 -m agi_chess.quiz report --batch batch2    # Outputs table in 0.1s; supports batch1, batch2, batch3, 4p, 4p2, 5-ds, 5-sol, 6r, 6r-sol
+   ```
 
-```sh
-python3 -m http.server 8000 --bind 127.0.0.1
-```
+### Part 2: Install Python Rule Libraries & Run Your First Local Match (Optional)
 
-Open in your browser (with `&lang=en` for the English UI):
+To run command-line matches, export game records, verify position banks offline, or run the Python unit test suite, install the rule libraries (`chess` and `pyffish`):
 
-- [Chess Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8000/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn&lang=en)
-- [Xiangqi Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8000/viewer/?files=/runs/g7-x-opus-astra-1/game.pgn&lang=en)
-- [Chess Test Sample](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en)
-- [Xiangqi Test Sample](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en)
+1. **Create a virtual environment and install `requirements.txt`** (on Ubuntu/Debian, if `ensurepip` is missing, run `sudo apt install python3-venv` first):
 
-Use the Left/Right arrow keys to step through moves and Space to play or pause; you can also open the [Blank Viewer](http://127.0.0.1:8000/viewer/?lang=en) and drag in any `.pgn` file (plus its `analysis.jsonl`), or point `files=` to any checked-in `/runs/<tag>/game.pgn` (for the 58 single-game directories) or `/runs/<batch>/<game>/game.pgn` (for the 7 multi-game batch directories `b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`, e.g. `/runs/zc/maia-1900-s1-w/game.pgn`). Press Ctrl-C in the terminal when finished. If port 8000 is busy, choose another port and update the URLs accordingly.
+   ```sh
+   python3 -m venv .venv && . .venv/bin/activate
+   pip install -r requirements.txt
+   ```
 
-Viewing in a browser requires no `npm` installation. `runs/` includes `game.pgn` (includes the visible reasoning, elapsed time, and token metadata recorded for model moves) for all 171 official model games. Recording MP4 videos requires headless Chromium automation and FFmpeg; see the [Viewer & Video Guide](docs/viewer-guide.en.md).
+2. **Verify position banks and run unit tests**:
 
-The viewer defaults to Chinese (`lang=zh`); append `&lang=en` to switch the interface to English, and use `names=` to override displayed player names. See the [Viewer & Video Guide](docs/viewer-guide.en.md) for full URL parameters.
+   ```sh
+   python3 data/batch1/select_positions.py check
+   python3 data/batch2/select_positions.py check
+   python3 -m unittest discover -s tests -t . -v
+   ```
 
-## Research Themes
+   `select_positions.py check` verifies the Batch 1 and Batch 2 position banks offline; when local Stockfish / Fairy-Stockfish engines are not installed, `unittest -v` automatically skips the 21 live-engine integration tests while passing all offline tests.
+
+3. **Run a Zero-API-Cost First Match in 0.1s & Inspect Prompts**:
+
+   ```sh
+   # Play 20 plies between two random movers (no API key or engine needed; writes runs/demo-random/game.pgn in 0.1s, viewable at ?files=/runs/demo-random)
+   python3 -m agi_chess play --game chess --tag demo-random --white random --black random --max-plies 20 --seed 42
+   # Print the system prompt and first-move user prompt under the real-player protocol without calling any model
+   python3 -m agi_chess play --game xiangqi --tag demo-prompt --dry-run
+   ```
+
+   For full environment setup, engine opponent installation, and post-game engine blunder analysis (`python3 -m agi_chess.analyze runs/<tag>`), see [Setup & Running](docs/setup.en.md).
+
+## Research Themes & Key Findings
 
 - **Reasoning Depth & Session Continuity:** Position quizzes and full-game experiments separately test the impact of reasoning effort, multi-turn session continuation, and retaining vs. dropping prior thinking blocks. Identically named effort levels across providers do not imply equal compute budgets.
 - **Board Representation & Blunder Taxonomy:** We compare ASCII boards, FEN strings, and piece lists, combining post-game engine analysis with visible model rationales to diagnose errors. Visible rationales are inspectable response text, not the model's hidden chain-of-thought.
 - **Model-vs-Model Play & Rating Calibration:** Covers head-to-head model matches, fixed-strength engine opponents, and engine ladder calibration. Cross-model matches are mostly small-sample directional tests, and analogies to human rating pools carry anchor and conversion uncertainties.
+
+**Summary of Core Quantitative Findings** (see [Research Index](docs/research.en.md) and [Project Status (zh-CN)](docs/status.md) for full details):
+
+- **Calibrated Playing Strength (Opus Max across 67 Engine Calibration Games):** In International Chess (30 games), under engine adjudication at the 200-ply cap (≥300 cp lead wins), Opus Max fits at **+189 scale points above Maia-1900** (95% CI: 66–313), corresponding to **~1800 Lichess Blitz / ~1920 Lichess Rapid** (or +281 / ~1910 Blitz / ~2020 Rapid under the original cap-is-draw rule); in Xiangqi (37 games), it fits at **+121 Elo above Fairy-Stockfish `nodes=100`** (95% CI: +1 to +236), comparable to or slightly above `nodes=300` (+82) and clearly below `nodes=1000` (+385).
+- **Move Legality & Capture Rules Are Not the Primary Bottleneck:** Under the real-player protocol, models rarely output illegal moves. In targeted diagnostics across 14 full-game missed-capture/hanging-piece positions, models listed every legal capture **26/26 times** when asked in isolation, yet failed to mention the critical capture in 13/14 full-game rationales—pointing to **selective attention during search and shallow lookahead** rather than board-reading or rule ignorance.
+- **Board Representation & 1-Ply Blind Spots (Especially in Xiangqi):** More input is not always better—in Xiangqi, giving **only the piece list (`pieces`)** yielded the lowest blunder rate (21% vs. 34% for `FEN + ASCII board + piece list`, where the ASCII grid caused models to confuse Black's `車` with Red's). Models in Xiangqi repeatedly exhibited 1-ply self-hangs (such as walking a Rook into a screened Cannon capture, `炮隔炮打车`) and left hanging major pieces uncaptured for multiple consecutive plies.
+- **Reasoning Depth Dominates, While Thought Carryover Cuts Both Ways:** Scaling `effort` (`medium → high → xhigh → max`) is the single most effective lever for reducing blunders (e.g., in the `max` vs. `max` peak match against Astra, Opus won 3:1 in Chess and 4:0 in Xiangqi). Continuous sessions (`session`) genuinely reuse prior thinking and cut per-move thinking tokens, but retaining prior thinking can also lock in early blind spots (dropping prior thinking via `drop_thinking` reduced missed captures for Opus at 2–3× the per-move token and time cost).
 
 The [Round 1 Summary](docs/results/summary-round1.md) summarizes only the initial phase of experiments; subsequent head-to-head matches, rating calibrations, and Gemini evaluations are cataloged in the [Research Index](docs/research.en.md). Each report preserves the conditions and conclusions of its time.
 

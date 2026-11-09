@@ -177,11 +177,21 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
   font-size: var(--row1-size); line-height: var(--row1-lh); white-space: nowrap; }
 #title .t-row .name { flex: 0 1 auto; min-width: 0; overflow: hidden; }
 
-/* ---- 没有棋谱时的提示（拖文件进来） ---- */
+/* ---- 没有棋谱时的提示（拖文件进来，或直接点内置代表局） ---- */
 #hint { display: none; }
 #stage.empty > :not(#hint) { display: none; }
-#stage.empty > #hint { display: flex; flex: 1; align-items: center; justify-content: center; padding: 0 32px;
-  text-align: center; white-space: pre-line; font-size: var(--row2-size); line-height: 1.6; color: var(--text-weak); }
+#stage.empty > #hint { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center;
+  gap: 24px; padding: 24px 32px; text-align: center; font-size: var(--row2-size); line-height: 1.6; color: var(--text-weak); }
+#hint .h-msg { white-space: pre-line; }
+#hint .h-samples { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 440px; text-align: left; }
+#hint .h-title { font-size: 14px; color: var(--text-weak); text-align: center; margin-bottom: 2px; }
+#hint .h-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px;
+  background: var(--bar-bg); border: 1px solid #3d3935; border-radius: 8px; color: var(--text); text-decoration: none;
+  font-size: 15px; line-height: 1.4; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#hint .h-link:hover { background: #383430; border-color: #524c46; }
+#hint .h-link:active { background: var(--bar-active-bg); border-color: var(--accent); }
+#hint .h-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hint .h-arr { flex: none; font-size: 18px; line-height: 1; color: var(--accent); }
 
 /* ================================================================ 宽版（给人读棋谱；docs/viewer.md「版式」）
   左边沿用窄版的棋手条 + 棋盘 + 棋手条（字号配色同上），右边一栏 #side：对局信息、播放按钮、着法列表、这步的评注和数字。

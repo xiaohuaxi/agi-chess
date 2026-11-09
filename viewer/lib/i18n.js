@@ -42,6 +42,13 @@ export const TEXT = {
     btn: { first: '本盘开头（Home）', prev: '上一步（←）', play: '播放 / 暂停（空格）', next: '下一步（→）', last: '本盘结尾（End）' },
     keys: [[['←', '→'], '单步'], [['空格'], '播放 / 暂停'], [['Home', 'End'], '本盘首尾'], [['PgUp', 'PgDn'], '换盘'], [[], '点着法跳到那步']],
     hint: '把棋谱文件（.pgn）拖进来\n或在网址后加 ?files=/runs/xxx/game.pgn',
+    samplesTitle: '直接打开仓内代表局（自动加载恶手复盘）',
+    samples: [
+      ['国际象棋巅峰局 · Opus Max vs Astra Max', '/runs/g7-c-opus-astra-1'],
+      ['中国象棋巅峰局 · Opus Max vs Astra Max', '/runs/g7-x-opus-astra-1'],
+      ['国际象棋 · Argon High vs Opus High', '/runs/argon-vs-agy-opus-high-20261019'],
+      ['国际象棋等级分锚定局 · Opus Max vs Maia-1900', '/runs/zc/maia-1900-s1-w'],
+    ],
     // 着法标注与评注数字（lib/panel.js）
     nag: { 1: '好棋', 2: '错着', 3: '妙着', 4: '大错', 5: '有意思', 6: '可疑' },
     hms: ['时', '分', '秒'],
@@ -78,6 +85,13 @@ export const TEXT = {
     btn: { first: 'Start of game (Home)', prev: 'Previous move (←)', play: 'Play / pause (Space)', next: 'Next move (→)', last: 'End of game (End)' },
     keys: [[['←', '→'], 'Step'], [['Space'], 'Play / pause'], [['Home', 'End'], 'First / last move'], [['PgUp', 'PgDn'], 'Switch game'], [[], 'Click a move to jump to it']],
     hint: 'Drop PGN files here\nor add ?files=/runs/xxx/game.pgn to the URL',
+    samplesTitle: 'Or open a featured game from runs/ (with blunder annotations)',
+    samples: [
+      ['Chess Peak Match · Opus Max vs Astra Max', '/runs/g7-c-opus-astra-1'],
+      ['Xiangqi Peak Match · Opus Max vs Astra Max', '/runs/g7-x-opus-astra-1'],
+      ['Chess Match · Argon High vs Opus High', '/runs/argon-vs-agy-opus-high-20261019'],
+      ['Chess Rating Match · Opus Max vs Maia-1900', '/runs/zc/maia-1900-s1-w'],
+    ],
     nag: { 1: 'Good move', 2: 'Mistake', 3: 'Brilliant move', 4: 'Blunder', 5: 'Interesting move', 6: 'Dubious move' },
     hms: ['h', 'm', 's'],
     cmd: {

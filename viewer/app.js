@@ -51,12 +51,29 @@ const frames = (n = 2) => new Promise((ok) => {
 });
 
 // ---------------------------------------------------------------- 读棋谱
+// 支持传目录简写（如 ?files=/runs/g7-c-opus-astra-1 → 自动补 /game.pgn）；
+// 当路径以 /game.pgn（或 game.pgn）结尾且未显式传同目录 analysis.jsonl 时，自动尝试伴随加载同目录 analysis.jsonl（404 静默忽略）。
 async function fetchTexts(paths) {
-  return Promise.all(paths.map(async (p) => {
+  const norm = paths.map((p) => {
+    const clean = p.replace(/\/+$/, '');
+    return /\.(pgn|jsonl)$/i.test(clean) ? clean : `${clean}/game.pgn`;
+  });
+  const explicit = new Set(norm);
+  const groups = await Promise.all(norm.map(async (p) => {
     const res = await fetch(p);
     if (!res.ok) throw new Error(`读不到棋谱 ${p}：${res.status}`);
-    return { name: p, text: decodeText(new Uint8Array(await res.arrayBuffer())) };
+    const main = { name: p, text: decodeText(new Uint8Array(await res.arrayBuffer())) };
+    if (!/(^|\/)game\.pgn$/i.test(p)) return [main];
+    const ana = p.replace(/game\.pgn$/i, 'analysis.jsonl');
+    if (explicit.has(ana)) return [main];
+    explicit.add(ana);
+    try {
+      const aRes = await fetch(ana);
+      if (aRes.ok) return [main, { name: ana, text: decodeText(new Uint8Array(await aRes.arrayBuffer())) }];
+    } catch { /* 同目录无 analysis.jsonl 时静默忽略 */ }
+    return [main];
   }));
+  return groups.flat();
 }
 
 function parseGames(inputs) {
@@ -616,9 +633,23 @@ async function useTexts(texts) {
   delete document.body.dataset.error;
 }
 
-function showHint(text) {
+function showHint(text, withSamples = false) {
   $('stage').classList.add('empty');
-  $('hint').textContent = text;
+  const box = $('hint');
+  const kids = [h('div', 'h-msg', text)];
+  if (withSamples && L.samples?.length) {
+    const wrap = h('div', 'h-samples');
+    wrap.append(h('div', 'h-title', L.samplesTitle));
+    const tail = LANG === 'en' ? '&lang=en' : '';
+    for (const [label, path] of L.samples) {
+      const a = h('a', 'h-link');
+      a.href = `?files=${path}${tail}`;
+      a.append(h('span', 'h-name', label), h('span', 'h-arr', '›'));
+      wrap.append(a);
+    }
+    kids.push(wrap);
+  }
+  box.replaceChildren(...kids);
 }
 
 async function init() {
@@ -626,7 +657,7 @@ async function init() {
   const files = (params.get('files') || '').split(',').map((s) => s.trim()).filter(Boolean);
   if (!files.length) {
     if (REC) throw new Error('没给棋谱：网址加 ?files=/runs/xxx/game.pgn');
-    showHint(L.hint);
+    showHint(L.hint, true);
     return true;
   }
   await useTexts(await fetchTexts(files));

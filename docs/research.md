@@ -104,7 +104,25 @@
 | [评级战绩与脚本](../analysis/rating/) | 从 `games-engines.csv`、`games-opus.csv`、`human-scale.json` 离线复算评级刻度（`rate.py report`），或直接查看已入库的批次汇总 `runs/zc/summary.md`、`runs/zx/summary.md` | `rate.py export` 重导 CSV 所需的纯引擎标定原始目录不在库（导出后的 CSV 已入库）；`stats.py` 统计每盘花费与墙钟需读取未入库的本机 `game.jsonl` |
 | [阅读器 fixtures](../viewer/test/fixtures/) | 测试、演示解析和显示 | 仅供测试演示；查看真实实验对局请直接打开单盘目录 `runs/<tag>/game.pgn` 或多盘批次子目录 `runs/<batch>/<game>/game.pgn` |
 
-评级复算在仓库根运行 `python3 analysis/rating/rate.py report`，不调用模型或引擎；它复算已有战绩和历史人类锚，不获取最新在线评级。`runs/` 现已随仓入库全部 171 盘正式模型对局的 `game.pgn`、引擎逐着复盘 `analysis.jsonl` 以及 9 批正式局面题判卷结果 `judged.jsonl`；仅体积庞大的底层事件流 `game.jsonl`、纯引擎互弈标定原始目录及录屏 `.mp4` 视频保持被 Git 忽略。
+评级复算在仓库根运行 `python3 analysis/rating/rate.py report --boot 10`（1.5 秒快检；去掉 `--boot 10` 跑完整 1,000 次自助法抽样约 1.5 分钟），不调用模型或引擎；9 批局面题判卷汇总表可运行 `python3 -m agi_chess.quiz report --batch batch2`（可换 `batch1`、`batch2`、`batch3`、`4p`、`4p2`、`5-ds`、`5-sol`、`6r`、`6r-sol`，0.1 秒出表）。`runs/` 现已随仓入库全部 171 盘正式模型对局的 `game.pgn`、引擎逐着复盘 `analysis.jsonl` 以及 9 批正式局面题判卷结果 `judged.jsonl`；仅体积庞大的底层事件流 `game.jsonl`、纯引擎互弈标定原始目录及录屏 `.mp4` 视频保持被 Git 忽略。
+
+### `runs/` 目录前缀与实验批次速查表
+
+| `runs/` 目录（或前缀） | 类型与规模 | 棋种与对阵 / 实验条件 | 对应报告 |
+| --- | --- | --- | --- |
+| `g1-c-opus-sol`、`g1-x-opus-sol` | 单盘目录 × 2（2 盘） | 国象 / 中象：Opus `xhigh` vs Sol `xhigh`（`real` 协议首跑，未写理由） | [Opus 对 Sol 首局](results/game-opus-vs-sol-1.md) |
+| `g2-c-*` | 单盘目录 × 6（6 盘） | 国象：Opus `xhigh` vs Astra `xhigh`（双方带思考、写理由，2:4） | [Opus 对 Astra：国际象棋](results/game-opus-vs-astra-1.md) |
+| `g3-x-*`、`g4-x-*` | 单盘目录 × 4（4 盘） | 中象：Opus `xhigh` vs Astra `xhigh`（双方带思考、写理由，4:0） | [Opus 对 Astra：中国象棋](results/game-opus-vs-astra-xq-1.md) |
+| `g3-c-max-*`、`g5-c-max-*` | 单盘目录 × 4（4 盘） | 国象：Opus `xhigh` vs Astra `max`（2:2） | [Opus xhigh 对 Astra Max：国际象棋](results/game-opus-vs-astra-max-1.md) |
+| `g5-x-max-*` | 单盘目录 × 4（4 盘） | 中象：Opus `xhigh` vs Astra `max`（2:2） | [Opus xhigh 对 Astra Max：中国象棋](results/game-opus-vs-astra-max-xq-1.md) |
+| `g6-c-*`、`g6-x-*` | 单盘目录 × 8（8 盘） | 国象 / 中象：Opus `xhigh`（`drop_thinking=on`）vs Astra `xhigh`（国象 3:1、中象 4:0） | [Opus 去掉此前思考对 Astra](results/game-opus-drop-vs-astra-1.md) |
+| `g7-c-*`、`g7-x-*` | 单盘目录 × 8（8 盘） | **巅峰对决**：国象 / 中象 Opus `max` vs Astra `max`（国象 3:1、中象 4:0） | [双方 Max 巅峰对决](results/game-opus-max-vs-astra-max-1.md) |
+| `argon-high-*`、`argon-vs-agy-opus-high-*`、`gemini38-*` | 单盘目录 × 7（7 盘） | Gemini Argon High 自弈（中象/国象各 1 盘）、Argon High vs agy Opus High 国象 4 盘（3:1）、Gemini 3.8 Flash High 中象自弈 | [Argon 中象自弈](results/argon-high-xiangqi-20261019.md)、[国象自弈](results/argon-high-chess-20261019.md)、[对 agy Opus 四盘](results/argon-vs-agy-opus-high-20261020.md) |
+| `b1-ch-*`、`b1-xq-*` | 单盘目录 × 15（15 盘） | 第一批 B：Opus `high`（`stateless`/`notes`/`session`）对 Maia-1100（9 盘）与 FSF `nodes=100`（6 盘） | [第一批 B：思考延续](results/batch1-carryover.md) |
+| `b1`、`b1-session`、`b2` | 多盘批次目录 × 3（40 盘） | 第二批 B1/C 国象（24 盘，对 random / Maia-1500 / Maia-1900）与 B2 中象（16 盘，对 FSF `nodes=30,100`） | [第二批 B1/C 国象](results/batch2-chess-strength.md)、[第二批 B2 中象](results/batch2-xiangqi-strength.md) |
+| `b3max-ch`、`b3max-xq` | 多盘批次目录 × 2（6 盘） | 第三批 B：Opus `max`（`stateless`）对引擎（国象 4 盘、中象 2 盘全胜） | [第三批 B：Max 整盘](results/batch3-maxdepth.md) |
+| `zc`（30 盘）、`zx`（37 盘） | 多盘批次目录 × 2（67 盘） | **Opus Max 棋力定位**：国象对 Maia-1900 / Stockfish 限强三档；中象对 FSF `nodes=30..1000` 阶梯 | [Opus Max 棋力定位](results/opus-max-rating.md) |
+| `quiz-{batch1,batch2,batch3,4p,4p2,5-ds,5-sol,6r,6r-sol}` | 局面题目录 × 9（50 份 `judged.jsonl`） | 第一至六批局面题判卷结果与汇总表（含 `report.txt`，可用 `python3 -m agi_chess.quiz report --batch <名>` 重算） | [第一批 A](results/batch1-depth.md)、[第二批 A](results/batch2-capture.md)、[第三批 A](results/batch3-reason.md)、[第四至六批](results/batch4-presentation.md) |
 
 使用程序见[安装与运行](setup.md)，看棋谱和出视频见[阅读器指南](viewer-guide.md)；当前工作状态与后续待办见[项目状态](status.md)。本索引只导航已有材料，没有追加模型调用、引擎分析或棋力重估。
 

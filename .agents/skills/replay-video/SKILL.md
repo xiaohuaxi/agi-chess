@@ -13,7 +13,7 @@ description: 用本仓库的棋谱阅读器（viewer/）把对局录成 mp4，�
   - **已入库的 171 盘正式对局**（含在 git worktree 中，无 `game.jsonl`）：共 65 个正式对局目录，其中 **58 个单盘目录**（43 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*` / `b1-xq-*`）直接位于 `runs/<tag>/game.pgn`；**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）顶层只有 `summary.*`，每盘棋位于二级子目录 `runs/<batch>/<game>/game.pgn`（如 `runs/zc/maia-1900-s1-w/game.pgn`）。它们均自带最新导出的完整 `game.pgn`（170 盘另带 `analysis.jsonl`），可直接浏览或录屏，**不要**检查 `game.jsonl`，也**不要**运行 `python3 -m agi_chess export`。
   - **本机新跑、含 `game.jsonl` 的对局**：只录下完的棋——先确认 `runs/<tag>/game.jsonl` 最后一行是 `{"type": "end", …}`（没有这一行的可能正在下，别碰它的目录），再按需运行 `python3 -m agi_chess export runs/<tag>` 重写导出文件（`game.pgn`、`record.txt`），不动 `game.jsonl`。
 - 录制脚本认相对仓库根目录的路径或本机任意绝对路径。
-- 开发依赖：先在 `viewer/` 下跑一次 `npm ci`（安装锁定的 `playwright-core==1.58.2`）。脚本会自动从 `PATH` 与常见路径查找 `ffmpeg` 和 Chromium / Chrome；若本机尚无兼容浏览器，可在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本配套的浏览器。
+- 开发依赖：先在仓库根目录跑一次 `npm --prefix viewer ci`（安装锁定的 `playwright-core==1.58.2`）。脚本会自动从 `PATH` 与常见路径查找 `ffmpeg` 和 Chromium / Chrome；若本机尚无兼容浏览器，可在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本配套的浏览器。
 
 ## 一条命令出片
 
@@ -64,14 +64,14 @@ ffmpeg -v error -y -ss 5 -i /tmp/g1.mp4 -frames:v 1 /tmp/g1-5s.png
 页面是纯静态文件，但不能用 `file://` 打开，要在仓库根目录下起本机服务：
 
 ```
-python3 -m http.server --bind 127.0.0.1 8000
-# 或用零依赖 Node 服务：node viewer/serve.mjs --port 8000 --bind 127.0.0.1
+node viewer/serve.mjs
+# 默认监听 127.0.0.1:8765；无 Node.js 时可用：python3 -m http.server 8765 --bind 127.0.0.1
 ```
 
-一定要绑 127.0.0.1，别暴露到局域网。然后打开 `http://127.0.0.1:8000/viewer/`：
+一定要绑 127.0.0.1，别暴露到局域网。然后打开 `http://127.0.0.1:8765/viewer/`：
 
-- 网址参数：`?files=/runs/a/game.pgn,/runs/b/game.pgn&autoplay=1&gap=1.5`（多盘批次写二级子目录如 `/runs/zc/maia-1900-s1-w/game.pgn`；同时传入同目录的 `analysis.jsonl` 可叠加引擎恶手/失误/不精确徽章）。路径从站点根算起，所以要在同时有 `viewer/` 和 `runs/` 的目录下起服务。静态看某一格用 `game=2&ply=30`（`ply=end` 是终局），多盘总比分用 `summary=1`；`layout=wide` / `layout=compact` 强制宽版或窄版。
-- 也可以不带参数打开页面，把 `.pgn` 文件（可连带对应的 `analysis.jsonl`）拖进去。多个文件按文件名排序连播。
+- 网址参数：`?files=/runs/g7-c-opus-astra-1` 或 `?files=/runs/a/game.pgn,/runs/b/game.pgn&autoplay=1&gap=1.5`（支持单盘目录简写自动补 `/game.pgn`，多盘批次写二级子目录如 `/runs/zc/maia-1900-s1-w`；当路径指向 `game.pgn` 或目录简写时，阅读器会自动尝试加载同目录的 `analysis.jsonl` 叠加引擎恶手/失误/不精确徽章，也支持逗号显式传多文件）。路径从站点根算起，所以要在同时有 `viewer/` 和 `runs/` 的目录下起服务。静态看某一格用 `game=2&ply=30`（`ply=end` 是终局），多盘总比分用 `summary=1`；`layout=wide` / `layout=compact` 强制宽版或窄版。
+- 也可以不带参数打开页面，直接点击页面上的内置代表局，或把 `.pgn` 文件（可连带对应的 `analysis.jsonl`）拖进去。多个文件按文件名排序连播。
 - 声音默认关着，网址加 `sound=1` 打开（`vol=0.5` 调轻）。浏览器要页面上点过一下或按过键才放得出声，所以 `autoplay=1&sound=1` 打开后先点一下页面。
 - 快捷键：← → 单步，空格播放 / 暂停，Home / End 跳到本盘首尾，PgUp / PgDn 换盘；改了样式或脚本后可在浏览器里硬刷新（macOS: Cmd+Shift+R / Linux & Windows: Ctrl+Shift+R）。宽版（窗口宽 ≥ 900）右栏可以点着法跳步，看每步的评注、用时、token。
 

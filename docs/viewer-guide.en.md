@@ -11,23 +11,26 @@ The viewer defaults to Chinese; append `lang=en` to the URL to switch the UI to 
 Start a local static HTTP server from the repository root:
 
 ```sh
-python3 -m http.server --bind 127.0.0.1 8000
-# Or use the zero-dependency Node server: node viewer/serve.mjs --port 8000 --bind 127.0.0.1
+node viewer/serve.mjs
+# Listens on 127.0.0.1:8765 by default; without Node.js, use: python3 -m http.server 8765 --bind 127.0.0.1
 ```
 
-Open any of the links below in your browser:
+Open any of the links below in your browser (passing a run directory or `game.pgn` automatically loads the companion `analysis.jsonl` blunder annotations):
 
-- [Chess Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8000/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn&lang=en)
-- [Xiangqi Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8000/viewer/?files=/runs/g7-x-opus-astra-1/game.pgn&lang=en)
-- [Chess Test Sample](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en)
-- [Xiangqi Test Sample](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en)
-- [Back-to-Back Playback of Both Samples](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1&lang=en)
+- [Blank Viewer (with 4 clickable featured games)](http://127.0.0.1:8765/viewer/?lang=en)
+- [Chess Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1&lang=en)
+- [Xiangqi Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8765/viewer/?files=/runs/g7-x-opus-astra-1&lang=en)
+- [Chess: Argon High vs Opus High (Game 1)](http://127.0.0.1:8765/viewer/?files=/runs/argon-vs-agy-opus-high-20261019&lang=en)
+- [Chess Rating Calibration Match (Opus Max vs Maia-1900)](http://127.0.0.1:8765/viewer/?files=/runs/zc/maia-1900-s1-w&lang=en)
+- [Chess Test Sample](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en)
+- [Xiangqi Test Sample](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en)
+- [Back-to-Back Playback of Both Samples](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1&lang=en)
 
-The repository's `runs/` directory contains `game.pgn` for all 65 official model match directories (171 games in total): **58 single-game directories** (43 model-vs-model + 15 single-game model-vs-engine `b1-ch-*`/`b1-xq-*`) are at `/runs/<tag>/game.pgn`, and **7 multi-game batch directories** (`b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`, 113 games in total) place each game in a second-level subdirectory `/runs/<batch>/<game>/game.pgn` (e.g. `/runs/zc/maia-1900-s1-w/game.pgn`). Replace `files=` in the URL with any of those paths to inspect that match and read the model's move-by-move rationales; if you also pass the accompanying `analysis.jsonl` in the same directory (e.g. `?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl&lang=en`), the viewer validates it and overlays engine blunder/mistake/inaccuracy badges. The HTTP server must be started from the repository root because paths in `files=` are resolved relative to the site root. Bind only to `127.0.0.1`, and press Ctrl-C in the terminal when finished. If port 8000 is in use, choose another port and update the URL. Because the viewer uses native browser ES modules, it cannot be opened directly via `file://`, and requires neither a build step nor `npm ci` for browsing.
+The repository's `runs/` directory contains `game.pgn` for all 65 official model match directories (171 games in total): **58 single-game directories** (43 model-vs-model + 15 single-game model-vs-engine `b1-ch-*`/`b1-xq-*`) can be passed directly as `/runs/<tag>` (or `/runs/<tag>/game.pgn`), and **7 multi-game batch directories** (`b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`, 113 games in total) place each game in a second-level subdirectory `/runs/<batch>/<game>` (e.g. `/runs/zc/maia-1900-s1-w`). Replace `files=` in the URL with any of those directory or `.pgn` paths to inspect that match and read the model's move-by-move rationales; when a path points to `game.pgn` (or a directory shorthand), the viewer automatically requests `analysis.jsonl` in the same directory to validate and overlay engine blunder/mistake/inaccuracy badges (silently ignoring 404s, while also supporting comma-separated multiple files). The HTTP server must be started from the repository root because paths in `files=` are resolved relative to the site root. Bind only to `127.0.0.1`, and press Ctrl-C in the terminal when finished. If port 8765 is in use, pass `--port 8000` to `node viewer/serve.mjs` and update the URL. Because the viewer uses native browser ES modules, it cannot be opened directly via `file://`, and requires neither a build step nor `npm ci` for browsing.
 
 ## Browse Your Own PGNs
 
-Open <http://127.0.0.1:8000/viewer/?lang=en> and drag `.pgn` files (optionally alongside matching `analysis.jsonl` files) onto the page. Multiple dropped files play sequentially sorted by filename; prefix filenames with `01-`, `02-` to control playback order.
+Open <http://127.0.0.1:8765/viewer/?lang=en> to click one of the built-in featured games or drag `.pgn` files (optionally alongside matching `analysis.jsonl` files) onto the page. Multiple dropped files play sequentially sorted by filename; prefix filenames with `01-`, `02-` to control playback order.
 
 | Action | Shortcut |
 | --- | --- |
@@ -61,12 +64,10 @@ Do not combine static positioning parameters (`game`, `ply`, `summary`) with `au
 Video recording uses a Node.js script to drive headless Chromium frame-by-frame and pipes frames into FFmpeg to produce an MP4. It does not require Python rule libraries and makes no model calls. Prerequisites:
 
 1. **Node.js >= 22 and npm** (quoted globbing in `node --test 'viewer/test/*.test.js'` requires Node.js 22+; on Node 18/20, omit the single quotes so the shell expands the glob: `node --test viewer/test/*.test.js`. Verified on 2026-11-05 with Node.js 24.20.0 and npm 11.19.0).
-2. Install locked dev dependencies in `viewer/`:
+2. Install locked dev dependencies in `viewer/` from the repository root:
 
    ```sh
-   cd viewer
-   npm ci
-   cd ..
+   npm --prefix viewer ci
    ```
 
 3. **A Chromium browser compatible with Playwright.** `playwright-core` does not download browsers during `npm ci`; point to an existing binary via `--chromium /abs/path/to/Chromium` or `VIEWER_CHROMIUM`. When unspecified, the script checks Playwright's local browser cache (installable for the locked `1.58.2` version from the repository root via `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium`) and then searches `PATH` and standard system paths for `chromium`, `chromium-browser`, `google-chrome-stable`, `google-chrome`, `/snap/bin/chromium`, and macOS `/Applications/Google Chrome.app/...`.

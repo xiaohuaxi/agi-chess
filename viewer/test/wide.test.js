@@ -179,4 +179,26 @@ test('评注面板：标注、将军、非法重选、不认识的命令', { ski
   });
 });
 
+test('目录简写与空白页示例：files=/runs/<dir> 自动加载 game.pgn 与同目录 analysis.jsonl 恶手标注，空白页提供代表局直达链接', { skip }, async () => {
+  await withPage('', WIDE, async (page) => {
+    const empty = await page.evaluate(() => ({
+      isEmpty: document.getElementById('stage').classList.contains('empty'),
+      msg: document.querySelector('#hint .h-msg')?.textContent,
+      hrefs: [...document.querySelectorAll('#hint .h-link')].map((a) => a.getAttribute('href')),
+    }));
+    assert.equal(empty.isEmpty, true);
+    assert.match(empty.msg, /把棋谱文件（\.pgn）拖进来/);
+    assert.ok(empty.hrefs.includes('?files=/runs/g7-c-opus-astra-1') && empty.hrefs.length >= 4);
+  });
+  await withPage('layout=wide&files=/runs/g7-c-opus-astra-1&ply=62', WIDE, async (page) => {
+    await at(page, 0, 62);
+    const loaded = await page.evaluate(() => ({
+      badCount: document.querySelectorAll('#s-moves .m.bad').length,
+      nags: [...document.querySelectorAll('#s-note .nag.bad')].map((e) => e.textContent),
+    }));
+    assert.ok(loaded.badCount > 0);
+    assert.deepEqual(loaded.nags, ['?? 大错']);
+  });
+});
+
 after(() => browser?.close());

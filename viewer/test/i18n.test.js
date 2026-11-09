@@ -242,6 +242,11 @@ test('英文界面：窄版各格画面（中局、将军、终局横幅、总�
 });
 
 test('英文界面：宽版右栏的标签、按钮、快捷键、下拉框没有中文；象棋着法写 WXF', { skip }, async () => {
+  await withPage('lang=en', WIDE, async (page) => {
+    noCjk(await visible(page), 'empty-en');
+    const hrefs = await page.evaluate(() => [...document.querySelectorAll('#hint .h-link')].map((a) => a.getAttribute('href')));
+    assert.ok(hrefs.length >= 4 && hrefs.every((h) => h.endsWith('&lang=en')));
+  });
   for (const q of [`${BOTH}&game=1&ply=12`, `${BOTH}&game=2&ply=end`, `${BOTH}&game=2&ply=0`]) {
     await withPage(`layout=wide&lang=en&${q}`, WIDE, async (page) => noCjk(await visible(page), q));
   }

@@ -11,23 +11,26 @@
 在仓库根目录运行本机静态服务：
 
 ```sh
-python3 -m http.server --bind 127.0.0.1 8000
-# 或用零依赖 Node 服务：node viewer/serve.mjs --port 8000 --bind 127.0.0.1
+node viewer/serve.mjs
+# 默认监听 127.0.0.1:8765；无 Node.js 时可用：python3 -m http.server 8765 --bind 127.0.0.1
 ```
 
-打开下面任一网址：
+打开下面任一网址（传入对局目录名或 `game.pgn` 会自动伴随加载同目录 `analysis.jsonl` 的恶手标注）：
 
-- [国际象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8000/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn)
-- [中国象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8000/viewer/?files=/runs/g7-x-opus-astra-1/game.pgn)
-- [国际象棋测试样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn)
-- [中国象棋测试样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
-- [两种棋样例连播](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1)
+- [空白阅读器（含 4 盘代表局一键直达入口）](http://127.0.0.1:8765/viewer/)
+- [国际象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1)
+- [中国象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-x-opus-astra-1)
+- [国际象棋 Argon High vs Opus High 第 1 局](http://127.0.0.1:8765/viewer/?files=/runs/argon-vs-agy-opus-high-20261019)
+- [国际象棋等级分锚定局（Opus Max vs Maia-1900）](http://127.0.0.1:8765/viewer/?files=/runs/zc/maia-1900-s1-w)
+- [国际象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn)
+- [中国象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
+- [两种棋样例连播](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1)
 
-仓库 `runs/` 目录已包含全部 65 个正式模型对局目录（共 171 盘）的 `game.pgn`：其中 **58 个单盘目录**（43 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）路径为 `/runs/<tag>/game.pgn`，**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `/runs/<batch>/<game>/game.pgn`（如 `/runs/zc/maia-1900-s1-w/game.pgn`）。只需将网址中的 `files=` 改为对应路径即可查看对局与每步思考理由；若同时传入同目录的 `analysis.jsonl`（如 `?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl`），阅读器还会严格校验并叠加引擎恶手/失误/不精确徽章。服务必须从仓库根目录启动，URL 中的路径相对站点根目录。只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8000 被占用时换一个端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
+仓库 `runs/` 目录已包含全部 65 个正式模型对局目录（共 171 盘）的 `game.pgn`：其中 **58 个单盘目录**（43 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）可直接写成 `/runs/<tag>`（或 `/runs/<tag>/game.pgn`），**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `/runs/<batch>/<game>`（如 `/runs/zc/maia-1900-s1-w`）。只需将网址中的 `files=` 改为对应目录或 `.pgn` 路径即可查看对局与每步思考理由；当路径指向 `game.pgn`（或目录简写）时，阅读器会自动尝试请求同目录的 `analysis.jsonl` 并严格校验叠加引擎恶手/失误/不精确徽章（若无则静默忽略，也支持用逗号显式传入多个文件）。服务必须从仓库根目录启动，URL 中的路径相对站点根目录。只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8765 被占用时可用 `node viewer/serve.mjs --port 8000` 换一个端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
 
 ## 浏览自己的棋谱
 
-打开 <http://127.0.0.1:8000/viewer/>，把 `.pgn` 文件（可连带对应的 `analysis.jsonl`）拖进页面。多个文件按文件名排序连播；若想控制顺序，可以在文件名前加 `01-`、`02-`。
+打开 <http://127.0.0.1:8765/viewer/>，可直接点击页面上的内置代表局，或把自己的 `.pgn` 文件（可连带对应的 `analysis.jsonl`）拖进页面。多个文件按文件名排序连播；若想控制顺序，可以在文件名前加 `01-`、`02-`。
 
 | 操作 | 快捷键 |
 | --- | --- |
@@ -61,12 +64,10 @@ python3 -m http.server --bind 127.0.0.1 8000
 录制由 Node.js 脚本启动无头 Chromium 截图，再用 FFmpeg 拼成 MP4，不需要 Python 规则库，也不会调用模型。准备：
 
 1. **Node.js >= 22** 与 npm（`node --test 'viewer/test/*.test.js'` 的引号通配需要 Node.js 22+；若使用 Node 18/20，可去掉单引号由 shell 展开：`node --test viewer/test/*.test.js`。2026-11-05 实测环境为 Node.js 24.20.0、npm 11.19.0）。
-2. 在 `viewer/` 安装锁文件中的开发依赖：
+2. 在仓库根目录安装 `viewer/` 锁文件中的开发依赖：
 
    ```sh
-   cd viewer
-   npm ci
-   cd ..
+   npm --prefix viewer ci
    ```
 
 3. 可被 Playwright 驱动的 Chromium。`playwright-core` 不会在 `npm ci` 时自动下载浏览器；可通过 `--chromium /绝对路径/Chromium` 或设置 `VIEWER_CHROMIUM` 指定，未指定时脚本依次查找 Playwright 配套的缓存 Chromium（可在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本 `1.58.2` 配套的浏览器）以及系统 `PATH` 和常见路径中的 `chromium`、`chromium-browser`、`google-chrome-stable`、`google-chrome`、`/snap/bin/chromium` 与 macOS `/Applications/Google Chrome.app/...`。

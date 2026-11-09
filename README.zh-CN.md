@@ -8,7 +8,7 @@
 
 > **棋谱阅读器（[`viewer/`](viewer/)）——零配置直接回放 171 盘对局**
 >
-> 无需安装引擎或配置 API Key，在仓库根目录运行 `node viewer/serve.mjs --port 8765 --bind 127.0.0.1`（或 `python3 -m http.server 8765 --bind 127.0.0.1`），直接点开示例对局 [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn,/runs/g7-c-opus-astra-1/analysis.jsonl) 即可看到棋盘、每步模型思考理由、引擎复盘恶手标注、耗时与 token 统计。也可不带参数打开 [`http://127.0.0.1:8765/viewer/`](http://127.0.0.1:8765/viewer/) 并把任意单盘目录 `runs/<tag>/game.pgn` 或多盘批次子目录 `runs/<batch>/<game>/game.pgn`（可连带同目录 `analysis.jsonl`）拖入页面查看；导出 MP4 复盘视频需先在 `viewer/` 下执行 `npm ci` 并具备 Chromium 与 `ffmpeg`（详见[棋谱阅读器指南](docs/viewer-guide.md)）。
+> 无需安装引擎或配置 API Key，在仓库根目录运行 `node viewer/serve.mjs`（默认监听 `127.0.0.1:8765`；若无 Node.js 可用 `python3 -m http.server 8765 --bind 127.0.0.1`），直接打开 [`http://127.0.0.1:8765/viewer/`](http://127.0.0.1:8765/viewer/) 点击页面上的内置代表局，或直达 [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1)（传对局目录名或 `game.pgn` 会自动伴随加载同目录 `analysis.jsonl` 的恶手标注），即可看到棋盘、每步模型思考理由、引擎复盘恶手徽章、耗时与 token 统计。也可将任意 `runs/<tag>/game.pgn` 或 `runs/<batch>/<game>/game.pgn`（可连带同目录 `analysis.jsonl`）拖入页面查看；导出 MP4 复盘视频需先执行 `npm --prefix viewer ci` 并具备 Chromium 与 `ffmpeg`（详见[棋谱阅读器指南](docs/viewer-guide.md)）。
 
 ## 从这里开始
 
@@ -21,59 +21,88 @@
 | 理解提示、赛制、记录格式和异常处理 | [程序设计](docs/design.md) |
 | 跟进维护工作与尚未决定的事项 | [项目进度](docs/status.md) |
 
-## 两条不调用模型的快速开始
+## 快速开始（免模型账号、免引擎）
 
-以下命令均在仓库根目录执行，不需要模型账号或棋类引擎。仅复算评级（`analysis/rating`）与浏览棋谱（`viewer/`）无需安装额外的 Python 规则库。
+以下命令均在仓库根目录执行，不需要模型账号或棋类引擎。
 
-### 安装 Python 规则依赖（可选）
+### 第一部分：零依赖 30 秒即刻体验（仅需 Python 3 标准库或 Node.js）
 
-若需运行命令行对弈、导出棋谱、离线校验已入库题库或执行 Python 离线测试，可通过仓库提供的 `requirements.txt` 安装规则库：
+1. **浏览 171 盘棋谱与引擎恶手复盘**：
 
-```sh
-python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
-python3 data/batch1/select_positions.py check
-python3 data/batch2/select_positions.py check
-```
+   ```sh
+   node viewer/serve.mjs
+   # 若未安装 Node.js，也可使用：python3 -m http.server 8765 --bind 127.0.0.1
+   ```
 
-`select_positions.py check` 离线校验已入库的第一批与第二批局面题（`data/batch1/` 与 `data/batch2/`），无需引擎或模型账号。完整环境配置与引擎对手安装详见[安装与运行](docs/setup.md)。
+   浏览器打开（传目录名或 `game.pgn` 会自动叠加同目录 `analysis.jsonl` 的恶手标注）：
+   - [空白阅读器（含 4 盘代表局一键直达入口）](http://127.0.0.1:8765/viewer/)
+   - [国际象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1)
+   - [中国象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-x-opus-astra-1)
+   - [国际象棋 Argon High vs Opus High 第 1 局](http://127.0.0.1:8765/viewer/?files=/runs/argon-vs-agy-opus-high-20261019)
+   - [国际象棋等级分锚定局（Opus Max vs Maia-1900）](http://127.0.0.1:8765/viewer/?files=/runs/zc/maia-1900-s1-w)
+   - [国际象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn) · [中国象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
 
-### 复算已有评级
+   用左右方向键逐步看棋，空格播放或暂停；也可将网址中的 `files=` 替换为任意单盘目录 `/runs/<tag>`（58 个单盘目录）或多盘批次子目录 `/runs/<batch>/<game>`（7 个多盘批次目录 `b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`）。默认中文界面，网址加 `&lang=en` 切英文，`names=` 可覆盖棋手显示名（详见[阅读器指南](docs/viewer-guide.md)）。
 
-只需要 Python 3 标准库：
+2. **秒级复算等级分刻度**（仅需 Python 3 标准库）：
 
-```sh
-python3 analysis/rating/rate.py report
-```
+   ```sh
+   python3 analysis/rating/rate.py report --boot 10   # 约 1.5 秒快速出表（10 次自助抽样）
+   python3 analysis/rating/rate.py report             # 完整 1,000 次自助抽样（约 1.5 分钟，复现报告精确置信区间）
+   ```
 
-脚本读取已入库的战绩与人类刻度数据，执行 1,000 次自助抽样，通常需要几分钟。输出对应 [Opus max 棋力定位报告](docs/results/opus-max-rating.md) 中的刻度与区间。它复算统计结果，不重新生成原始对局，也不等于核验了每一步引擎分析。
+   脚本读取已入库的战绩与人类刻度数据，输出对应 [Opus max 棋力定位报告](docs/results/opus-max-rating.md) 中的刻度与区间。它复算统计拟合结果，不重新生成原始对局或逐手引擎评分。
 
-### 播放正式对局与样例棋谱
+3. **秒级复算 9 批局面题判卷汇总表**（仅需 Python 3 标准库）：
 
-用 Python 3 在本机启动静态服务：
+   ```sh
+   python3 -m agi_chess.quiz report --batch batch2    # 0.1 秒出表；可换 batch1、batch2、batch3、4p、4p2、5-ds、5-sol、6r、6r-sol
+   ```
 
-```sh
-python3 -m http.server 8000 --bind 127.0.0.1
-```
+### 第二部分：安装 Python 规则依赖与试跑首盘对局（可选）
 
-浏览器打开：
+若需运行命令行对弈、导出棋谱、校验已入库题库或执行 Python 单元测试，先安装规则库（`chess` 与 `pyffish`）：
 
-- [国际象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8000/viewer/?files=/runs/g7-c-opus-astra-1/game.pgn)
-- [中国象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8000/viewer/?files=/runs/g7-x-opus-astra-1/game.pgn)
-- [国际象棋测试样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/chess-sample.pgn)
-- [中国象棋测试样例](http://127.0.0.1:8000/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
+1. **创建虚拟环境并安装 `requirements.txt`**（Ubuntu / Debian 若提示缺少 `ensurepip`，先执行 `sudo apt install python3-venv`）：
 
-用左右方向键逐步看棋，空格播放或暂停；也可以打开 [空白阅读器](http://127.0.0.1:8000/viewer/) 后拖入 PGN 文件（及对应 `analysis.jsonl`），或将网址中的 `files=` 替换为 `/runs/<tag>/game.pgn`（58 个单盘目录）或 `/runs/<batch>/<game>/game.pgn`（7 个多盘批次目录 `b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，如 `/runs/zc/maia-1900-s1-w/game.pgn`）浏览任意已入库正式对局。结束后在服务终端按 Ctrl-C 停止。若端口被占用，换一个端口，并同步修改链接。
+   ```sh
+   python3 -m venv .venv && . .venv/bin/activate
+   pip install -r requirements.txt
+   ```
 
-浏览页面不需要 npm 安装。`runs/` 已随仓包含全部 171 盘正式模型对局的 `game.pgn`（包含原记录中各模型步的可见思考理由、耗时与 token 元数据）。视频录制另需浏览器自动化与 ffmpeg，见[指南](docs/viewer-guide.md)。
+2. **校验题库与跑单元测试**：
 
-阅读器默认中文；在网址后加 `&lang=en` 切换英文，`names=` 可覆盖棋手显示名。具体写法见[阅读器指南](docs/viewer-guide.md)。
+   ```sh
+   python3 data/batch1/select_positions.py check
+   python3 data/batch2/select_positions.py check
+   python3 -m unittest discover -s tests -t . -v
+   ```
 
-## 研究内容
+   `select_positions.py check` 离线校验第一批与第二批局面题；`unittest -v` 在未安装本地 Stockfish / Fairy-Stockfish 引擎时会自动跳过 21 项真引擎集成测试（其余离线测试全部通过属正常预期）。
+
+3. **零 API 成本 0.1 秒试跑首盘对局与查看提示词**：
+
+   ```sh
+   # 双方随机走子试跑 20 个半回合（无需 API Key 与引擎，0.1 秒生成 runs/demo-random/game.pgn，可在阅读器打开 ?files=/runs/demo-random）
+   python3 -m agi_chess play --game chess --tag demo-random --white random --black random --max-plies 20 --seed 42
+   # 仅打印真实棋手协议下的系统提示词与首步用户提示词（不调模型、不落盘）
+   python3 -m agi_chess play --game xiangqi --tag demo-prompt --dry-run
+   ```
+
+   完整环境配置、引擎对手安装与事后引擎恶手分析（`python3 -m agi_chess.analyze runs/<tag>`）详见[安装与运行](docs/setup.md)。
+
+## 研究内容与核心发现
 
 - **思考深度与会话组织：** 局面题与整盘实验分别观察 effort、会话延续及此前思考保留的影响，不能假设同名 effort 在不同服务商之间代表相同计算预算。
 - **局面表示与错误类型：** 比较棋盘、FEN、子力清单等输入，并用事后分析和模型可见理由定位错误。理由是可检查的回答正文，不等于模型的内部思考。
 - **模型对弈与棋力定位：** 包含模型互弈、固定配置引擎对手和引擎标定。跨模型对局多为小样本；人类等级分类比还有锚点与换算误差。
+
+**核心定量结论摘要**（详见[研究索引](docs/research.md)与[项目进度](docs/status.md)）：
+
+- **棋力锚定区间（Opus Max 对引擎 67 盘标定）：** 国际象棋（30 盘）按 200 半回合上限引擎评分裁决（领先 ≥300 厘兵判胜）拟合为比 Maia-1900 高 **+189**（95% 区间 66–313），折合 **Lichess 超快棋约 1800 / 快棋约 1920**（按原始到上限判和口径为 +281，折合超快棋约 1910 / 快棋约 2020）；中国象棋（37 盘）比 Fairy-Stockfish `nodes=100` 高 **+121 Elo**（95% 区间 +1..+236），接近或略高于 `nodes=300`（+82）、明显低于 `nodes=1000`（+385）。
+- **合法着法与吃子规则并非主瓶颈：** 在真实棋手协议下，模型极少走非法着法；针对整盘漏吃/送子局面的复盘诊断（14 个失误点）显示，模型在单问“列出全部合法吃子”时 **26/26 全对**，但在正常选着时 13/14 次连可见理由都未提该吃子——失误主因是搜索中的注意力漏扫与多步算力不足，而非不认识棋盘或规则。
+- **局面表示与单步盲区（尤以中国象棋显著）：** 输入并非越多越好——中国象棋仅给**子力清单（`pieces`）**时大失误率最低（21%，而给全量 `FEN + 字符棋盘 + 清单` 时达 34%，且字符棋盘易把黑方 `車` 误认成红车）；模型在中国象棋中反复出现“炮隔己方炮打车”等单步自送吃及连续多步双方对挂着的大子视而不见的盲区。
+- **思考深度主导棋力，跨轮思考延续有利有弊：** 调高 `effort`（`medium → high → xhigh → max`）是降低大失误率最显著的单一手段（如 Opus vs Astra 巅峰对决升至双方 `max` 后，Opus 国象 3:1、中象 4:0）；连续会话（`session`）确实复用了前序思考并节省每步思考 token，但保留前序思考有时会固化早期盲区（Opus 开 `drop_thinking` 丢弃前序思考后漏吃减少，但思考 token 与耗时翻 2–3 倍）。
 
 [第一轮总结](docs/results/summary-round1.md) 只概括当时的研究阶段；后续模型对弈、评级及 Gemini 实验见[研究索引](docs/research.md)。各篇报告保留当时的条件和结论。
 
