@@ -118,8 +118,9 @@
 
 - **正式对局与判卷产物已入库：** `runs/` 目录已随仓入库全部 65 个正式模型对局目录——43 个模型互弈单盘目录 + 22 个模型对引擎目录（15 个单盘 + 7 个多盘批次，合计 171 盘）——的 `game.pgn`（包含原记录中各模型步的可见思考理由、耗时与 token 元数据）、`analysis.jsonl` / `analysis-summary.json`（170 盘的引擎逐着评分与恶手判定）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的汇总判卷结果 `judged.jsonl` 与 `report.txt`。仅排除了体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `analysis/rating/games-engines.csv`）及录屏 `.mp4` 视频。
 - **内置 `llm-chat` 双通道调用层：** 仓库已在 `.agents/skills/llm-chat/` 内置 `llm-chat`（含 `llm_chat.py` 与 `agy_core.py`），`agi_chess/chat.py` 默认直接调用仓内脚本，无需额外安装外部 `llm-chat` skill。整盘对弈统一驱动两类通道（详见[安装与运行](docs/setup.md)）：
-  - **本地 Agent CLI 订阅通道**（主力实验通道）：Claude（通过 `claude` CLI）、GPT（通过 `codex` CLI）、Gemini（通过 `agy` CLI），直接使用本机已安装并登录的 CLI 订阅额度；若未安装对应 CLI，`llm-chat` 会直接返回未安装错误提示。
-  - **HTTP API 通道**（DeepSeek 及 OpenRouter）：支持设置环境变量 `API_KEY_OPENROUTER`（或 `OPENROUTER_API_KEY`）和 `API_KEY_DEEPSEEK`（或 `DEEPSEEK_API_KEY`）。运行 `deepseek:flash`（`deepseek-flash`）或 `deepseek:v4-pro`（`deepseek-v4-pro`）时，若仅配置了 `API_KEY_OPENROUTER` 而未设置 `API_KEY_DEEPSEEK`，`llm-chat` 会自动通过 OpenRouter 访问 DeepSeek 模型（`deepseek-flash` → `deepseek/deepseek-v4.1-flash`、`deepseek-v4-pro` → `deepseek/deepseek-v4-pro`），无需单独申请 DeepSeek 官方 Key。
+  - **本地 Agent CLI 订阅通道**（主力实验通道）：Claude（通过 `claude` CLI）、GPT（通过 `codex` CLI）、Gemini（通过 `agy` CLI），直接使用本机已安装并登录的 CLI 订阅额度；正式开盘前检查双方，缺 CLI 时退出码为 2，并给出保留其他参数的 OpenRouter 命令模板（型号占位须换成已确认的 ID）。`--dry-run` 无需模型 CLI 或 API Key。
+  - **HTTP API 通道**（DeepSeek 及 OpenRouter）：显式 `openrouter:<vendor>/<model-id>` 选择另行收费的 API 渠道，也支持 Claude/GPT；`claude:` / `codex:` 仍默认走本机 CLI。支持设置环境变量 `API_KEY_OPENROUTER`（或 `OPENROUTER_API_KEY`）和 `API_KEY_DEEPSEEK`（或 `DEEPSEEK_API_KEY`）。运行 `deepseek:flash`（`deepseek-flash`）或 `deepseek:v4-pro`（`deepseek-v4-pro`）时，若仅配置了 `API_KEY_OPENROUTER` 而未设置 `API_KEY_DEEPSEEK`，`llm-chat` 会自动通过 OpenRouter 访问 DeepSeek 模型（`deepseek-flash` → `deepseek/deepseek-v4.1-flash`、`deepseek-v4-pro` → `deepseek/deepseek-v4-pro`），无需单独申请 DeepSeek 官方 Key。
+- 新 Gemini 对局用 `agy:`，如 `--white agy:gemini-3.8-flash --effort medium`；旧 `gemini:` 记录仍可续跑。续跑固定原后端。
 - 模型可用性、CLI 行为和会话处理会变化。报告中的型号与版本是实验记录，不是对当前服务可用性的保证。
 - 不加 `--dry-run` 的 `play` 可以实际调用模型并消耗额度；首次使用请先走上面的离线路径。
 

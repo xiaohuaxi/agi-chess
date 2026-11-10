@@ -233,16 +233,17 @@ class PassThrough(unittest.TestCase):
 
     def test_agy_player_and_opponent_build_real_config(self):
         from agi_chess import cli
-        player, opp = 'agy:claude-opus-5-5-high', 'gemini:gemini-4-argon-high'
+        player, opp = 'agy:claude-opus-5-5-high', 'agy:gemini-4-argon-high'
         self.assertEqual(B.full_spec(player), player)
         a = ns(player=player, protocol='real', memory='session', effort='high')
         seen = {}
         def capture(args):
+            args.dry_run = True  # 此用例只验配置，不检查或调用后端。
             seen.update(cli.build_cfg(args)[1])
             return 0
         with mock.patch.object(cli, 'cmd_play', capture):
             self.assertEqual(cli.main(B.play_cmd(a, 'runs/b/agymodel-s1-b', opp, 1, 'b')[3:]), 0)
-        self.assertEqual(seen['models'], {'w': 'gemini-4-argon-high', 'b': 'agy/claude-opus-5-5-high'})
+        self.assertEqual(seen['models'], {'w': 'agy/gemini-4-argon-high', 'b': 'agy/claude-opus-5-5-high'})
         self.assertEqual(seen['backend'], 'llm-chat')
 
     def test_commands_parse(self):

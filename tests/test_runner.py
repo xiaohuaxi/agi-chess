@@ -33,7 +33,8 @@ class WholeGameOffline(unittest.TestCase):
 
     def test_legacy_direct_refusal_stops_without_forfeit(self):
         blocked = {'result': '[reasoning_extraction]', 'stop_reason': 'refusal', 'is_error': True}
-        with mock.patch.object(claude_cli, 'call', return_value=(blocked, 0.1)) as call:
+        with mock.patch.object(cli.chat.shutil, 'which', return_value='/fake/claude'), \
+                mock.patch.object(claude_cli, 'call', return_value=(blocked, 0.1)) as call:
             rc = run_quiet(['play', '--game', 'chess', '--tag', 'ref', '--out', self.tmp,
                             '--protocol', 'legacy', '--black', 'random', '--max-plies', '1'])
         self.assertEqual(rc, 3)
@@ -55,7 +56,8 @@ class WholeGameOffline(unittest.TestCase):
         for n, outcome in enumerate(({'result': '着法: e2e4', 'permission_denials': [{'tool_name': 'Read'}]},
                                       codex_cli.ToolUsed('事件流里出现 command_execution'))):
             options = {'side_effect': outcome} if isinstance(outcome, Exception) else {'return_value': (outcome, 0.1)}
-            with mock.patch.object(claude_cli, 'call', **options) as call:
+            with mock.patch.object(cli.chat.shutil, 'which', return_value='/fake/claude'), \
+                    mock.patch.object(claude_cli, 'call', **options) as call:
                 rc = run_quiet(['play', '--game', 'chess', '--tag', 'direct-tool%d' % n, '--out', self.tmp,
                                 '--protocol', 'legacy', '--black', 'random', '--max-plies', '1'])
             self.assertEqual(rc, 3)

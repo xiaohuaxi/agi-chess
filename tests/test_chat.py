@@ -71,6 +71,9 @@ class FakeChat(unittest.TestCase):
             return [json.loads(x) for x in f]
 
     def play(self, argv):
+        # 既有 agy 安全停止用例均用 high 型号，显式给一致档位。
+        if any(x.startswith("agy:") for x in argv) and "--effort" not in argv:
+            argv = [*argv, "--effort", "high"]
         with contextlib.redirect_stdout(io.StringIO()):
             return cli.main(['play', '--out', self.tmp] + argv)
 
@@ -123,12 +126,12 @@ class FakeChat(unittest.TestCase):
     def test_agy_chess_sessions_and_batch_entry(self):
         self.plan([{'text': '着法: e2e4'}, {'text': '着法: e7e5'},
                    {'text': '着法: g1f3'}, {'text': '着法: b8c6'}])
-        white, black = 'gemini:gemini-4-argon-high', 'agy:claude-opus-5-5-high'
+        white, black = 'agy:gemini-4-argon-high', 'agy:claude-opus-5-5-high'
         self.assertEqual(batch.full_spec(black), black)
         self.assertEqual(self.play(['--game', 'chess', '--tag', 'agy-chess', '--white', white,
                                     '--black', black, '--effort', 'high', '--max-plies', '4']), 0)
         recs, calls = self.recs('agy-chess'), self.calls()
-        self.assertEqual(recs[0]['cfg']['models'], {'w': 'gemini-4-argon-high', 'b': 'agy/claude-opus-5-5-high'})
+        self.assertEqual(recs[0]['cfg']['models'], {'w': 'agy/gemini-4-argon-high', 'b': 'agy/claude-opus-5-5-high'})
         starts = [r for r in recs if r['type'] == 'call_started']
         atts = [r for r in recs if r['type'] == 'attempt']
         self.assertEqual(len(starts), 4)
@@ -258,12 +261,12 @@ class FakeChat(unittest.TestCase):
     def test_gemini_xiangqi_selfplay_sessions(self):
         self.plan([{'text': '着法: h2e2'}, {'text': '着法: h7e7'},
                    {'text': '着法: i0i1'}, {'text': '着法: i9i8'}])
-        spec = 'gemini:gemini-3.8-flash-high'
+        spec = 'agy:gemini-3.8-flash-high'
         self.assertEqual(self.play(['--game', 'xiangqi', '--tag', 'gemini', '--red', spec, '--black', spec,
                                     '--effort', 'high', '--max-plies', '4']), 0)
         recs, calls = self.recs('gemini'), self.calls()
         cfg = recs[0]['cfg']
-        self.assertEqual(cfg['models'], dict.fromkeys('wb', 'gemini-3.8-flash-high'))
+        self.assertEqual(cfg['models'], dict.fromkeys('wb', 'agy/gemini-3.8-flash-high'))
         self.assertEqual((cfg['protocol'], cfg['backend']), ('real', 'llm-chat'))
         atts = [r for r in recs if r['type'] == 'attempt']
         self.assertEqual(len(atts), 4)
@@ -271,7 +274,7 @@ class FakeChat(unittest.TestCase):
         self.assertNotEqual(atts[0]['session'], atts[1]['session'])
         for n, call in enumerate(calls):
             argv = call['argv']
-            self.assertEqual(argv[argv.index('-m') + 1], 'gemini-3.8-flash-high')
+            self.assertEqual(argv[argv.index('-m') + 1], 'agy/gemini-3.8-flash-high')
             self.assertEqual(argv[argv.index('--effort') + 1], 'high')
             if n < 2:
                 self.assertIn('--system', argv)
@@ -282,7 +285,7 @@ class FakeChat(unittest.TestCase):
         for extra in (['--protocol', 'legacy'], ['--w', 'drop_thinking=on']):
             with self.assertRaises(SystemExit):
                 self.play(['--game', 'xiangqi', '--tag', 'bad-gemini',
-                           '--red', 'gemini:gemini-3.8-flash-high', '--black', 'random'] + extra)
+                           '--red', 'agy:gemini-3.8-flash-high', '--black', 'random'] + extra)
         self.assertFalse(os.path.exists(os.path.join(self.tmp, 'calls.jsonl')))
 
     def test_xiangqi_session_illegal_retry_and_loose_parse(self):
@@ -406,7 +409,7 @@ class FakeChat(unittest.TestCase):
 
     def test_provider_refusals_stop_without_call_retry(self):
         cases = [('agy:claude-opus-5-5-high', {'text': '[reasoning_extraction]'}),
-                 ('gemini:gemini-3.8-flash-high', {'error': "Gemini’s safety filter blocked the answer"}),
+                 ('agy:gemini-3.8-flash-high', {'error': "Gemini’s safety filter blocked the answer"}),
                  ('codex:gpt-6-sol', {'text': "I cannot provide my private chain-of-thought."}),
                  ('deepseek:deepseek-v4-pro', {'text': '我无法提供内部思考过程。'}),
                  ('claude:opus', {'text': '[reasoning_extraction]'}),
@@ -472,7 +475,7 @@ class FakeChat(unittest.TestCase):
                 tag = 'uncertain%d' % n
                 with mock.patch.object(runner.claude_cli, '_wait') as wait:
                     rc = self.play(['--game', 'chess', '--tag', tag, '--white',
-                                    'gemini:gemini-3.8-flash-high', '--black', 'random', '--max-plies', '1'])
+                                    'agy:gemini-3.8-flash-high', '--black', 'random', '--max-plies', '1'])
                 self.assertEqual(rc, 3)
                 wait.assert_not_called()
                 self.assertEqual(len(self.calls()), before + 1)
@@ -510,7 +513,7 @@ class FakeChat(unittest.TestCase):
 
 
     def test_gemini_pending_and_old_fail_records_lock(self):
-        for player in ('gemini:gemini-3.8-flash-high', 'agy:claude-opus-5-5-high'):
+        for player in ('agy:gemini-3.8-flash-high', 'agy:claude-opus-5-5-high'):
             cfg = {'players': {'w': player, 'b': 'random'}}
             start = {'type': 'call_started', 'side': 'w', 'ply': 1, 'call_id': 'unique'}
             attempt = {'type': 'attempt', 'side': 'w', 'ply': 1, 'call_id': 'unique', 'legal': True}
@@ -526,7 +529,7 @@ class FakeChat(unittest.TestCase):
     def test_gemini_completed_turn_can_resume(self):
         self.plan([{'text': '着法: e2e4'}, {'text': '着法: d2d4'}])
         self.assertEqual(self.play(['--game', 'chess', '--tag', 'safe-resume', '--white',
-                                    'gemini:gemini-3.8-flash-high', '--black', 'random',
+                                    'agy:gemini-3.8-flash-high', '--black', 'random',
                                     '--max-plies', '3', '--stop-after', '1']), 3)
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(cli.main(['resume', os.path.join(self.tmp, 'safe-resume')]), 0)
@@ -547,8 +550,8 @@ class FakeChat(unittest.TestCase):
 
     def test_tool_errors_stop_all_providers_and_lock_resume(self):
         cases = [('agy:claude-opus-5-5-high', 'the model opened files that were not attached: /tmp/test'),
-                 ('gemini:gemini-3.8-flash-high', 'agy soft-denied a tool and ended the turn (headless mode cannot ask): attempted: view_file /etc/hosts'),
-                 ('gemini:gemini-3.8-flash-high', 'the model opened files that were not attached: /tmp/test'),
+                 ('agy:gemini-3.8-flash-high', 'agy soft-denied a tool and ended the turn (headless mode cannot ask): attempted: view_file /etc/hosts'),
+                 ('agy:gemini-3.8-flash-high', 'the model opened files that were not attached: /tmp/test'),
                  ('claude:opus', 'the model used server-side tools (web_search: 1); plain chat allows none'),
                  ('codex:gpt-6-sol', "unexpected codex item 'command_execution'; plain chat allows no tools"),
                  ('deepseek:deepseek-v4-pro', 'the model called a tool; plain chat allows none')]
@@ -587,7 +590,7 @@ class FakeChat(unittest.TestCase):
             result = original(*args, **kwargs)
             runner.claude_cli.STOP.set()
             return result
-        spec = 'gemini:gemini-3.8-flash-high'
+        spec = 'agy:gemini-3.8-flash-high'
         with mock.patch.object(chat, 'run', side_effect=stopping_run):
             self.assertEqual(self.play(['--game', 'chess', '--tag', 'stop-safe', '--white', spec,
                                         '--black', spec, '--max-plies', '2']), 3)

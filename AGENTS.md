@@ -45,7 +45,7 @@
 
 ## 验证
 
-- Python（首次需 `pip install -r requirements.txt`）：`python3 -m unittest discover -s tests -t . -v`（离线，不调模型；共 320 项，其中 21 项真引擎测试需本机 `stockfish` 与 `fairy-stockfish`，未装自动 skip）。题库离线校验：`python3 data/batch1/select_positions.py check` 与 `batch2`。
+- Python（首次需 `pip install -r requirements.txt`）：`python3 -m unittest discover -s tests -t . -v`（离线，不调模型；共 338 项，其中 21 项真引擎测试需本机 `stockfish` 与 `fairy-stockfish`，未装自动 skip）。题库离线校验：`python3 data/batch1/select_positions.py check` 与 `batch2`。
 - 阅读器：`node --test 'viewer/test/*.test.js'`（引号通配需 Node 22+；Node 18/20 去掉单引号）。`runs/` 下已入库 74 个正式对局/局面题目录（含 171 盘 `game.pgn`），58 项纯 JS 与棋谱回归直接可跑；29 项浏览器播放测试需执行 `npm --prefix viewer ci` 安装开发依赖并具备 Chromium，3 项往返测试需 Python 规则库（共 32 项，未装自动跳过）。
 - 冒烟会消耗模型额度：只用 medium，半回合数压到个位数（免模型本地冒烟可用 `--white random --black random` 或 `engine:fsf:nodes=100`）。
 
@@ -53,7 +53,7 @@
 
 - 棋手不准用引擎或规则库帮忙；引擎只能当对手或事后裁判。Codex 当棋手前，先证明工具关掉、调不到本机引擎。
 - 棋手一旦调用或尝试工具（含失败、权限拦截），立即暂停分析，不自动重试或续跑；没有工具事件不等于证明从未调用。
-- 整盘棋手走仓内 `.agents/skills/llm-chat` skill，对弈实验期间只用不改。Claude、GPT 默认走本机 CLI 订阅，DeepSeek 走 HTTP、只作辅助参考；Claude 不走 API 直连。各后端及 agy 路由见 `docs/design.md` 第九节。局面题和旧记录续跑仍按原路径直调；思考深度每次显式传。
+- 整盘棋手走仓内 `.agents/skills/llm-chat` skill，对弈实验期间只用不改。Claude、GPT 默认走本机 CLI 订阅；显式 `openrouter:<vendor>/<model-id>` 可选 API 渠道，另行收费。DeepSeek 走 HTTP、只作辅助参考。各后端及 agy 路由见 `docs/design.md` 第九节。局面题和旧记录续跑仍按原路径直调；思考深度每次显式传。
 - 整盘协议是「模型就是真实棋手」：不报将军、吃子、威胁，不给合法着法，非法只说不合法。改提示先读 `docs/design.md` 第九节逐句去留；模型对模型双方思考延续方式须一致。
 - 防思维链泄露类拒答一出现就终止并回报用户：所有服务商、real / legacy / 旧记录均适用；不重问、不改措辞、不自动续跑，不当棋手输。仅被动监测正常对弈，禁止向真实模型主动诱发或探测拒答，检测验证只用本地假响应 / mock。可见理由不是加密思考；空回复或 503 无明确拒答证据时不算。
 - 规则判定沿用旧实现，不自行改棋规：中国象棋用 pyffish，国际象棋用 python-chess（两者属对通用规范「禁强 copyleft」的刻意例外：pyffish 是目前唯一提供中象重复局面与长将/长捉裁决的开源 Python 库（长捉属近似判定，边界见 `docs/design.md`）；两者仅由用户 pip 安装、不随仓分发，冗余的 cchess 已移除）；上游来源见 `docs/design.md`，只读参考，不切上游归档分支。

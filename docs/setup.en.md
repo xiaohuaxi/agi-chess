@@ -99,7 +99,7 @@ python -m unittest discover -s tests -t . -v
 
 `python3 data/batch1/select_positions.py check` and `python3 data/batch2/select_positions.py check` rely only on the two rule libraries above to validate the checked-in Batch 1 and Batch 2 position banks (`data/batch1/{xiangqi,chess}.jsonl` and `data/batch2/{xiangqi,chess}.jsonl` FENs, side to move, and move legality) offline, without launching engines or reading `runs/`.
 
-The full Python test suite (320 tests) includes 21 live-engine handshake and move-generation tests that require `stockfish` and `fairy-stockfish`. **When local engines are not installed, `unittest -v` automatically skips those 21 engine tests while passing all 299 offline tests**; with both engines installed, all 320 tests pass (0 fail / 0 skip). Engines are standalone executables not installed by `pip`; their licenses are documented separately in [Dependencies & Provenance](dependencies.en.md).
+The full Python test suite (338 tests) includes 21 live-engine handshake and move-generation tests that require `stockfish` and `fairy-stockfish`. **When local engines are not installed, `unittest -v` automatically skips those 21 engine tests while passing all 317 offline tests**; with both engines installed, all 338 tests pass (0 fail / 0 skip). Engines are standalone executables not installed by `pip`; their licenses are documented separately in [Dependencies & Provenance](dependencies.en.md).
 
 ## Model Matches: Built-in `llm-chat`, Local CLI Subscriptions & HTTP API Keys
 
@@ -110,12 +110,17 @@ Full-game matches run through `agi_chess/chat.py`, which invokes `llm-chat`. **T
 1. **Local Agent CLI Subscription Channel (primary experimental channel):**
    - **Claude:** Invoked via the local `claude` CLI (e.g., `--white claude:opus`);
    - **GPT:** Invoked via the local `codex` CLI (e.g., `--black codex:astra`);
-   - **Gemini (or models routed via agy):** Invoked via the local `agy` CLI (e.g., `--white gemini:gemini-4-argon-high` or `agy:claude-opus-5-5-high`).
-   - This channel directly uses the subscription quota of the locally installed and authenticated CLI (tested during development with `claude 2.1.282` and `codex 0.156.1+`; you can sanity-check your local CLI setup with `claude --version`, `codex --version`, or `agy --version`, and verify prompt generation offline with `python3 -m agi_chess play --game chess --white claude:opus --black random --dry-run`). If the required CLI executable is not installed on your machine, `llm-chat` immediately returns a clear "not installed" error message.
+   - **Gemini (or models routed via agy):** Invoked via the local `agy` CLI (e.g., `--white agy:gemini-3.8-flash --effort medium` or `agy:claude-opus-5-5-high`).
+   - This channel directly uses the subscription quota of the locally installed and authenticated CLI (tested during development with `claude 2.1.282` and `codex 0.156.1+`; you can sanity-check your local CLI setup with `claude --version`, `codex --version`, or `agy --version`, and verify prompt generation offline with `python3 -m agi_chess play --game chess --white claude:opus --black random --dry-run`). Before a live game, both players are checked for required CLI executables and API keys; configuration errors exit with code 2 before any model call. This does not verify login, quota, or live model availability. Missing CLIs produce an OpenRouter command template preserving the other arguments. The template preserves known vendors (`anthropic` / `openai` / `google`); replace `<model-id>` and any remaining placeholders with confirmed concrete values; the program does not guess IDs, install or log into CLIs, or switch channels automatically.
 
 2. **HTTP API Channel (DeepSeek & OpenRouter):**
+   - Explicit `openrouter:<vendor>/<model-id>` selects the separately billed API channel, including Claude/GPT (vendors `anthropic` / `openai`); use a confirmed concrete model ID. The usual `claude:` / `codex:` syntax still selects local CLIs. This channel is available only with `real`.
    - Configured via environment variables `API_KEY_OPENROUTER` (or alias `OPENROUTER_API_KEY`) and `API_KEY_DEEPSEEK` (or alias `DEEPSEEK_API_KEY`).
    - **Automatic OpenRouter Fallback for DeepSeek:** When running `deepseek:flash` (`deepseek-flash`) or `deepseek:v4-pro` (`deepseek-v4-pro`), if `API_KEY_DEEPSEEK` (or `DEEPSEEK_API_KEY`) is set, `llm-chat` connects to the official DeepSeek API directly; if only `API_KEY_OPENROUTER` (or `OPENROUTER_API_KEY`) is set without `API_KEY_DEEPSEEK`, `llm-chat` automatically routes the request through OpenRouter (`deepseek-flash` → `deepseek/deepseek-v4.1-flash`, `deepseek-v4-pro` → `deepseek/deepseek-v4-pro`), so you do not need to apply for a separate official DeepSeek API key.
+
+`--dry-run` generates prompts offline without a model CLI or API key. A custom `AGI_CHESS_LLM_CHAT` is checked only for script existence; its backend requirements belong to that script. Resume keeps the recorded backend, including DeepSeek direct vs. OpenRouter; restore the original route configuration instead of switching channels.
+
+New games use `agy:`; `gemini:` is retained only for old-record resume. Prefer `--white agy:gemini-3.8-flash --effort medium`. Full slugs such as `gemini-3.8-flash-medium` remain supported, but their suffix must match the final effort for that side or the game is rejected before starting. `--effort` supplies the default for both sides; `--w effort=...` / `--b effort=...` overrides one side. Identically named levels across providers do not imply equal compute.
 
 Configuration and command examples:
 

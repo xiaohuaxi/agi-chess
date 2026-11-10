@@ -342,6 +342,14 @@ def cmd_run(a):
         k, sep, _ = kv.partition('=')
         if not sep or k not in cli.SIDE_KEYS:
             raise SystemExit('--set 写成 变量=值，变量是 %s 之一：%r' % ('/'.join(cli.SIDE_KEYS), kv))
+    player_effort = a.effort
+    for kv in a.set or []:
+        if kv.startswith('effort='):
+            player_effort = kv.split('=', 1)[1]
+    for spec, effort in [(a.player, player_effort), *((o, a.effort) for o in opps)]:
+        kind, _, name = spec.partition(':')
+        cli.chat.check_effort(kind, name, effort, 'w / --b（batch 我方用 --set）')
+    cli.chat.preflight(dict(enumerate([a.player, *opps])), via_chat=a.protocol == 'real')
     seeds = parse_seeds(a.seeds)
     colors = {'both': 'wb', 'w': 'w', 'b': 'b'}[a.colors]
     bdir = os.path.join(a.out or str(cli.RUNS), a.batch)
@@ -356,6 +364,18 @@ def cmd_run(a):
                              'summary.md', 'summary.json', 'judged.jsonl', 'report.txt'))):
         raise SystemExit('批次 %s 下已有已入库或已导出的对局目录（%s，无原始 game.jsonl），请换个 --batch'
                          % (bdir, '、'.join(exported_only[:3]) or 'summary.*'))
+    # 整批启动前也检查将续跑的记录，避免前几盘已付费才发现后面的配置失效。
+    for name, _, _, _ in games:
+        log_path = os.path.join(bdir, name, 'game.jsonl')
+        if os.path.isfile(log_path):
+            old = records.read(log_path)
+            cfg = old[0]['cfg']
+            if not any(r.get('type') == 'end' for r in old):
+                ctx = runner.load(cli.game_module(cfg['game']), os.path.dirname(log_path))
+                for side, spec in cfg['players'].items():
+                    kind, _, model = spec.partition(':')
+                    cli.chat.check_effort(kind, cfg.get('models', {}).get(side, model), cfg['sides'][side]['effort'], side)
+                cli.chat.preflight(cfg['players'], cfg.get('models'), ctx['sessions'], cfg.get('backend') == 'llm-chat')
     os.makedirs(bdir, exist_ok=True)
     lock = take_lock(bdir)
     try:
@@ -574,7 +594,11 @@ def main(argv=None):
     s.add_argument('--out', help='另存成 <out>.md / <out>.json；只给一个批次时默认写在批次目录里')
     s.add_argument('--analyze', action='store_true', help='先给下完、还没分析的盘补分析')
     a = ap.parse_args(argv)
-    return cmd_run(a) if a.cmd == 'run' else cmd_summary(a)
+    try:
+        return cmd_run(a) if a.cmd == 'run' else cmd_summary(a)
+    except cli.chat.ConfigError as e:
+        print(cli.chat.config_error_message(e, sys.argv[1:] if argv is None else argv, 'agi_chess.batch'), file=sys.stderr)
+        return 2
 
 
 if __name__ == '__main__':

@@ -17,8 +17,9 @@
   非法着法只告诉它不合法、让它重选（每步最多 retries+1 次，用完判负；real 默认 3 次）；模型调用走 llm-chat（chat.py）。legacy 是改协议之前的提示和调用（claude -p 直调，memory 默认 stateless），
   用来续跑、复现旧实验；旧记录的 config 里没有 protocol，resume 自动按旧的走。
 棋手：claude:<模型>（默认 claude:opus）/ codex:<GPT 模型，如 sol 或 gpt-6-sol> / deepseek:<模型，默认 deepseek-v4-pro>
-  / gemini:<agy models 中的完整 gemini-* slug> / agy:<agy models 中的完整 slug>（后四种只在 real 下）/ engine:<引擎>[:参数] / random。
-  Gemini / agy 经 agy 的 Google 订阅调用，思考档位包含在模型 slug 中，--effort 仍显式传给 llm-chat。
+  / agy:<agy models 中的完整 slug> / openrouter:<vendor/model-id>（后四种只在 real 下）/ engine:<引擎>[:参数] / random。
+  例如 agy:gemini-3.8-flash --effort medium；若 slug 已带思考档位，必须与最终 --effort 或 --w / --b effort 一致。
+  OpenRouter 是显式 API 渠道（另行付费），Claude / Codex 的默认写法仍走本机 CLI。
   国际象棋引擎 maia-1100 … maia-1900（lc0，go nodes 1）、stockfish[:elo=N|nodes=N|depth=N|movetime=毫秒]；
   中国象棋引擎 fsf[:nodes=N|depth=N|movetime=毫秒]（Fairy-Stockfish，默认 nodes=1000）。
 模型相关变量（公共值用 --变量，一方单设用 --w / --b 变量=值，w 是先走的红方 / 白方）：
@@ -124,11 +125,13 @@ def side_cfg(a, G, overrides, max_plies):
 
 def check_player(G, spec, protocol='legacy'):
     kind = runner.player_kind(spec)
+    if kind == 'gemini':
+        raise chat.ConfigError('新对局不再接受 gemini: 前缀，请改为 agy:' + spec.partition(':')[2])
     if kind == 'claude' and ':' in spec and spec.split(':', 1)[1]:
         return
     if kind in ('codex', 'deepseek') and protocol == 'real':
         return
-    if kind in chat.AGY_KINDS and protocol == 'real' and ':' in spec:
+    if kind in ('agy', 'openrouter') and protocol == 'real' and ':' in spec:
         chat.model_id(kind, spec.split(':', 1)[1])
         return
     if kind == 'random' and spec == 'random':
@@ -139,7 +142,7 @@ def check_player(G, spec, protocol='legacy'):
         except ValueError as e:
             raise SystemExit(str(e))
         return
-    raise SystemExit('棋手写成 claude:<模型> / codex:<模型> / deepseek[:<模型>] / gemini:<完整 gemini-* slug> / agy:<完整 slug>'
+    raise SystemExit('棋手写成 claude:<模型> / codex:<模型> / deepseek[:<模型>] / agy:<完整 slug> / openrouter:<vendor/model-id>'
                      '（后四种只在 real 协议下）/ '
                      'engine:<引擎>[:参数] / random，收到 %r' % spec)
 
@@ -183,6 +186,11 @@ def build_cfg(a):
             players[s] = 'deepseek:' + chat.DEEPSEEK_DEFAULT
         check_player(G, players[s], a.protocol)
     sides = {'w': side_cfg(a, G, a.w, a.max_plies), 'b': side_cfg(a, G, a.b, a.max_plies)}
+    for side, spec in players.items():
+        kind, _, name = spec.partition(':')
+        chat.check_effort(kind, name, sides[side]['effort'], side)
+    if not a.dry_run:
+        chat.preflight(players, via_chat=a.protocol == 'real')
     margin = cap_margin(a, players)
     if margin:
         for s in 'wb':
@@ -208,7 +216,8 @@ def build_cfg(a):
             kind, name = players[s].split(':', 1)
             if kind == 'deepseek' and sides[s]['effort'] not in chat.DEEPSEEK_EFFORTS:
                 raise SystemExit('DeepSeek 只有 %s 三档思考，收到 %r' % ('/'.join(chat.DEEPSEEK_EFFORTS), sides[s]['effort']))
-            cfg['models'][s] = chat.model_id(kind, name)
+            cfg['models'][s] = (name if a.dry_run and kind == 'codex' and not name.startswith('gpt-')
+                                else chat.model_id(kind, name))
         cfg['llm_chat'] = chat.script_info()
         cfg['commands'] = {s: chat.shown(cfg['models'][s], sides[s]['effort'], sides[s]['drop_thinking'] == 'on')
                            for s in models}
@@ -325,6 +334,10 @@ def cmd_resume(a):
     elif a.retry_idle_timeout:
         print('没有可明确关联的 agy stream idle timeout 失败，不能授权重试。')
         return 3
+    for side, spec in cfg['players'].items():
+        kind, _, name = spec.partition(':')
+        chat.check_effort(kind, cfg.get('models', {}).get(side, name), cfg['sides'][side]['effort'], side)
+    chat.preflight(cfg['players'], cfg.get('models'), ctx['sessions'], cfg.get('backend') == 'llm-chat')
     rec = {'type': 'resume', 'ply': len(ctx['st']['moves']), 'commit': commit()}
     if a.timeout is not None:                    # 只管这次续跑；下次不给就又沿用 config 里的值
         ctx['cfg']['timeout'] = rec['timeout'] = a.timeout
@@ -409,4 +422,8 @@ def main(argv=None):
     e = sub.add_parser('export', help='已结束的盘按记录重新导出棋谱（record.txt / game.pgn，带每步元信息）')
     e.add_argument('dir')
     a = ap.parse_args(argv)
-    return {'play': cmd_play, 'resume': cmd_resume, 'export': cmd_export}[a.cmd](a)
+    try:
+        return {'play': cmd_play, 'resume': cmd_resume, 'export': cmd_export}[a.cmd](a)
+    except chat.ConfigError as e:
+        print(chat.config_error_message(e, sys.argv[1:] if argv is None else argv, 'agi_chess'), file=sys.stderr)
+        return 2

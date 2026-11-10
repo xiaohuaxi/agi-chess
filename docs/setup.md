@@ -99,7 +99,7 @@ python -m unittest discover -s tests -t . -v
 
 `python3 data/batch1/select_positions.py check` 与 `python3 data/batch2/select_positions.py check` 仅依赖上述规则库，离线校验已入库的第一批与第二批局面题（`data/batch1/{xiangqi,chess}.jsonl` 与 `data/batch2/{xiangqi,chess}.jsonl` 的 FEN、行棋方与着法合法性），不启动引擎、不读取 `runs/`。
 
-完整单元测试（共 320 项）包含 21 项真引擎握手与走子测试，需要能找到 `stockfish` 和 `fairy-stockfish`。**当本机未安装这两个引擎时，`unittest -v` 会自动跳过这 21 项真引擎测试（其余 299 项全部通过属正常预期）**；安装两个引擎后 320 项全部通过（0 fail / 0 skip）。引擎是单独安装的程序，不会由 `pip` 提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
+完整单元测试（共 338 项）包含 21 项真引擎握手与走子测试，需要能找到 `stockfish` 和 `fairy-stockfish`。**当本机未安装这两个引擎时，`unittest -v` 会自动跳过这 21 项真引擎测试（其余 317 项全部通过属正常预期）**；安装两个引擎后 338 项全部通过（0 fail / 0 skip）。引擎是单独安装的程序，不会由 `pip` 提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
 
 ## 模型对弈：内置 `llm-chat`、本地 CLI 订阅与 HTTP API 配置
 
@@ -110,12 +110,17 @@ python -m unittest discover -s tests -t . -v
 1. **本地 Agent CLI 订阅通道（主力实验通道）：**
    - **Claude**：通过本机 `claude` CLI 调用（如 `--white claude:opus`）；
    - **GPT**：通过本机 `codex` CLI 调用（如 `--black codex:astra`）；
-   - **Gemini（或经 agy 路由的模型）**：通过本机 `agy` CLI 调用（如 `--white gemini:gemini-4-argon-high` 或 `agy:claude-opus-5-5-high`）。
-   - 该通道直接使用用户本机已安装并登录的对应 CLI 订阅额度（研发实测版本：`claude 2.1.282`、`codex 0.156.1+`；开工前可用 `claude --version`、`codex --version`、`agy --version` 检查版本，并用 `python3 -m agi_chess play --game chess --white claude:opus --black random --dry-run` 离线核对提示生成）。若本机未安装对应 CLI，`llm-chat` 会直接返回明确的未安装错误提示。
+   - **Gemini（或经 agy 路由的模型）**：通过本机 `agy` CLI 调用（如 `--white agy:gemini-3.8-flash --effort medium` 或 `agy:claude-opus-5-5-high`）。
+   - 该通道直接使用用户本机已安装并登录的对应 CLI 订阅额度（研发实测版本：`claude 2.1.282`、`codex 0.156.1+`；开工前可用 `claude --version`、`codex --version`、`agy --version` 检查版本，并用 `python3 -m agi_chess play --game chess --white claude:opus --black random --dry-run` 离线核对提示生成）。正式开盘前检查双方所需 CLI 与 API Key；配置错误退出码为 2，不先调用任何一方；此检查不验证登录、额度或线上型号可用性。缺 CLI 时给出保留其他参数的 OpenRouter 命令模板，模板保留已知厂商名（`anthropic` / `openai` / `google`），须把 `<model-id>` 等占位项换成已确认的具体值；程序不猜型号、不自动安装或登录 CLI，也不自动换渠道。
 
 2. **HTTP API 通道（DeepSeek 及 OpenRouter）：**
+   - 显式 `openrouter:<vendor>/<model-id>` 选择另行收费的 API 渠道，包括 Claude/GPT（厂商名 `anthropic` / `openai`）；型号须自行确认。原有 `claude:` / `codex:` 写法仍走本地 CLI，此 API 入口只支持 `real`。
    - 支持设置环境变量 `API_KEY_OPENROUTER`（或别名 `OPENROUTER_API_KEY`）以及 `API_KEY_DEEPSEEK`（或别名 `DEEPSEEK_API_KEY`）。
    - **自动回退机制**：运行 `deepseek:flash`（`deepseek-flash`）或 `deepseek:v4-pro`（`deepseek-v4-pro`）时，若设置了 `API_KEY_DEEPSEEK`（或 `DEEPSEEK_API_KEY`），则直连 DeepSeek 官方 API；若只有 `API_KEY_OPENROUTER`（或 `OPENROUTER_API_KEY`）而没有配置 DeepSeek 官方 Key，`llm-chat` 会自动通过 OpenRouter 访问 DeepSeek 模型（`deepseek-flash` → `deepseek/deepseek-v4.1-flash`，`deepseek-v4-pro` → `deepseek/deepseek-v4-pro`），无需单独申请 DeepSeek 官方 Key。
+
+`--dry-run` 离线生成提示，不需要模型 CLI 或 API Key。自定义 `AGI_CHESS_LLM_CHAT` 只检查脚本存在，后端要求由该脚本负责。续跑固定记录中的后端，包括 DeepSeek 直连与 OpenRouter 的区别；应恢复原渠道配置，不能切换渠道续跑。
+
+新对局统一用 `agy:`，`gemini:` 仅保留旧记录续跑。推荐 `--white agy:gemini-3.8-flash --effort medium`。仍接受 `gemini-3.8-flash-medium` 等完整 slug，但尾缀必须与该方最终 effort 一致，否则开盘前拒绝。`--effort` 给双方默认值，`--w effort=...` / `--b effort=...` 覆盖单方；不同厂商的同名档位不代表相同算力。
 
 配置与运行示例：
 

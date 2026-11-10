@@ -35,7 +35,7 @@
 | P6 | 不能直接问它"你上一轮想了什么" | **已核实** | 直接问"上一轮你在思考里挑的数是多少"，3/3 被安全分类器拦下（`Opus 5.5's safeguards flagged this message`）。文档说这是 `reasoning_extraction` 类拒答：要求在正文里吐出思考会被拒。换成"我放弃了，公布答案"，6 次里 2 次被拦、2 次它自称看不到之前的思考、2 次给了答案；而且 **Claude Code 会自动往会话里塞一条"上面的回复被安全分类器拦了，别再输出"的用户消息然后重试一次**，这条消息会永久留在会话里。 |
 | P7 | 关掉工具、MCP、用户设置、CLAUDE.md 后，模型拿不到引擎 | **已核实** | 沿用上一轮命令（`--tools "" --strict-mcp-config --setting-sources "" --system-prompt ... CLAUDE_CODE_DISABLE_CLAUDE_MDS=1`），抓到的请求 `tools: []`。system 里只剩 Claude Code 固定的一句身份说明和我们的系统提示，用户消息前多一小段 userEmail 提示，另有一条环境说明（工作目录、日期、模型名）。**2026-09-25 用对弈程序实际拼出的命令复核**（运行目录是仓库外的空临时目录，桩服务抓请求）：`tools: []`，没有 MCP，system 只有身份说明和我们的提示，全文搜不到 stockfish / fairy / lc0 / maia / `/opt/homebrew` / llm-chess / CLAUDE.md / AGENTS / memory / skill / hook。`--bare` 只认 API key、不能走订阅，不用；加 `--safe-mode` 请求体没有变化，不加。 |
 | P8 | 续接跨天、跨长暂停后思考仍保留 | 待验证 | 文档说前缀必须逐字节一致。环境说明里带日期，续接时 Claude Code 是重放当初那条还是重新生成，没测。上一段 P5 的实测都在几分钟内完成。 |
-| P9 | 走 API 直连更可控，但本研究不需要 | **已核实（文档）/ 决定不用** | 直连能多拿到：`display: "summarized"` 的思考摘要、`thinking-binding-controls` 的丢块报告、完全干净的 system（没有 Claude Code 那两段）、per-message effort。代价是走 API 计费、不走订阅额度，而且要自己维护 messages 数组、保证只追加不改写，否则思考块会被丢掉或 400。本研究要的"思考深度、思考延续、token 统计"`claude -p` 全都能做到，所以**默认 `claude -p`**，API 只作为以后要看思考摘要时的可选后端；要加时再在对局循环里加一个棋手分支。 |
+| P9 | 走 API 直连更可控，但最初研究不需要 | **已核实（文档）/ 原决定不用，现支持显式 OpenRouter** | 直连能多拿到：`display: "summarized"` 的思考摘要、`thinking-binding-controls` 的丢块报告、完全干净的 system（没有 Claude Code 那两段）、per-message effort。代价是走 API 计费、不走订阅额度，而且要自己维护 messages 数组、保证只追加不改写，否则思考块会被丢掉或 400。本研究要的"思考深度、思考延续、token 统计"`claude -p` 全都能做到，所以**默认 `claude -p`**，当时未实现 API 后端；现已支持显式 OpenRouter 渠道（第九节），默认 CLI 不变。 |
 | P10 | Codex 能当另一方 | **已核实（2026-09-28）** | sol 和 DeepSeek 都走 `codex exec`（`agi_chess/codex_cli.py`），关 features + 补丁模型目录后请求里工具数为 0，诱导跑引擎、读文件都做不到，事件流和会话记录里没有工具调用；全局 `~/.codex/AGENTS.md` 关不掉，作为固定噪声进上下文。只支持无状态。详见 `results/batch5-isolation.md`。 |
 | P11 | 国际象棋固定强度对手：Fairy-Stockfish 限 Elo | **已核实能用 / 分数标定待验证** | 本机 `/opt/homebrew/bin/fairy-stockfish`，`id name Fairy-Stockfish 14.0.1 XQ`，有 `UCI_LimitStrength`、`UCI_Elo`（500–2850）、`Skill Level`（-20..20）。实测同一局面每手 0.1 秒：不限强时 6 次只走 d5/Bb3/Qc2 三种好棋，限 500 时出现 Nxe5（送子）这类着法，限强生效。但它是经典估值、不是正版 Stockfish，Elo 标定和正版不一定一致；python-chess 驱动它时不能手动设 `UCI_Variant`（库自动管）。 |
 | P12 | 正版 Stockfish、Maia | **已安装（用户同意）** | Stockfish 19 在 `/opt/homebrew/bin/stockfish`，lc0 v0.32.1 在 `/opt/homebrew/bin/lc0`；Maia 权重 1100–1900 共 9 档在 `~/.local/share/maia/maia-XXXX.pb.gz`（不入库）。官方 README：用 lc0 加载，`go nodes 1`、不搜索。另有 `pip` 包 `maia2`（要 torch，较重，不用）。 |
@@ -90,8 +90,8 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
   - `engine:<名字>[:参数]`：国际象棋 `maia-1100`…`maia-1900`（lc0 加权重，`go nodes 1`）、`stockfish[:elo=N|nodes=N|depth=N|movetime=毫秒]`；中国象棋 `fsf[:nodes=N|depth=N|movetime=毫秒]`（Fairy-Stockfish，`UCI_Variant xiangqi`）。每步把起始局面和全部着法发给引擎，不只发末尾 FEN；等待有上限；中国象棋出棋时用 `searchmoves` 排除会被判长将 / 长捉的着法（P15）。`boards.Engine` 是单局面分析用的（不带历史、等待没有上限），不拿来当对手；另外 boards.py 实测过 Skill Level 不可复现，弱档一律用节点数或深度。
   - `random`：随机走子，按对局种子可复现，当最低参照（LLM CHESS 用它 [5]）。
   - `codex:<模型>` / `deepseek:<模型>`：局面题里走 `codex exec`，只支持无状态（quiz `--model sol|deepseek`，P10）；整盘（`--protocol real`）走 llm-chat，支持连续会话（第九节）。
-  - `gemini:<完整 gemini-* slug>`：只支持 real 整盘，经 llm-chat 调 agy 的 Google 订阅；模型名照 `agy models` 的目录给，不解析简称，思考档位包含在 slug 中，`--effort` 仍显式传。会话由 agy 保存并续接，不支持 `drop_thinking`。棋手不提供附件，llm-chat 拒绝读取非附件文件及其他工具调用。
-  - `agy:<完整 slug>`：只支持 real，经 llm-chat 的 `-m agy/<slug>` 调用 agy 目录里的任意型号；例如 `agy:claude-opus-5-5-high` 映射为 `agy/claude-opus-5-5-high`，不走 `claude -p`。与 Gemini 共用失败即停、发送前 `call_started` 和未完成调用续跑锁；模型档位由目录 slug 决定，effort 仍显式传，不支持 `drop_thinking`。保留 `gemini:` 的模型和记录格式，旧盘无需改写。共享脚本只用不改；agy preset 不继承规则、skills、MCP，仅有 `view_file`，棋手无附件，因此任何文件读取都应被共享脚本拒绝；执行前隔离和事件遗漏仍受上述外部限制约束。
+  - `agy:<完整 slug>`：只支持 real，经 llm-chat 的 `-m agy/<slug>` 调用 agy 目录里的任意型号；例如 `agy:claude-opus-5-5-high` 映射为 `agy/claude-opus-5-5-high`，不走 `claude -p`。使用失败即停、发送前 `call_started` 和未完成调用续跑锁，不支持 `drop_thinking`。新对局不接受 `gemini:`；旧记录保留原模型与记录格式续跑。推荐基础 slug 配显式 effort，如 `agy:gemini-3.8-flash --effort medium`；完整 slug 的档位尾缀须与该方最终 effort 一致，否则开盘前拒绝。共享脚本只用不改；agy preset 不继承规则、skills、MCP，仅有 `view_file`，棋手无附件，因此任何文件读取都应被共享脚本拒绝；执行前隔离和事件遗漏仍受上述外部限制约束。
+  - `openrouter:<vendor>/<model-id>`：只支持 real，显式选择另行收费的 API 渠道，允许 Claude/GPT；须给已确认的具体型号，不接受 router、preset 或 variant。默认 `claude:` / `codex:` 仍走本机 CLI。
 - **引擎只当对手和事后裁判**。给模型的提示里永远不出现引擎的任何输出；分析在对局结束后另跑。
 
 ## 三、变量与默认值
@@ -102,7 +102,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 |---|---|---|---|
 | `game` | `xiangqi` / `chess` | — | |
 | 棋手 | `claude:<模型>` / `engine:<名字>[:参数]` / `random`（见第二节） | `claude:opus` | `--red`/`--white`、`--black` |
-| `effort` | medium / high / xhigh / max | medium | 与上一轮一致，方便对照；实验里扫全档 |
+| `effort` | 由后端支持，如 low / medium / high / xhigh / max | 单盘 medium，批次 xhigh | `--effort` 给双方默认，`--w` / `--b effort=...` 覆盖单方；批次我方用 `--set effort=...` |
 | `protocol` | `real` / `legacy` | 整盘 real，局面题 legacy | 第九节。legacy 是改协议之前的提示和调用，逐字复现旧数据 |
 | `memory` | `stateless` / `notes` / `session` | 整盘 real 下 session，legacy 和局面题 stateless | 见下 |
 | `show` | `all` / `board` / `pieces` / `fen`；中国象棋另有 `boardpieces` | 中国象棋 `pieces`（只给子力清单）；国际象棋 `all`（FEN + 字母棋盘） | 局面怎么给，整盘（`--show`）和局面题（`--set show=`）共用一套。`show=all` 逐字复现改默认之前的提示（中国象棋棋盘 + 子力清单 + FEN 三样，第四批及以前的数据都是它）。依据：第四批局面题 high 下，中国象棋只给清单的昏招比三样全给少、也不会认错「車」，分不开时按简洁选；国际象棋只给字母棋盘和全给分不开，但棋盘缺易位权和吃过路兵信息，所以不换（`results/batch4-presentation.md` 末节） |
@@ -238,7 +238,9 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 
 **着法解析**：先找「着法: 」；没有就认英文「Move: 」；再没有就取最后一个非空行（不超过 30 个字符），交给棋种的解析判合不合法。所以只回一行着法、或用英文作答都读得出来。旧协议不变（只认「着法: 」）。
 
-**模型调用走 llm-chat**（`agi_chess/chat.py`）：项目级 skill `.agents/skills/llm-chat` 的脚本，一个入口五种棋手串——`claude:<模型>`（claude -p）、`codex:<模型>`（GPT，短名如 sol 按 `codex debug models` 取最新一代全名，现为 gpt-6-sol）、`deepseek:<模型>`（设 `API_KEY_DEEPSEEK` 时 HTTP 直连 api.deepseek.com，仅设 `API_KEY_OPENROUTER` 时自动回退走 OpenRouter 映射 `deepseek/deepseek-v4.1-flash` 或 `deepseek/deepseek-v4-pro`；默认 deepseek-v4-pro，思考只有 low / high / max）、`gemini:<完整 slug>`（agy）、`agy:<完整 slug>`（显式 agy 路由，包括其 Claude 型号）。脚本只用不改；它的会话 id 记进每条 attempt，续跑照记录接上同一段对话。思考深度每次 `--effort` 显式传。config 记 `backend: llm-chat`、每方实际模型 `models`、脚本路径和内容摘要 `llm_chat`。agy 后端调用失败立即停，不等待或重发；其余后端调不通重试、撞额度等解除与停止信号沿用 `claude_cli.call`（`run` 钩子把脚本的输出折成原来的样子）。隔离与跨轮思考的实测见 `results/llm-chat-isolation.md`。
+**模型调用走 llm-chat**（`agi_chess/chat.py`）：项目级 skill `.agents/skills/llm-chat` 的脚本，一个入口五种棋手串——`claude:<模型>`（claude -p）、`codex:<模型>`（GPT，短名如 sol 按 `codex debug models` 取最新一代全名，现为 gpt-6-sol）、`deepseek:<模型>`（设 `API_KEY_DEEPSEEK` 时 HTTP 直连 api.deepseek.com，仅设 `API_KEY_OPENROUTER` 时自动回退走 OpenRouter 映射 `deepseek/deepseek-v4.1-flash` 或 `deepseek/deepseek-v4-pro`；默认 deepseek-v4-pro，思考只有 low / high / max）、`agy:<完整 slug>`（显式 agy 路由，包括其 Claude 型号）、`openrouter:<vendor>/<model-id>`（显式 API 渠道，包括 Claude/GPT，另行收费）。脚本只用不改；它的会话 id 记进每条 attempt，续跑照记录接上同一段对话。思考深度每次显式传：`--effort` 作为双方默认，`--w effort=...` / `--b effort=...` 覆盖单方，不把跨厂商同名档位视作相同算力。config 记 `backend: llm-chat`、每方实际模型 `models`、脚本路径和内容摘要 `llm_chat`。agy 后端调用失败立即停，不等待或重发；其余后端调不通重试、撞额度等解除与停止信号沿用 `claude_cli.call`（`run` 钩子把脚本的输出折成原来的样子）。隔离与跨轮思考的实测见 `results/llm-chat-isolation.md`。
+- 开盘前检查双方 CLI / Key，失败退出 2，不先调用任何一方；缺 CLI 给出保留原参数的 OpenRouter 模板，型号占位须替换为已确认 ID，不自动换渠道。OpenRouter Key 支持 `API_KEY_OPENROUTER` / `OPENROUTER_API_KEY`；既有 DeepSeek 按 Key 自动选择渠道的规则保留。`--dry-run` 不需 CLI / Key；覆盖 `AGI_CHESS_LLM_CHAT` 时只检查自定义脚本存在，后端契约由该脚本负责。
+- llm-chat 会话固定实际 backend，resume 不可在本地 CLI、OpenRouter 与 DeepSeek 直连之间切换；环境变化导致路由不同则要求恢复原配置。agy 1.5.4 的真实 Flash 冒烟已确认基础 slug `gemini-3.8-flash` 加 `--effort medium`、完整 slug `gemini-3.8-flash-medium` 不传 effort 均选择 Medium；整盘仍显式传最终 effort。
 - 旧路（`claude -p` 直调、`codex exec` 无状态）原样保留，给旧记录续跑和局面题用，已有数据可以逐字复现。
 
 ## 附：核实用的桩服务

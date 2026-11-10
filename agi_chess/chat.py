@@ -13,7 +13,8 @@ GPT 是 codex exec resume，DeepSeek 是脚本自己回放历史正文，Gemini 
   - 回答为空（三路的报错文字都带 empty answer）：{'result': '', 'empty_error': 报错}，对局循环照旧记「空回复」。
   - agy 后端失败（含空正文、缺失/无效 META）结果不确定，停止并禁止重发；其余后端沿用原重试行为。
 """
-import hashlib, json, os, pathlib, re, subprocess, sys, tempfile
+import hashlib, importlib.util, json, os, pathlib, re, shlex, shutil, subprocess, sys, tempfile
+from functools import lru_cache
 
 from . import claude_cli
 
@@ -30,7 +31,7 @@ def _default_script():
 
 SCRIPT = _default_script()
 META = 'LLM_CHAT_META '
-KINDS = ('claude', 'codex', 'deepseek', 'gemini', 'agy')
+KINDS = ('claude', 'codex', 'deepseek', 'gemini', 'agy', 'openrouter')
 AGY_KINDS = ('gemini', 'agy')
 DEEPSEEK_DEFAULT = 'deepseek-v4-pro'
 DEEPSEEK_EFFORTS = ('low', 'high', 'max')       # DeepSeek 没有 medium / xhigh（batch5-isolation.md）
@@ -66,6 +67,12 @@ def model_id(kind, model, slugs=None):
     """棋手串里的模型名 → 传给 llm-chat 的 -m。claude 原样（opus 之类的别名由 claude 自己解析，实际模型记在 meta 里）；
     codex 写全名（gpt-…）原样，写短名（sol）按 `codex debug models` 的目录取最新一代；deepseek 空着取 deepseek-v4-pro；
     Gemini 必须给完整 gemini-* slug；agy 给 `agy models` 中的完整 slug，固定补 agy/，不猜别名。"""
+    if kind == 'openrouter':
+        try:
+            backend_module().assert_openrouter_allowed(model, explicit=True)
+        except backend_module().ChatError as e:
+            raise ConfigError(str(e)) from e
+        return 'openrouter:' + model
     if kind == 'claude':
         return model
     if kind == 'deepseek':
@@ -218,3 +225,128 @@ def codex_tool_calls(session):
         if r.get('type') == 'response_item' and (r.get('payload') or {}).get('type') in TOOL_ITEMS:
             n += 1
     return n
+
+
+class ConfigError(ValueError):
+    """调用前即可确定的配置错误；CLI 统一返回 2。"""
+
+
+@lru_cache(maxsize=1)
+def backend_module():
+    # 路由规则以仓内脚本为唯一来源；导入不启动资源，也不读取凭据内容。
+    spec = importlib.util.spec_from_file_location('agi_chess_llm_chat', _REPO_SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def check_effort(kind, model, effort, side):
+    if kind in AGY_KINDS:
+        try:
+            backend_module().check_agy_effort(model, effort)
+        except backend_module().ChatError as e:
+            raise ConfigError(str(e) + '；整盘用 --%s effort=%s，或显式选择一致型号' %
+                              (side, model.rsplit('-', 1)[-1])) from e
+
+
+def preflight(players, models=None, sessions=None, via_chat=True):
+    """仅检查可执行文件和 key 是否存在，不证明登录有效，不调用模型或切换渠道。
+
+    自定义脚本拥有自己的后端契约，因此只检查脚本可读；不假设它使用本仓的 CLI/key。
+    """
+    if not any(spec.partition(':')[0] in KINDS for spec in players.values()):
+        return
+    if via_chat and pathlib.Path(SCRIPT).resolve() != _REPO_SCRIPT.resolve():
+        if not pathlib.Path(SCRIPT).is_file():
+            raise ConfigError('自定义 AGI_CHESS_LLM_CHAT 脚本不存在：%s' % SCRIPT)
+        return
+    mod = backend_module()
+    errors, missing = [], {}
+    for side, spec in players.items():
+        kind, _, name = spec.partition(':')
+        if kind not in KINDS:
+            continue
+        model = (models or {}).get(side)
+        if not via_chat:
+            backend = 'codex' if kind == 'deepseek' else kind
+            if kind == 'deepseek':
+                # 旧 DeepSeek 实际走 Codex profile，不应用整盘 HTTP 的 key/回退规则。
+                from . import codex_cli
+                try:
+                    table = codex_cli.profile()['provider_table']
+                except (OSError, ValueError, KeyError):
+                    raise ConfigError('旧 DeepSeek 的 Codex profile 缺失或无效；请恢复原配置') from None
+                key_name = table.get('env_key')
+                if key_name and not os.environ.get(key_name):
+                    errors.append('旧 DeepSeek profile 缺少 API Key：' + key_name)
+        elif model is None and kind == 'codex' and not name.startswith('gpt-'):
+            backend = 'codex'  # 别名解析之前先检查 CLI，dry-run 则完全不解析。
+        else:
+            model = model or model_id(kind, name)
+            try:
+                backend, _ = mod.route(model)
+            except mod.ChatError as e:
+                raise ConfigError(str(e)) from e
+        sid = (sessions or {}).get(side)
+        if via_chat and sid:
+            try:
+                saved = json.loads((state_dir() / 'sessions' / (sid + '.json')).read_text())
+            except (OSError, ValueError) as e:
+                raise ConfigError('无法检查 llm-chat 会话 %s：%s' % (sid, e)) from e
+            if saved['backend'] != backend:
+                raise ConfigError('会话 %s 固定渠道 %s，当前配置路由到 %s；请恢复原渠道配置，不能切换续跑' %
+                                  (sid, saved['backend'], backend))
+        if backend in ('claude', 'codex', 'agy'):
+            if not shutil.which(backend):
+                errors.append('%s CLI not found in PATH（%s）' % (backend, spec))
+                vendor = {'claude': 'anthropic', 'codex': 'openai', 'deepseek': 'deepseek',
+                          'gemini': 'google'}.get(kind, '<vendor>')
+                if kind == 'agy':
+                    vendor = ('google' if name.startswith('gemini-') else
+                              'anthropic' if name.startswith('claude-') else '<vendor>')
+                missing[spec] = 'openrouter:%s/<model-id>' % vendor
+        elif not mod.find_api_key(backend):
+            keys = ' / '.join(mod.key_env_names(backend))
+            if backend == 'deepseek':
+                keys += '（或 API_KEY_OPENROUTER / OPENROUTER_API_KEY）'
+            errors.append('缺少 API Key：' + keys)
+    if errors:
+        error = ConfigError('；'.join(errors))
+        error.missing = missing
+        raise error
+
+
+def config_error_message(error, argv, module):
+    message = str(error)
+    missing = getattr(error, 'missing', {})
+    if not missing:
+        return message
+    # 保留全部原参数与重复 side overrides；仅替换缺失棋手。未知映射不猜型号。
+    args = list(argv)
+    flags = ('--white', '--red', '--black', '--player', '--opp')
+    for i, arg in enumerate(args):
+        if arg in flags and i + 1 < len(args) and args[i + 1] in missing:
+            args[i + 1] = missing[args[i + 1]]
+        elif '=' in arg:
+            flag, value = arg.split('=', 1)
+            if flag in flags and value in missing:
+                args[i] = flag + '=' + missing[value]
+    if module == 'agi_chess' and args and args[0] == 'play':
+        for flag in ('--white', '--black'):
+            if not any(x == flag or x.startswith(flag + '=') for x in args) and not (
+                    flag == '--white' and any(x == '--red' or x.startswith('--red=') for x in args)):
+                if 'claude:opus' in missing:
+                    args += [flag, missing['claude:opus']]
+    elif module == 'agi_chess.batch' and not any(x == '--player' or x.startswith('--player=') for x in args):
+        if 'claude:opus' in missing:
+            args += ['--player', missing['claude:opus']]
+    legacy = '--protocol=legacy' in args or any(
+        arg == '--protocol' and i + 1 < len(args) and args[i + 1] == 'legacy'
+        for i, arg in enumerate(args))
+    if legacy:
+        message += '\nlegacy 协议不能使用 OpenRouter；请恢复原 CLI，或另开 real 协议的新对局。'
+    if args and args[0] != 'resume' and not legacy:
+        message += ('\n可选 OpenRouter 命令模板（须先把占位项（如 <model-id>）替换成已确认的具体型号；不可原样执行）：\n' +
+                    shlex.join(['python3', '-m', module, *args]))
+    message += '\nOpenRouter API 另行付费，需配置 API_KEY_OPENROUTER（或 OPENROUTER_API_KEY）；不会自动安装、登录或换渠道。'
+    return message

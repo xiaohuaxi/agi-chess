@@ -59,15 +59,16 @@ So run any request that may not be quick through the host's managed background e
 
 Decided from the model id, in this order (a leading `~` is ignored when reading the vendor):
 
-1. Claude: `anthropic/<name>` (the prefix is stripped), `claude-*`, or the aliases `opus`, `sonnet`, `haiku`, `fable` (optionally `[1m]`). Runs the local `claude -p` with the subscription login.
-2. GPT: `openai/<name>` (prefix stripped) or `gpt-*`. Runs the local `codex exec` with the subscription login. Use full names such as `gpt-6-luna`.
-3. agy: `gemini-*` or `agy/<slug>` (prefix stripped). Runs the local `agy` (Antigravity CLI) with the Google subscription login. Slugs come from `agy models` and change with the subscription, so look them up instead of guessing (e.g. `gemini-3.8-flash-high`; the suffix is the thinking level).
-4. DeepSeek: `deepseek/<name>` (prefix stripped) or `deepseek*`. Calls `https://api.deepseek.com` directly when `API_KEY_DEEPSEEK` (or `DEEPSEEK_API_KEY`) is set. Current ids: `deepseek-flash`, `deepseek-v4-pro` (bare `deepseek` defaults to `deepseek-v4-pro`). When no DeepSeek key is set in the environment and `API_KEY_OPENROUTER` (or `OPENROUTER_API_KEY`) is set, automatically falls back to OpenRouter (`deepseek-flash` → `deepseek/deepseek-v4.1-flash`, `deepseek` / `deepseek-v4-pro` → `deepseek/deepseek-v4-pro`; legacy aliases `deepseek-chat` and `deepseek-reasoner` map to the same models).
-5. Any other `vendor/name` id: OpenRouter with `API_KEY_OPENROUTER` (or `OPENROUTER_API_KEY`). A bare id without `/` that matches none of the above is an error.
+1. Explicit OpenRouter: `openrouter:<vendor>/<model-id>` selects the separately billed API route, including Claude/GPT. Give a confirmed concrete ID; do not infer an API model from a CLI alias. Requires `API_KEY_OPENROUTER` (or `OPENROUTER_API_KEY`).
+2. Claude: `anthropic/<name>` (the prefix is stripped), `claude-*`, or the aliases `opus`, `sonnet`, `haiku`, `fable` (optionally `[1m]`). Runs the local `claude -p` with the subscription login.
+3. GPT: `openai/<name>` (prefix stripped) or `gpt-*`. Runs the local `codex exec` with the subscription login. Use full names such as `gpt-6-luna`.
+4. agy: `gemini-*` or `agy/<slug>` (prefix stripped). Runs the local `agy` (Antigravity CLI) with the Google subscription login. Slugs come from `agy models` and change with the subscription, so look them up instead of guessing (e.g. `agy/gemini-3.8-flash` with `--effort medium`). Full slugs such as `gemini-3.8-flash-medium` also work; if effort is supplied, it must match a thinking-level suffix or the call is rejected before sending. These names do not imply equal compute across providers.
+5. DeepSeek: `deepseek/<name>` (prefix stripped) or `deepseek*`. Calls `https://api.deepseek.com` directly when `API_KEY_DEEPSEEK` (or `DEEPSEEK_API_KEY`) is set. Current ids: `deepseek-flash`, `deepseek-v4-pro` (bare `deepseek` defaults to `deepseek-v4-pro`). When no DeepSeek key is set in the environment and `API_KEY_OPENROUTER` (or `OPENROUTER_API_KEY`) is set, automatically falls back to OpenRouter (`deepseek-flash` → `deepseek/deepseek-v4.1-flash`, `deepseek` / `deepseek-v4-pro` → `deepseek/deepseek-v4-pro`; legacy aliases `deepseek-chat` and `deepseek-reasoner` map to the same models).
+6. Any other `vendor/name` id: OpenRouter with `API_KEY_OPENROUTER` (or `OPENROUTER_API_KEY`). A bare id without `/` that matches none of the above is an error.
 
 For Gemini, use the agy slugs by default: the subscription already pays for them, and only agy takes attachments. `google/gemini-*` still goes to OpenRouter and is billed per token there; use it when the agy weekly quota is out (`agy -p /usage` shows it without spending any) or when a model is not on agy.
 
-Claude and GPT never go to OpenRouter. The OpenRouter path refuses, before sending anything: any id whose vendor is `anthropic` or `openai` (with or without a leading `~`) or that contains `claude` or `gpt-`; every `openrouter/*` id such as `openrouter/auto`; and presets (`@...`). Routers and presets are refused because they may pick a Claude or GPT model on their own. Name a concrete `vendor/model` instead.
+Claude and GPT use local CLIs unless the model starts with explicit `openrouter:`. The implicit OpenRouter path still refuses Claude/GPT IDs. Both OpenRouter paths require a concrete `vendor/model` and reject `openrouter/*`, IDs containing `router` or `@`, variant suffixes and `multi-agent` models; the explicit prefix does not bypass these checks.
 
 The three CLIs run with a whitelisted environment (home, path, user, shell, locale, temp dir, proxy and CA-certificate variables). Variables such as `ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY`, `CLAUDE_CODE_USE_BEDROCK` or `OPENAI_BASE_URL`, `OPENAI_API_KEY` are never passed, so a call cannot leave the subscription login; for agy, `GEMINI_API_KEY` and the `AGY_LLM_GATEWAY_*` variables are dropped the same way.
 
@@ -76,7 +77,7 @@ OpenRouter pins one provider with no fallback: `x-ai` → `xai`, `google` → `g
 ## Sessions
 
 - The first turn fixes the system message. On later turns omit it, or pass the identical text; different text is an error and nothing is sent.
-- The first turn's concrete model id is locked, so an alias cannot change model mid-conversation. Passing a different model id on a later turn switches model, allowed only within the same kind of backend (OpenRouter and DeepSeek share history; Claude stays Claude; GPT stays GPT; agy stays agy).
+- The first turn's concrete model id is locked, so an alias cannot change model mid-conversation. Passing a different model id on a later turn switches model, allowed only within the same exact backend. OpenRouter and direct DeepSeek cannot switch either; changing keys so a DeepSeek ID resolves to a different backend fails before sending. Restore the original route configuration to resume.
 - A failed turn is not saved. Claude, GPT and agy keep their own history, though, so a failed turn there may still have reached their thread.
 - Two calls on the same session at once: the second fails immediately with "in use". Run turns of one session one after another.
 
@@ -113,7 +114,7 @@ The model should answer from its own knowledge. Each route is locked down as bel
 
 Limits of this guarantee:
 
-- OpenRouter router or orchestration models (e.g. `typesafe/jev-router`, `sakana/fugu-max`) pick or delegate to other models internally. The script keeps no allow or deny list for them; choose concrete models yourself.
+- OpenRouter orchestration models may delegate internally. IDs containing `router` are rejected, but names alone cannot identify all orchestration (e.g. `sakana/fugu-max`); choose concrete models yourself.
 - Zero web access assumes the OpenRouter account does not force the web plugin on. If it is on by default with "Prevent overrides", the per-request disable is ignored and the search runs before the script can refuse the answer.
 - codex's `clock.sleep` may run without showing up in the event stream. It only waits; it touches no network or files.
 

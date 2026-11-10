@@ -166,6 +166,10 @@ def route(model):
     low = name.lower()
     if not name:
         raise ChatError("model id is empty")
+    if low.startswith("openrouter:"):
+        concrete = name.split(":", 1)[1]
+        assert_openrouter_allowed(concrete, explicit=True)
+        return "openrouter", concrete
     bare = low.lstrip("~")
     if bare.startswith("anthropic/"):
         return "claude", name.lstrip("~").split("/", 1)[1]
@@ -192,17 +196,16 @@ def route(model):
     raise ChatError(f"unrecognized model id {name!r}: OpenRouter models need a vendor/name id")
 
 
-def assert_openrouter_allowed(model):
-    """Hard guarantee: Claude and GPT never go to OpenRouter (subscriptions cover them).
+def assert_openrouter_allowed(model, explicit=False):
+    """Claude/GPT 默认保留订阅路由；只有显式 openrouter: 才允许 API。
 
-    Also refuses meta-routers (openrouter/auto and other openrouter/* ids) and
-    presets (@...), since they may pick a Claude or GPT model on their own.
+    两种入口都拒绝 router、preset、variant 与非具体型号。
     """
     low = model.lower().lstrip("~")
     vendor = low.split("/", 1)[0]
-    if vendor in ("anthropic", "openai") or "claude" in low or "gpt-" in low:
+    if not explicit and (vendor in ("anthropic", "openai") or "claude" in low or "gpt-" in low):
         raise ChatError(f"refusing to send {model!r} to OpenRouter: Claude/GPT use the local CLIs")
-    if vendor == "openrouter" or low.startswith("@") or "/" not in low:
+    if vendor == "openrouter" or "@" in low or "/" not in low or "router" in low:
         raise ChatError(f"refusing {model!r}: only concrete vendor/model ids go to OpenRouter, "
                         "not routers or presets that may choose Claude/GPT")
     # No tools, no web: ":online" turns on web search, and the other variant
@@ -212,6 +215,8 @@ def assert_openrouter_allowed(model):
         raise ChatError(f"refusing {model!r}: variant suffixes (':online', ':free', ...) are not allowed")
     if "multi-agent" in low:
         raise ChatError(f"refusing {model!r}: multi-agent models use tools")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*", low):
+        raise ChatError(f"refusing {model!r}: expected a concrete vendor/model id")
 
 
 def state_dir():
@@ -402,6 +407,10 @@ def check_choice(resp):
     if message.get("annotations"):
         raise ChatError("the answer carries annotations (web citations); plain chat allows no web access")
     check_no_tools(resp.get("usage"))
+    # 工具证据先判；结构化拒答即使没有正文，也不能按 empty answer 重问。
+    if message.get("refusal") or str(finish).lower() in ("refusal", "content_filter", "safety"):
+        raise ChatError("model refused (finish_reason=refusal); response=" +
+                        sanitize(json.dumps(resp, ensure_ascii=False)))
     if not text.strip():
         raise ChatError(f"empty answer (finish_reason={finish}); reasoning tokens count toward "
                         "--max-tokens, raise it or lower --effort")
@@ -412,7 +421,7 @@ def check_choice(resp):
 
 def call_openrouter(session, user_text, opts):
     model = session["model"]
-    assert_openrouter_allowed(model)
+    assert_openrouter_allowed(model, explicit=session.get("model_requested", "").strip().lower().startswith("openrouter:"))
     key = api_key("openrouter")
     if "provider_only" not in session:
         session["provider_only"] = resolve_provider_slug(model, key, opts.timeout)
@@ -962,17 +971,26 @@ def continue_session(session, opts, backend, backend_model, system):
         # Fixed on the first turn: once earlier thinking has been resent, it
         # cannot be taken back, and switching mid-way would mix two conditions.
         raise ChatError("--drop-thinking is fixed on a session's first turn; this session was started without it")
-    if FAMILY[backend] != FAMILY[session["backend"]]:
+    if backend != session["backend"]:
         raise ChatError(f"session {session['id']} runs on {session['backend']}; "
                         f"model {opts.model!r} routes to {backend}")
     if opts.model != session["model_requested"] or backend != session["backend"]:
-        # Switching model or HTTP route inside the same backend family: resolve afresh.
+        # Model changes may refresh provider selection, but never switch backend.
         session.update(backend=backend, model_requested=opts.model, model=backend_model)
         session.pop("provider_only", None)
 
 
+def check_agy_effort(model, effort):
+    suffix = model.rsplit("-", 1)[-1]
+    if effort and suffix in ("low", "medium", "high", "xhigh", "max") and suffix != effort:
+        raise ChatError(f"agy model {model!r} has effort {suffix}, conflicting with --effort {effort}; "
+                        f"use --effort {suffix} or explicitly choose a matching model")
+
+
 def run_turn(opts, user_text, root):
     backend, backend_model = route(opts.model)
+    if backend == "agy":
+        check_agy_effort(backend_model, opts.effort)
     system = read_system(opts)
     if opts.effort and not EFFORT_PATTERN.match(opts.effort):
         raise ChatError(f"invalid --effort {opts.effort!r}")
@@ -1007,6 +1025,7 @@ def run_turn(opts, user_text, root):
         elif backend == "claude":
             result = call_claude(session, user_text, opts, root)
         elif backend == "agy":
+            check_agy_effort(session["model"], opts.effort)
             result = call_agy(session, user_text, opts, root)
         else:
             result = call_codex(session, user_text, opts, root)
