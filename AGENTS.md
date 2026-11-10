@@ -59,4 +59,3 @@
 - 防思维链泄露类拒答一出现就终止并回报用户：所有服务商、real / legacy / 旧记录均适用；不重问、不改措辞、不自动续跑，不当棋手输。仅被动监测正常对弈，禁止向真实模型主动诱发或探测拒答，检测验证只用本地假响应 / mock。可见理由不是加密思考；空回复或 503 无明确拒答证据时不算。
 - 规则判定沿用旧实现，不自行改棋规：中国象棋用 pyffish，国际象棋用 python-chess（两者属对通用规范「禁强 copyleft」的刻意例外：pyffish 是目前唯一提供中象重复局面与长将/长捉裁决的开源 Python 库（长捉属近似判定，边界见 `docs/design.md`）；两者仅由用户 pip 安装、不随仓分发，冗余的 cchess 已移除）；上游来源见 `docs/design.md`，只读参考，不切上游归档分支。
 - `runs/` 已入库 74 个正式对局/局面题目录的 `game.pgn`、`analysis*.json*`（恶手字段口径：国际象棋看 `lichess: "Blunder"`，中国象棋看 `cls: "blunder"`）、`summary.*`、`judged.jsonl`、`report.txt`；原始大文件 `game.jsonl`、`record.txt`、`.mp4` 及新跑目录由 `.gitignore` 忽略（`python3 -m agi_chess export` 与 `agi_chess.analyze` 仅用于含 `game.jsonl` 的本地对局目录）。结论写入 `docs/`，写明盘数与条件；小样本只看方向。每批对局汇报附累计总览表，按对阵组合、棋种及可比条件列有效盘数、先后手比分和关键指标；有当次目标时列剩余盘数，不混算旧协议或不同条件。
-- 公开提交前须确认无私有凭据、个人本机路径或未脱敏日志。
