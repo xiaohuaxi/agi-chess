@@ -42,6 +42,7 @@
 - 设计、规则来源和上游研究见 `docs/design.md`；跨轮思考的证据与限制见 `docs/thinking-carryover.md`；依赖来源与许可边界见 `docs/dependencies.md`。
 - 环境配置与命令速查见 `docs/setup.md`；看棋谱、录视频用 `.agents/skills/replay-video/SKILL.md` 与 `docs/viewer-guide.md`，实现见 `docs/viewer.md`。
 - 5 个核心 Python CLI 入口：`python3 -m agi_chess {play,resume,export}`（单盘对弈与导出）、`python3 -m agi_chess.analyze runs/<tag>`（事后引擎逐手复盘）、`python3 -m agi_chess.batch {run,summary}`（多盘批次运行与汇总）、`python3 -m agi_chess.quiz {run,judge,report}`（局面题测试、判卷与离线报表，如 `--batch batch2`）、`python3 analysis/rating/rate.py report [--boot 10]`（离线复算等级分刻度）。
+- 正常安排对弈优先用现有 CLI 的 `play` / `resume` / `batch run`，复用程序的规则判定、记录与安全停止；默认整盘由程序调用仓内 llm-chat。独立通道验证或程序故障排查时，可按需直接调用底层通道，说明原因和验证范围即可；临时通道测试不代表完整程序验收，棋手隔离与安全停止等硬约束仍适用。
 
 ## 验证
 
@@ -53,7 +54,7 @@
 
 - 棋手不准用引擎或规则库帮忙；引擎只能当对手或事后裁判。Codex 当棋手前，先证明工具关掉、调不到本机引擎。
 - 棋手一旦调用或尝试工具（含失败、权限拦截），立即暂停分析，不自动重试或续跑；没有工具事件不等于证明从未调用。
-- 整盘棋手走仓内 `.agents/skills/llm-chat` skill，对弈实验期间只用不改。Claude、GPT 默认走本机 CLI 订阅；显式 `openrouter:<vendor>/<model-id>` 可选 API 渠道，另行收费。DeepSeek 走 HTTP、只作辅助参考。各后端及 agy 路由见 `docs/design.md` 第九节。局面题和旧记录续跑仍按原路径直调；思考深度每次显式传。
+- 默认整盘的模型调用层使用仓内 `.agents/skills/llm-chat` 脚本，对弈实验期间只用不改。Claude、GPT 默认走本机 CLI 订阅；显式 `openrouter:<vendor>/<model-id>` 可选 API 渠道，另行收费。DeepSeek 走 HTTP、只作辅助参考。各后端及 agy 路由见 `docs/design.md` 第九节。局面题和旧记录续跑仍按原路径直调；思考深度每次显式传。
 - 整盘协议是「模型就是真实棋手」：不报将军、吃子、威胁，不给合法着法，非法只说不合法。改提示先读 `docs/design.md` 第九节逐句去留；模型对模型双方思考延续方式须一致。
 - 防思维链泄露类拒答一出现就终止并回报用户：所有服务商、real / legacy / 旧记录均适用；不重问、不改措辞、不自动续跑，不当棋手输。仅被动监测正常对弈，禁止向真实模型主动诱发或探测拒答，检测验证只用本地假响应 / mock。可见理由不是加密思考；空回复或 503 无明确拒答证据时不算。
 - 规则判定沿用旧实现，不自行改棋规：中国象棋用 pyffish，国际象棋用 python-chess（两者属对通用规范「禁强 copyleft」的刻意例外：pyffish 是目前唯一提供中象重复局面与长将/长捉裁决的开源 Python 库（长捉属近似判定，边界见 `docs/design.md`）；两者仅由用户 pip 安装、不随仓分发，冗余的 cchess 已移除）；上游来源见 `docs/design.md`，只读参考，不切上游归档分支。
