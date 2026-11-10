@@ -60,6 +60,8 @@ The viewer defaults to Chinese; append `&lang=en` to switch the UI to English, a
 
 ## Python Package, Offline Tests & Zero-Cost First Match
 
+Python 3.13 is recommended; use `python3.13 -m venv .venv` to select it explicitly on systems with several versions. If building `pyffish` fails, check the local C++ toolchain and SDK.
+
 The repository provides `requirements.txt` for installing the rule libraries. To run the match harness, export PGN records, or execute the Python test suite, install the dependencies in a Python virtual environment (recomputing ratings in `analysis/rating`, printing quiz reports via `quiz report`, and browsing PGNs in `viewer/` do not require these packages):
 
 ```sh
@@ -125,7 +127,17 @@ python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --b
 
 Available model slugs, rate limits, and billing depend on your own accounts and subscriptions; this repository does not provide accounts, credentials, or quota. Note the configuration difference for DeepSeek between the two execution modes:
 - **Full-game match mode** (`python3 -m agi_chess`): Driven by the built-in `.agents/skills/llm-chat/` over HTTP directly to DeepSeek or OpenRouter. **You only need to set `DEEPSEEK_API_KEY` (`API_KEY_DEEPSEEK`) or `OPENROUTER_API_KEY` (`API_KEY_OPENROUTER`); Codex CLI is not required.**
-- **Historical stateless position-quiz mode** (`python3 -m agi_chess.quiz`): Invokes `claude` or `codex exec` directly; running `python3 -m agi_chess.quiz run --game chess --batch batch2 --ids c2-01 --efforts medium --reps 1 --model deepseek` uses a Codex CLI profile and reads `$CODEX_HOME/deepseek.config.toml` (or `~/.codex/deepseek.config.toml` when `CODEX_HOME` is unset) by default, overridable via `AGI_CHESS_DEEPSEEK_CONFIG` (with backward compatibility for `AGICHESS_DEEPSEEK_CONFIG` and `LLMCHESS_DEEPSEEK_CONFIG`). Minimal credential-free templates:
+- **Historical stateless position-quiz mode** (`python3 -m agi_chess.quiz`): Invokes `claude` or `codex exec` directly; DeepSeek uses a Codex CLI profile and reads `$CODEX_HOME/deepseek.config.toml` (or `~/.codex/deepseek.config.toml` when `CODEX_HOME` is unset) by default, overridable via `AGI_CHESS_DEEPSEEK_CONFIG` (with backward compatibility for `AGICHESS_DEEPSEEK_CONFIG` and `LLMCHESS_DEEPSEEK_CONFIG`).
+
+  Use a separate output directory for the example run, keeping `--batch batch2` to select the position bank:
+
+  ```sh
+  python3 -m agi_chess.quiz run --game chess --batch batch2 --out runs/quiz-deepseek-demo --ids c2-01 --efforts medium --reps 1 --model deepseek
+  ```
+
+  Choose a fresh `--out` for each new experiment and pass the same `--out` to subsequent `judge` / `report` commands. The default `runs/quiz-batch2` contains published judged results without raw answers in a fresh clone, so the program refuses to append experiments there.
+
+  Minimal credential-free configuration template:
 
   ```toml
   # ~/.codex/deepseek.config.toml (needed only for quiz --model deepseek; not needed for full-game matches)

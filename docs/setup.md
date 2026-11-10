@@ -60,6 +60,8 @@ node viewer/serve.mjs
 
 ## Python 程序、离线测试与零成本试跑
 
+建议使用 Python 3.13；多版本环境可用 `python3.13 -m venv .venv` 明确选择解释器。若安装 `pyffish` 报编译或链接错误，先核对本机 C++ 工具链与 SDK。
+
 仓库提供 `requirements.txt` 用于安装规则库依赖。若要运行对弈程序、导出棋谱或跑 Python 测试，应先在自己选择的 Python 虚拟环境安装规则库（仅复算评级 `analysis/rating`、复算局面题报表 `quiz report` 与本地静态浏览 `viewer/` 无需安装这两个库）：
 
 ```sh
@@ -125,7 +127,17 @@ python -m agi_chess play --game chess --tag ds-smoke --white deepseek:v4-pro --b
 
 可用型号、额度与收费由账号和服务决定；本仓库不提供账号、凭据或额度。请注意 DeepSeek 在两种运行模式下的配置差异：
 - **整盘对弈模式**（`python3 -m agi_chess`）：由仓内 `.agents/skills/llm-chat/` 通过 HTTP 直连 DeepSeek 官方 API 或 OpenRouter，**只需设置 `DEEPSEEK_API_KEY`（`API_KEY_DEEPSEEK`）或 `OPENROUTER_API_KEY`（`API_KEY_OPENROUTER`）环境变量，无需安装 Codex CLI**。
-- **历史无状态局面题模式**（`python3 -m agi_chess.quiz`）：仍按原路径直调 `claude` 或 `codex exec`；其中 `python3 -m agi_chess.quiz run --game chess --batch batch2 --ids c2-01 --efforts medium --reps 1 --model deepseek` 走 Codex CLI profile，默认读取 `$CODEX_HOME/deepseek.config.toml`（未设 `CODEX_HOME` 时为 `~/.codex/deepseek.config.toml`）还原供应商与模型目录配置，也可通过环境变量 `AGI_CHESS_DEEPSEEK_CONFIG`（兼容 `AGICHESS_DEEPSEEK_CONFIG` 与 `LLMCHESS_DEEPSEEK_CONFIG`）覆盖配置文件路径。无凭据最小配置模板示例：
+- **历史无状态局面题模式**（`python3 -m agi_chess.quiz`）：仍按原路径直调 `claude` 或 `codex exec`；其中 DeepSeek 走 Codex CLI profile，默认读取 `$CODEX_HOME/deepseek.config.toml`（未设 `CODEX_HOME` 时为 `~/.codex/deepseek.config.toml`）还原供应商与模型目录配置，也可通过环境变量 `AGI_CHESS_DEEPSEEK_CONFIG`（兼容 `AGICHESS_DEEPSEEK_CONFIG` 与 `LLMCHESS_DEEPSEEK_CONFIG`）覆盖配置文件路径。
+
+  示例中的运行命令请使用独立输出目录，保留 `--batch batch2` 选择题库：
+
+  ```sh
+  python3 -m agi_chess.quiz run --game chess --batch batch2 --out runs/quiz-deepseek-demo --ids c2-01 --efforts medium --reps 1 --model deepseek
+  ```
+
+  每次新实验换一个 `--out`；后续 `judge` / `report` 使用相同的 `--out`。默认的 `runs/quiz-batch2` 已有公开判卷数据，新克隆缺少原始作答，程序会拒绝向其中追加实验。
+
+  无凭据最小配置模板示例：
 
   ```toml
   # ~/.codex/deepseek.config.toml（仅在运行 quiz --model deepseek 时需要；整盘对弈无需此文件）

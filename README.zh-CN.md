@@ -63,6 +63,8 @@
 
 若需运行命令行对弈、导出棋谱、校验已入库题库或执行 Python 单元测试，先安装规则库（`chess` 与 `pyffish`）：
 
+建议使用 Python 3.13。如果安装了多个 Python 版本，创建虚拟环境时可将 `python3` 换成 `python3.13`；`pyffish` 含本机扩展，可能需要可用的 C++ 编译环境（见[安装说明](docs/setup.md)）。
+
 1. **创建虚拟环境并安装 `requirements.txt`**（Ubuntu / Debian 若提示缺少 `ensurepip`，先执行 `sudo apt install python3-venv`）：
 
    ```sh

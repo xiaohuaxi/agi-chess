@@ -63,6 +63,8 @@ All commands below run from the repository root and require neither model creden
 
 To run command-line matches, export game records, verify position banks offline, or run the Python unit test suite, install the rule libraries (`chess` and `pyffish`):
 
+Python 3.13 is recommended. If you have several Python versions installed, use `python3.13` instead of `python3` when creating the virtual environment; `pyffish` includes a native extension and may require a working C++ toolchain (see [Setup](docs/setup.en.md)).
+
 1. **Create a virtual environment and install `requirements.txt`** (on Ubuntu/Debian, if `ensurepip` is missing, run `sudo apt install python3-venv` first):
 
    ```sh
