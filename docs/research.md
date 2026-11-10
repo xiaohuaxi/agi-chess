@@ -18,7 +18,7 @@
 
 型号只写仓内材料能确认的值。部分报告只记 `claude:opus`，本索引保留别名；其中旧 CLI 国际象棋 14 盘 Opus–Astra 和 30 盘评级的 `claude-opus-5-5`，由[后续历史核对](results/argon-high-chess-rating-20261019.md)确认，不据此补全其他批次的型号。`agy:claude-opus-5-5-high` 与旧 CLI 的同名模型、不同 effort，不视为相同计算预算。
 
-“局面数”“作答数”“盘数”分别列出；同题重复、同盘的两方、重复开局都不是独立样本。不同棋种的大失误阈值和看杀口径也不统一，跨表先看原报告定义。旧报告中的拒答重问是历史处理；2026-10-15 起现行规则是拒答立即终止，见 [项目状态](status.md)。
+“局面数”“作答数”“盘数”分别列出；同题重复、同盘的两方、重复开局都不是独立样本。不同棋种的大失误阈值和看杀口径也不统一，跨表先看原报告定义。旧报告中的拒答重问是历史处理；2026-10-15 起现行规则是拒答立即终止，见 [项目状态](../STATUS.md)。
 
 ## 第一至三批：深度、延续与提示（2026-09-25—09-27）
 
@@ -124,6 +124,6 @@
 | `zc`（30 盘）、`zx`（37 盘） | 多盘批次目录 × 2（67 盘） | **Opus Max 棋力定位**：国象对 Maia-1900 / Stockfish 限强三档；中象对 FSF `nodes=30..1000` 阶梯 | [Opus Max 棋力定位](results/opus-max-rating.md) |
 | `quiz-{batch1,batch2,batch3,4p,4p2,5-ds,5-sol,6r,6r-sol}` | 局面题目录 × 9（50 份 `judged.jsonl`） | 第一至六批局面题判卷结果与汇总表（含 `report.txt`，可用 `python3 -m agi_chess.quiz report --batch <名>` 重算） | [第一批 A](results/batch1-depth.md)、[第二批 A](results/batch2-capture.md)、[第三批 A](results/batch3-reason.md)、[第四至六批](results/batch4-presentation.md) |
 
-使用程序见[安装与运行](setup.md)，看棋谱和出视频见[阅读器指南](viewer-guide.md)；当前工作状态与后续待办见[项目状态](status.md)。本索引只导航已有材料，没有追加模型调用、引擎分析或棋力重估。
+使用程序见[安装与运行](setup.md)，看棋谱和出视频见[阅读器指南](viewer-guide.md)；当前工作状态与后续待办见[项目状态](../STATUS.md)。实验与维护沿革见[历史记录](history.md)。本索引只导航已有材料，没有追加模型调用、引擎分析或棋力重估。
 
 阅读器技术与历史需求调研见[调研索引](viewer-survey/README.md)；[历史本机录屏经验](viewer-survey/post-studio-recording.md)保留实现取舍，私人原片和外部工具不随仓库提供。内部发帖交接材料已移出工作树，不作为研究或现行操作规范。

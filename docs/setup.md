@@ -70,16 +70,9 @@ python3 -m venv .venv
 python -m pip install -r requirements.txt
 python -c 'import chess, pyffish; print("规则库可导入")'
 python -m agi_chess --help
-python data/batch1/select_positions.py check
-python data/batch2/select_positions.py check
-python -m unittest discover -s tests -t . -v
 ```
 
 `chess` 是代码中 `import chess` 对应的包；中国象棋规则由 `pyffish` 提供，中文记谱已改用仓内自研实现（无需 `cchess`）。`pyffish` 含本机扩展，新平台可能需要编译环境；在 Debian/Ubuntu 上若系统缺少 `venv`（报 `ensurepip is not available`）、编译工具或 Stockfish，可先运行 `sudo apt install python3-venv build-essential python3-dev stockfish`。
-
-`python3 data/batch1/select_positions.py check` 与 `python3 data/batch2/select_positions.py check` 仅依赖上述规则库，离线校验已入库的第一批与第二批局面题（`data/batch1/{xiangqi,chess}.jsonl` 与 `data/batch2/{xiangqi,chess}.jsonl` 的 FEN、行棋方与着法合法性），不启动引擎、不读取 `runs/`。
-
-完整单元测试（共 320 项）包含 21 项真引擎握手与走子测试，需要能找到 `stockfish` 和 `fairy-stockfish`。**当本机未安装这两个引擎时，`unittest -v` 会自动跳过这 21 项真引擎测试（其余 299 项全部通过属正常预期）**；安装两个引擎后 320 项全部通过（0 fail / 0 skip）。引擎是单独安装的程序，不会由 `pip` 提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
 
 无需任何 API Key 或本地引擎，即可用 `random` 棋手在 0.1 秒内跑通首盘完整对局，或用 `--dry-run` 检查真实棋手协议提示词：
 
@@ -95,6 +88,18 @@ python -m agi_chess.analyze runs/demo-random
 ```
 
 > **提示**：`python3 -m agi_chess.analyze` 需读取对局目录下的原始 `game.jsonl` 重放落定着法（`--table` 多盘汇总表同样需读取本地 `game.jsonl`）；仓内已入库的 65 个正式对局目录均已预先算好并随仓提交了 `analysis.jsonl` 与 `analysis-summary.json`（其中恶手字段国际象棋看 `lichess: "Blunder"`，中国象棋看 `cls: "blunder"`），无需重跑引擎即可直接分析或用 `python3 -m agi_chess.analyze runs/g7-c-opus-astra-*` 核对已入库分析摘要。
+
+按需校验题库或运行完整测试（不是试跑首盘的前置步骤）：
+
+```sh
+python data/batch1/select_positions.py check
+python data/batch2/select_positions.py check
+python -m unittest discover -s tests -t . -v
+```
+
+`python3 data/batch1/select_positions.py check` 与 `python3 data/batch2/select_positions.py check` 仅依赖上述规则库，离线校验已入库的第一批与第二批局面题（`data/batch1/{xiangqi,chess}.jsonl` 与 `data/batch2/{xiangqi,chess}.jsonl` 的 FEN、行棋方与着法合法性），不启动引擎、不读取 `runs/`。
+
+完整单元测试（共 320 项）包含 21 项真引擎握手与走子测试，需要能找到 `stockfish` 和 `fairy-stockfish`。**当本机未安装这两个引擎时，`unittest -v` 会自动跳过这 21 项真引擎测试（其余 299 项全部通过属正常预期）**；安装两个引擎后 320 项全部通过（0 fail / 0 skip）。引擎是单独安装的程序，不会由 `pip` 提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
 
 ## 模型对弈：内置 `llm-chat`、本地 CLI 订阅与 HTTP API 配置
 

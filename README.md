@@ -19,7 +19,7 @@ This project puts untuned general-purpose models at the board like human players
 | Recompute ratings, set up the environment, run tests, or launch matches | [Setup & Running](docs/setup.en.md) |
 | Check dependency roles, upstream provenance, and licenses | [Dependencies & Provenance](docs/dependencies.en.md) |
 | Understand prompts, match protocols, record formats, and failure handling | [System Design (zh-CN)](docs/design.md) |
-| Track maintenance logs and open decisions | [Project Status (zh-CN)](docs/status.md) |
+| Track current work and open decisions | [Project Status (zh-CN)](STATUS.md) |
 
 ## Quick Starts (No Model Accounts or Engines Needed)
 
@@ -72,17 +72,7 @@ Python 3.13 is recommended. If you have several Python versions installed, use `
    pip install -r requirements.txt
    ```
 
-2. **Verify position banks and run unit tests**:
-
-   ```sh
-   python3 data/batch1/select_positions.py check
-   python3 data/batch2/select_positions.py check
-   python3 -m unittest discover -s tests -t . -v
-   ```
-
-   `select_positions.py check` verifies the Batch 1 and Batch 2 position banks offline; when local Stockfish / Fairy-Stockfish engines are not installed, `unittest -v` automatically skips the 21 live-engine integration tests while passing all offline tests.
-
-3. **Run a Zero-API-Cost First Match in 0.1s & Inspect Prompts**:
+2. **Run a Zero-API-Cost First Match in 0.1s & Inspect Prompts**:
 
    ```sh
    # Play 20 plies between two random movers (no API key or engine needed; writes runs/demo-random/game.pgn in 0.1s, viewable at ?files=/runs/demo-random)
@@ -93,13 +83,23 @@ Python 3.13 is recommended. If you have several Python versions installed, use `
 
    For full environment setup, engine opponent installation, and post-game engine blunder analysis (`python3 -m agi_chess.analyze runs/<tag>`), see [Setup & Running](docs/setup.en.md).
 
+3. **Optional: Verify position banks and run unit tests**:
+
+   ```sh
+   python3 data/batch1/select_positions.py check
+   python3 data/batch2/select_positions.py check
+   python3 -m unittest discover -s tests -t . -v
+   ```
+
+   `select_positions.py check` verifies the Batch 1 and Batch 2 position banks offline; when local Stockfish / Fairy-Stockfish engines are not installed, `unittest -v` automatically skips the 21 live-engine integration tests while passing all offline tests.
+
 ## Research Themes & Key Findings
 
 - **Reasoning Depth & Session Continuity:** Position quizzes and full-game experiments separately test the impact of reasoning effort, multi-turn session continuation, and retaining vs. dropping prior thinking blocks. Identically named effort levels across providers do not imply equal compute budgets.
 - **Board Representation & Blunder Taxonomy:** We compare ASCII boards, FEN strings, and piece lists, combining post-game engine analysis with visible model rationales to diagnose errors. Visible rationales are inspectable response text, not the model's hidden chain-of-thought.
 - **Model-vs-Model Play & Rating Calibration:** Covers head-to-head model matches, fixed-strength engine opponents, and engine ladder calibration. Cross-model matches are mostly small-sample directional tests, and analogies to human rating pools carry anchor and conversion uncertainties.
 
-**Summary of Core Quantitative Findings** (see [Research Index](docs/research.en.md) and [Project Status (zh-CN)](docs/status.md) for full details):
+**Summary of Core Quantitative Findings** (see [Research Index](docs/research.en.md) and [Experiment History (zh-CN)](docs/history.md) for full details):
 
 - **Calibrated Playing Strength (Opus Max across 67 Engine Calibration Games):** In International Chess (30 games), under engine adjudication at the 200-ply cap (≥300 cp lead wins), Opus Max fits at **+189 scale points above Maia-1900** (95% CI: 66–313), corresponding to **~1800 Lichess Blitz / ~1920 Lichess Rapid** (or +281 / ~1910 Blitz / ~2020 Rapid under the original cap-is-draw rule); in Xiangqi (37 games), it fits at **+121 Elo above Fairy-Stockfish `nodes=100`** (95% CI: +1 to +236), comparable to or slightly above `nodes=300` (+82) and clearly below `nodes=1000` (+385).
 - **Move Legality & Capture Rules Are Not the Primary Bottleneck:** Under the real-player protocol, models rarely output illegal moves. In targeted diagnostics across 14 full-game missed-capture/hanging-piece positions, models listed every legal capture **26/26 times** when asked in isolation, yet failed to mention the critical capture in 13/14 full-game rationales—pointing to **selective attention during search and shallow lookahead** rather than board-reading or rule ignorance.

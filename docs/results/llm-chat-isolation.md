@@ -2,7 +2,7 @@
 
 - 日期：2026-09-28。Claude Code 2.1.283；Codex CLI 0.158.0（源码对照 `~/repos/codex` 的 `rust-v0.158.0`）。llm-chat 是用户级 skill（`~/.claude/skills/llm-chat/scripts/llm_chat.py`），只用不改。
 - 三路：Claude `-m opus`（`claude -p`，订阅）、GPT `-m gpt-6-sol`（`codex exec`，订阅，llm-chat 自己的 `CODEX_HOME`）、DeepSeek `-m deepseek-v4-pro`（HTTP 直连 api.deepseek.com）。
-- 方法照 `batch5-isolation.md`：①抓请求：把脚本当模块导入，只把服务地址换成本机桩（Claude 塞 `ANTHROPIC_BASE_URL`；GPT 用官方的 `openai_base_url` 配置键，供应商身份和登录方式不变；DeepSeek 改请求地址），其余逻辑原样走；②真调诱导每路 1 次：读随机串金丝雀文件、读 `docs/status.md` 第一行、跑 stockfish、跑 `date`，最后列可用工具；③查 Claude / Codex 的会话记录里有没有工具调用条目；④跨轮思考：续接那一轮打到桩上看带没带上一轮思考，GPT、DeepSeek 再做「思考里定一个数、下一轮请它公布」的行为测试，GPT 加删推理对照。
+- 方法照 `batch5-isolation.md`：①抓请求：把脚本当模块导入，只把服务地址换成本机桩（Claude 塞 `ANTHROPIC_BASE_URL`；GPT 用官方的 `openai_base_url` 配置键，供应商身份和登录方式不变；DeepSeek 改请求地址），其余逻辑原样走；②真调诱导每路 1 次：读随机串金丝雀文件、读当时项目进度文档第一行（现归档至 [历史记录](../history.md)）、跑 stockfish、跑 `date`，最后列可用工具；③查 Claude / Codex 的会话记录里有没有工具调用条目；④跨轮思考：续接那一轮打到桩上看带没带上一轮思考，GPT、DeepSeek 再做「思考里定一个数、下一轮请它公布」的行为测试，GPT 加删推理对照。
 - 真调共 17 次（Claude 2、GPT 12、DeepSeek 3），medium（DeepSeek high）。原始材料在当次草稿目录，没入库。
 
 ## 一句话结论

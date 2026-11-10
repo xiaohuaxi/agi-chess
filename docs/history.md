@@ -1,4 +1,6 @@
-# 进度与待办
+# 实验与维护历史
+
+> 截至 2026-11-10 的归档记录，保留原进度文档的总览表、实验过程、旧决定与当时的待办，供追溯；不作为当前规则或活跃待办清单继续维护。当前状态与唯一待办入口见 [STATUS.md](../STATUS.md)，现行协议见 [设计](design.md)，硬约束见 [AGENTS.md](../AGENTS.md)。下文“当前”“下一步”“待用户定”等均指记录当时，后文可能推翻前文；历史拒答重问不授权现在重试。
 
 **总结论**：`results/summary-round1.md`（完整研究报告索引见 `docs/research.md`）。一句话：下得臭主要是想得不够深、判断错，不是看不清棋盘，也不是思考接不上；调高思考深度最管用，提示技巧作用有限。以下先列全局总览表与棋力定位定稿结论，再按时间倒序记录近期工程维护与各批实验详情。
 
@@ -50,7 +52,7 @@
   - `README.md` / `README.zh-CN.md`、`docs/setup*.md`、`docs/viewer-guide*.md`、`docs/viewer.md`、`.agents/skills/replay-video/SKILL.md` 静态服务默认端口统一为 `8765`（免参 `node viewer/serve.mjs`）；
   - `README*.md` 重排为「零依赖 30 秒体验（看棋谱 / `rate.py report --boot 10` / `quiz report --batch batch2`）」与「安装规则依赖及 `random vs random` 0.1 秒试跑首盘对局」，并在「研究内容」下直接给出 4 条核心定量结论摘要；
   - `docs/setup*.md` 开篇表格新增「直达命令」列，补齐 `agi_chess.analyze`、`quiz report`、`engine:fsf:nodes=100` 示例及无引擎/无浏览器时的预期 skip 数说明；
-  - `docs/status.md` 将核心总结论、Opus vs Astra 34 盘总览表与 Opus Max 棋力定位定稿结论置顶；`docs/research*.md` 新增 `runs/` 目录前缀与实验批次映射表；`AGENTS.md` 补齐关键文档指针、5 个 CLI 入口与 `analysis.jsonl` 恶手字段口径说明。
+  - 原进度文档（已归档至本文）将核心总结论、Opus vs Astra 34 盘总览表与 Opus Max 棋力定位定稿结论置顶；`docs/research*.md` 新增 `runs/` 目录前缀与实验批次映射表；`AGENTS.md` 补齐关键文档指针、5 个 CLI 入口与 `analysis.jsonl` 恶手字段口径说明。
 
 ## 公开前清理、依赖收敛与许可定案（2026-11-08）
 
@@ -86,7 +88,7 @@
   - `viewer/lib/bins.mjs` 在显式指定二进制名称或路径（含环境变量 `VIEWER_FFMPEG`、`VIEWER_FFPROBE`、`VIEWER_CHROMIUM`）不存在时直接报错，不静默回退到系统默认版本，并补 `.exe` 扩展名探测；`viewer/test/record.test.js` 与 `viewer/test/wrap.test.js` 仅在缺少依赖时 skip，避免吞掉真实异常；
   - 加固干净克隆下 CLI 防覆盖与友好提示：`batch summary` 与 `quiz judge` 在缺少底层原始 `.jsonl`（或单题原始记录少于已有 `judged.jsonl` 条目）时直接报错退出、拒绝覆盖已入库的 `summary.*` 或 `judged.jsonl`；`play --tag`、`batch run --batch` 与 `quiz run`/`copy` 拒绝复用已有已入库或已导出产物的目录；`export`、`resume`、`analyze`（不带 `--force` 时优先复用已有 `analysis-summary.json`）及 `rate.py export`（含缺少已完赛对局检查）在缺少未入库 `game.jsonl` 或标定目录时输出清晰中文提示；`data/batch1/select_positions.py` 补齐离线 `check` 子命令，`data/batch2/select_positions.py` 与 `quiz.py` 延迟导入规则库使 `--help` 与 `quiz report` 仅凭标准库即可运行；`stats.py` 用 `%g` 保留和棋 `.5` 分；
   - `.agents/skills/llm-chat/scripts/llm_chat.py` 的 HTTP 后端（DeepSeek / OpenRouter）将服务端工具调用计数检查移到空正文与 `finish_reason` 截断判断之前，`call_claude` 将 `check_no_tools(usage)` 及 `permission_denials` / `tool_calls` / `stop_reason` / `content` 工具块检查前置到错误分支之前，防止工具事件被当成空回复或普通失败自动重试；
-  - 重新生成并同步全部 9 份 `runs/quiz-*/report.txt`（含新增 `quiz-6r`、`quiz-6r-sol` 的 `report.txt`），收紧 `.gitignore` 对 `runs/` 的白名单规则，统一 `docs/viewer-survey/record-experiment/package.json` 许可声明为 `MIT`，并对齐中英双语文档、`design.md`、CLI `--help` 及两份 `SKILL.md` 的细节说明；根目录新增 `TODO.md` 记录暂缓的非阻塞边角事项；
+  - 重新生成并同步全部 9 份 `runs/quiz-*/report.txt`（含新增 `quiz-6r`、`quiz-6r-sol` 的 `report.txt`），收紧 `.gitignore` 对 `runs/` 的白名单规则，统一 `docs/viewer-survey/record-experiment/package.json` 许可声明为 `MIT`，并对齐中英双语文档、`design.md`、CLI `--help` 及两份 `SKILL.md` 的细节说明；当时新增独立待办文件记录暂缓的非阻塞边角事项（现已合并至 [STATUS.md](../STATUS.md)）；
   - `tests/test_cap.py` 的 `--dry-run` 用例改用 `engine:stockfish:depth=1` 以免依赖本地未分发的 Maia 权重；`agi_chess/engine.py` 引擎搜索路径纳入 `~/.local/bin`；`viewer/shot.mjs` 将创建输出目录移至浏览器启动成功之后，`viewer/lib/bins.mjs` 在 Windows 下仅补全可直接无 shell 启动的 `.exe`；`viewer/test/{wrap,adjudication}.test.js` 自动优先选用仓内 `.venv/bin/python3`；`.gitignore` 补齐 `/.venv/`、`venv/`、`.env`、`.env.*`、`!.env.example`；
   - 在 Linux (WSL2, Ubuntu 22.04) 配齐 `.venv`、`viewer/node_modules`、`stockfish` 与 `fairy-stockfish` 后，Python 全套 320 项测试（含 21 项真引擎测试）与阅读器全套 89 项测试（含 Python 往返与 Chromium/FFmpeg 有声录制）均以 0 失败、0 跳过、0 `ResourceWarning` 全绿通过。
 
@@ -290,7 +292,7 @@
   - 因此 opus 不带思考对 astra 的 8 盘（`runs/g6-*`，`results/game-opus-drop-vs-astra-1.md`）只作研究结论，不改默认；`drop_thinking` 默认关维持。原「等用户拍板」里「opus 整盘要不要改成不带此前思考」一条就此定了。
 - 棋谱阅读器标题画面默认不加（2026-09-30 用户定），作为选项保留：网址参数 `title=1` / 出片 `--title` 开，`--no-title` 等同默认留作兼容。厂商前缀由 `vendor` 参数管（默认补，`vendor=0` 去掉）。
 
-## 下一步
+## 当时的下一步（历史快照）
 
 - opus max 棋力定位已完成：方案（4ac6c60）和结论文档都已提交。
 - 之后待用户从下面候选里挑，或就此收工。
@@ -301,11 +303,11 @@
 3. max 整盘补盘，配更强的对手（很贵，先定额度上限）。
 4. 已撤回的旧候选：sol / DeepSeek 接入整盘对局。后续已选择 astra，sol 不再测、DeepSeek 只作辅助参考，见「已拍板」的模型选择决定。
 
-## 等用户拍板
+## 当时等用户拍板的事项（历史快照）
 
 - 其他候选方向做不做，或者就此收工。
 
-## 遗留
+## 当时的遗留记录（不在此维护）
 
 - 判定门槛「变好 ≥ 6 且变坏 ≤ 1」是按每题 2 遍定的，每题 6 遍时两边差一次就算变好或变坏，「变坏 ≤ 1」太严，待重定。
 - 「复述局面」档的提示写着「用和上面棋盘相同的字」，中国象棋新默认没有棋盘；这档默认关着，要跑得先改提示或用 `show=all`。

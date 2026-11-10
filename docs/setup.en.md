@@ -70,16 +70,9 @@ python3 -m venv .venv
 python -m pip install -r requirements.txt
 python -c 'import chess, pyffish; print("Rule libraries imported successfully")'
 python -m agi_chess --help
-python data/batch1/select_positions.py check
-python data/batch2/select_positions.py check
-python -m unittest discover -s tests -t . -v
 ```
 
 `chess` is the PyPI distribution for `import chess` (`python-chess`); Xiangqi rules are provided by `pyffish`, while Chinese move notation uses our in-repo implementation (no `cchess` needed). Because `pyffish` includes a native C++ extension, installing it on a new platform may require a C++ build toolchain; on Debian/Ubuntu, if `venv` (`ensurepip is not available`), build tools, or Stockfish are missing, install them via `sudo apt install python3-venv build-essential python3-dev stockfish`.
-
-`python3 data/batch1/select_positions.py check` and `python3 data/batch2/select_positions.py check` rely only on the two rule libraries above to validate the checked-in Batch 1 and Batch 2 position banks (`data/batch1/{xiangqi,chess}.jsonl` and `data/batch2/{xiangqi,chess}.jsonl` FENs, side to move, and move legality) offline, without launching engines or reading `runs/`.
-
-The full Python test suite (320 tests) includes 21 live-engine handshake and move-generation tests that require `stockfish` and `fairy-stockfish`. **When local engines are not installed, `unittest -v` automatically skips those 21 engine tests while passing all 299 offline tests**; with both engines installed, all 320 tests pass (0 fail / 0 skip). Engines are standalone executables not installed by `pip`; their licenses are documented separately in [Dependencies & Provenance](dependencies.en.md).
 
 Without any API key or local engine, you can play a complete 20-ply match between two `random` movers in 0.1s, or inspect the exact real-player prompts with `--dry-run`:
 
@@ -95,6 +88,18 @@ python -m agi_chess.analyze runs/demo-random
 ```
 
 > **Note:** `python3 -m agi_chess.analyze` reads the raw `game.jsonl` log in a run directory to replay moves (`--table` also requires local `game.jsonl`). All 65 official match directories checked into `runs/` already include precomputed `analysis.jsonl` and `analysis-summary.json` files (for blunder classifications, check `lichess: "Blunder"` in International Chess and `cls: "blunder"` in Xiangqi), so you can inspect them directly or verify their cached summaries via `python3 -m agi_chess.analyze runs/g7-c-opus-astra-*` without re-running the engine.
+
+Optionally validate the position banks or run the full test suite; these are not prerequisites for your first match:
+
+```sh
+python data/batch1/select_positions.py check
+python data/batch2/select_positions.py check
+python -m unittest discover -s tests -t . -v
+```
+
+`python3 data/batch1/select_positions.py check` and `python3 data/batch2/select_positions.py check` rely only on the two rule libraries above to validate the checked-in Batch 1 and Batch 2 position banks (`data/batch1/{xiangqi,chess}.jsonl` and `data/batch2/{xiangqi,chess}.jsonl` FENs, side to move, and move legality) offline, without launching engines or reading `runs/`.
+
+The full Python test suite (320 tests) includes 21 live-engine handshake and move-generation tests that require `stockfish` and `fairy-stockfish`. **When local engines are not installed, `unittest -v` automatically skips those 21 engine tests while passing all 299 offline tests**; with both engines installed, all 320 tests pass (0 fail / 0 skip). Engines are standalone executables not installed by `pip`; their licenses are documented separately in [Dependencies & Provenance](dependencies.en.md).
 
 ## Model Matches: Built-in `llm-chat`, Local CLI Subscriptions & HTTP API Keys
 

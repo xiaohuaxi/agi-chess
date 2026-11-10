@@ -1,0 +1,46 @@
+# 当前状态
+
+更新：2026-11-10。这里维护当前快照与待办，不追加流水账；实验总览表、历次维护和决定沿革见 [历史记录](docs/history.md)，报告与 `runs/` 映射见 [研究索引](docs/research.md)。
+
+## 已完成与可用
+
+- 两种棋的单盘对弈、暂停续跑、批量对弈、局面题、事后引擎分析与离线评级复算均已实现；入口见 [安装与运行](docs/setup.md)。整盘调用层已收归仓内，支持 Claude / Codex / DeepSeek / Gemini / agy 路由。
+- 中英双语棋谱阅读器支持理由、用量、失误标记、连播、走子动画及有声视频；见 [阅读器指南](docs/viewer-guide.md)。随仓有 74 个正式对局/局面题目录、171 份棋谱；原始 `game.jsonl`、`record.txt`、视频和新跑目录不入库，缺原始记录时不能重导或重新分析。
+- 第一轮研究、Opus Max 棋力定位、Argon High 自弈及对 agy Opus High 的报告均已完成。统计脚本和人类刻度数据在 `analysis/rating/`；自有内容许可与规则依赖边界已定，见 [依赖](docs/dependencies.md)和[许可说明](docs/license-review.md)。
+- 最近一次完整离线验收（2026-11-10，干净归档副本、Python 3.13）：Python 320 项、阅读器 90 项全部通过且无跳过，两批题库校验、两棋种随机对局暂停/续跑/导出通过，无偶发失败。此前 Linux / WSL2 也已完整验证。未验证模型服务当前线上可用性；Python 3.15 在本机遇到 pyffish 编译工具链问题，安装建议沿用 3.13。
+
+## 核心研究结论
+
+- 现有证据主要指向算得不够深和判断错误，思考延续与提示技巧不是主要解法；提高思考深度收益最大。局部漏吃也存在注意力问题，不能概括为所有错误都“看见了”。见 [第一轮总结](docs/results/summary-round1.md)与[漏吃诊断](docs/results/missed-captures.md)。小样本只看方向。
+- Opus–Astra 的 real 协议、带理由对局共 34 盘，按棋种、effort 和思考延续条件分组；完整比分、先后手与指标保留在[历史总览](docs/history.md)。其中 Max 对 Max 各棋种 4 盘，Opus 国际象棋 3:1、中国象棋 4:0；详见[报告](docs/results/game-opus-max-vs-astra-max-1.md)，不混算不同条件。
+- Opus Max 对引擎定位已定稿：国际象棋 30 盘，新上限裁决事后回看约 lichess Blitz 1800 / Rapid 1920；中国象棋 37 盘，在 Fairy-Stockfish 阶梯约 +121（nodes=100 为 0），不换算人类段位。锚点、区间及旧规则差异见[定位报告](docs/results/opus-max-rating.md)；旧“Maia-1900 就是 lichess 1900”的推算已作废。
+- Argon High 对 agy Opus High 四盘 3:1，但开局重复、样本小，不能按比分上调评级。Blitz 1700 / Rapid 1800 只是主观中心，1600 类比不是下限；与 Opus Max 尚无直接对阵，约 100 分差也未验证。见[对阵报告](docs/results/argon-vs-agy-opus-high-20261020.md)、[暂定定位](docs/results/argon-high-chess-rating-20261019.md)和[token 对照](docs/results/thinking-tokens-argon-opus-20261025.md)。
+
+## 当前工作与未决定方向
+
+- 公开前上手检查和文档整理已完成；尚未选定下一轮研究，也可就此收工。以下仅是候选，不是已批准的实验计划。
+- 优先候选：修正看杀判分口径后离线重判已有数据；其次是 xhigh 对更强对手补测上限，或 Max 对更强对手补盘。国际象棋重测上限须重新决定范围；Max 重开先定额度上限，一次只开 2–4 盘，长评测按 5 小时窗口均匀使用、给日常工作留余量。
+- 中国象棋暂不补人类段位、不引入 Pikafish；不另做“列候选着法”或“程序告知吃子关系”实验。此前 Sol 不再测、GPT 棋手选择 Astra、DeepSeek 不再充值或做实验而只作辅助参考的决定保留，未完成的 DeepSeek 补测不列为续跑任务。
+
+## 有效约定与研究限制
+
+- 现行硬约束见 [AGENTS.md](AGENTS.md)，协议、默认呈现与调用恢复见 [设计](docs/design.md)第三、九节：真实棋手协议、标准初始局面、连续会话、默认 xhigh 与理由 plain；模型互弈双方思考延续一致，`drop_thinking` 默认关。棋力定位的随机开局按专门方案，不外推为普通互弈默认。旧记录沿用存下的提示，安全停止规则始终用现行要求。
+- 工具调用或尝试即暂停，防思维链泄露类拒答一次即终止，不重问、不改措辞绕过、不判棋手输；历史重问仅为事实。agy 调用结果不确定默认停，只有明确授权的精确 idle timeout 才可按设计显式恢复。旧错误误报与未上报内部工具仍是外部观测限制，“未发现工具事件”不证明零工具。
+- Codex 升级后需重新核实棋手隔离；旧局面题零工具请求与旧整盘请求挂 4 个 code mode 工具但执行层关闭，是不同路径的历史证据，不可混用。局面题直调还会带全局规范作为固定噪声；整盘走 llm-chat 无这段，见[隔离报告](docs/results/llm-chat-isolation.md)。
+- 中国象棋默认只给子力清单，国际象棋保留 FEN + 字母棋盘；只给棋盘会缺易位与吃过路兵信息。real 有引擎一方到上限按评分裁决，模型互弈仍判和；细节以设计为准。理由 brief / plain 不作变量、允许合并；大失误阈值在各棋种内部比较，跨棋种须先统一口径。
+- 看杀题仅判走后是否被将杀，会漏计引擎评分大跌，真实损失被低估；“变好 ≥6 且变坏 ≤1”的门槛按每题 2 遍制定，扩为 6 遍后偏严，待重定。见[理由实验](docs/results/batch3-reason.md)及[跨模型呈现实验](docs/results/batch5-cross-model-presentation.md)。
+- “复述局面”提示要求用棋盘同字，但中国象棋默认已无棋盘；该档默认关闭，若再跑须先改提示或用 `show=all`。
+- 跨天续接是否丢思考（P8）未单独验证，等额度 3–17 小时后接上会话不等于思考完整；同名 high 和跨模型 token 数不代表相同预算，agy Opus 上报 thinking=0 不能解释为无思考，缺计不能补零。
+- pyffish 长捉为近似判定，边界未全测（P15）；中国象棋分析器最佳着未排除长将/长捉禁着。连续引擎判题受哈希历史影响，亏损可漂几到几十厘兵，曾有 2 条大失误标记翻转，门槛附近比较需考虑噪声。
+- 旧 stateless 整盘约 7%–11% 非中文作答与错误的关系样本不足；首批 session 原始每步费用重复累计，分析器会做差重算，原始记录未修。DeepSeek 题目缺答与 Sol 清单档的混合表现只保留历史结果，不另开修复实验。
+- Sol 局面题旧批次曾把 WebSockets 回退 HTTPS 的连接错误误判为工具调用而停批，`codex_cli` 只放过重连提示，原因待处理；因已停止 Sol 实验，保留限制，不追加运行。
+- Opus 不带思考时两盘同处误走已移动的 a 兵，是否“忘了走过什么”证据不足；另有一次仅回复 `<reasoning_effort>40</reasoning_effort>`、未给着法的异常，原因未查。详见[不带思考实验](docs/results/game-opus-drop-vs-astra-1.md)与[中国象棋 Astra Max 对阵](docs/results/game-opus-vs-astra-max-xq-1.md)。
+
+## 暂缓工程问题
+
+以下四项是已知非阻塞问题，沿用研究仓库简单优先的决定；此次仅合并记录，未修代码。
+
+1. **批次锁的空文件窗口**（`agi_chess/batch.py:take_lock`）：独占创建 `.lock` 到写入 PID 之间为空，另一进程可能读成 pid=0、删锁重建而双持锁。暂缓：单人本地脚本极少同一瞬间启动同一批次的两个驱动，不为此引入跨平台文件锁或硬链接重构。
+2. **JSONL 无换行残片续写丢记录**（`agi_chess/records.py:write/read`）：断电或 SIGKILL 留下无换行半行，下次追加会把新记录拼上残片，读取时整行跳过。暂缓：短记录单次写入，需恰逢中断且未经检查直接续跑才触发，保留极简实现，不引入截断修复或复杂审计状态机。
+3. **批次元数据回退与非 Claude 呈现比对缺口**（`agi_chess/batch.py:batch_meta/check_meta`）：legacy / all 默认值省略键，show 仅为 Claude 记录，检查只遍历新键；未完批次从 real / pieces 改回默认可能绕过一致性校验。暂缓：正式实验固定参数跑完归档，少有中途混改，不改元数据归一化逻辑。
+4. **嵌套归档目录误传及缺依赖的底层堆栈**（`agi_chess/cli.py`、`claude_cli.py`、`codex_cli.py`、`data/batch{1,2}/select_positions.py`）：顶层归档防覆盖已做，但误把输出指到单盘归档内部建子目录仍有缺口；未装规则库或 CLI 时内部命令会报原生 ModuleNotFoundError / FileNotFoundError。暂缓：安装前提已有文档，常用只读入口已脱离依赖，不增加跨层目录扫描或全局异常包装。

@@ -38,7 +38,7 @@
 
 研究未经棋类专训的通用大模型为何下不好中国象棋、国际象棋，以及对弈基础设施。程序无界面，模型对模型或固定强度引擎。尽力而为，做不下去就停，别滚成大工程。
 
-- 开工先读 `docs/status.md`（顶部为全局总结论、对阵总览表与棋力定位定稿结论），收工前更新；研究报告与 `runs/` 目录前缀映射表见 `docs/research.md`，暂缓事项见 `TODO.md`。
+- 开工先读 `STATUS.md`，收工前更新当前快照与待办，不追加流水账；研究报告与 `runs/` 目录前缀映射表见 `docs/research.md`，实验与维护历史按需读 `docs/history.md`。
 - 设计、规则来源和上游研究见 `docs/design.md`；跨轮思考的证据与限制见 `docs/thinking-carryover.md`；依赖来源与许可边界见 `docs/dependencies.md`。
 - 环境配置与命令速查见 `docs/setup.md`；看棋谱、录视频用 `.agents/skills/replay-video/SKILL.md` 与 `docs/viewer-guide.md`，实现见 `docs/viewer.md`。
 - 5 个核心 Python CLI 入口：`python3 -m agi_chess {play,resume,export}`（单盘对弈与导出）、`python3 -m agi_chess.analyze runs/<tag>`（事后引擎逐手复盘）、`python3 -m agi_chess.batch {run,summary}`（多盘批次运行与汇总）、`python3 -m agi_chess.quiz {run,judge,report}`（局面题测试、判卷与离线报表，如 `--batch batch2`）、`python3 analysis/rating/rate.py report [--boot 10]`（离线复算等级分刻度）。

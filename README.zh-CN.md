@@ -19,7 +19,7 @@
 | 复算评级、配置环境、跑测试或对弈 | [安装与运行](docs/setup.md) |
 | 查看依赖用途、版本来源和许可 | [依赖与来源](docs/dependencies.md) |
 | 理解提示、赛制、记录格式和异常处理 | [程序设计](docs/design.md) |
-| 跟进维护工作与尚未决定的事项 | [项目进度](docs/status.md) |
+| 跟进当前工作与尚未决定的事项 | [当前状态](STATUS.md) |
 
 ## 快速开始（免模型账号、免引擎）
 
@@ -72,17 +72,7 @@
    pip install -r requirements.txt
    ```
 
-2. **校验题库与跑单元测试**：
-
-   ```sh
-   python3 data/batch1/select_positions.py check
-   python3 data/batch2/select_positions.py check
-   python3 -m unittest discover -s tests -t . -v
-   ```
-
-   `select_positions.py check` 离线校验第一批与第二批局面题；`unittest -v` 在未安装本地 Stockfish / Fairy-Stockfish 引擎时会自动跳过 21 项真引擎集成测试（其余离线测试全部通过属正常预期）。
-
-3. **零 API 成本 0.1 秒试跑首盘对局与查看提示词**：
+2. **零 API 成本 0.1 秒试跑首盘对局与查看提示词**：
 
    ```sh
    # 双方随机走子试跑 20 个半回合（无需 API Key 与引擎，0.1 秒生成 runs/demo-random/game.pgn，可在阅读器打开 ?files=/runs/demo-random）
@@ -93,13 +83,23 @@
 
    完整环境配置、引擎对手安装与事后引擎恶手分析（`python3 -m agi_chess.analyze runs/<tag>`）详见[安装与运行](docs/setup.md)。
 
+3. **可选：校验题库与跑单元测试**：
+
+   ```sh
+   python3 data/batch1/select_positions.py check
+   python3 data/batch2/select_positions.py check
+   python3 -m unittest discover -s tests -t . -v
+   ```
+
+   `select_positions.py check` 离线校验第一批与第二批局面题；`unittest -v` 在未安装本地 Stockfish / Fairy-Stockfish 引擎时会自动跳过 21 项真引擎集成测试（其余离线测试全部通过属正常预期）。
+
 ## 研究内容与核心发现
 
 - **思考深度与会话组织：** 局面题与整盘实验分别观察 effort、会话延续及此前思考保留的影响，不能假设同名 effort 在不同服务商之间代表相同计算预算。
 - **局面表示与错误类型：** 比较棋盘、FEN、子力清单等输入，并用事后分析和模型可见理由定位错误。理由是可检查的回答正文，不等于模型的内部思考。
 - **模型对弈与棋力定位：** 包含模型互弈、固定配置引擎对手和引擎标定。跨模型对局多为小样本；人类等级分类比还有锚点与换算误差。
 
-**核心定量结论摘要**（详见[研究索引](docs/research.md)与[项目进度](docs/status.md)）：
+**核心定量结论摘要**（详见[研究索引](docs/research.md)与[实验历史](docs/history.md)）：
 
 - **棋力锚定区间（Opus Max 对引擎 67 盘标定）：** 国际象棋（30 盘）按 200 半回合上限引擎评分裁决（领先 ≥300 厘兵判胜）拟合为比 Maia-1900 高 **+189**（95% 区间 66–313），折合 **Lichess 超快棋约 1800 / 快棋约 1920**（按原始到上限判和口径为 +281，折合超快棋约 1910 / 快棋约 2020）；中国象棋（37 盘）比 Fairy-Stockfish `nodes=100` 高 **+121 Elo**（95% 区间 +1..+236），接近或略高于 `nodes=300`（+82）、明显低于 `nodes=1000`（+385）。
 - **合法着法与吃子规则并非主瓶颈：** 在真实棋手协议下，模型极少走非法着法；针对整盘漏吃/送子局面的复盘诊断（14 个失误点）显示，模型在单问“列出全部合法吃子”时 **26/26 全对**，但在正常选着时 13/14 次连可见理由都未提该吃子——失误主因是搜索中的注意力漏扫与多步算力不足，而非不认识棋盘或规则。

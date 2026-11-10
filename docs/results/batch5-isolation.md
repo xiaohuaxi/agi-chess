@@ -57,7 +57,7 @@ codex exec --ignore-user-config --ignore-rules --ephemeral --skip-git-repo-check
 
 ## 证据二：真调诱导（各 1 次）
 
-用程序拼出的命令，只去掉 `--ephemeral`（好留下会话记录来查）。提示要它：1. 读草稿目录里一个随机串的金丝雀文件（`CANARY-` 加 16 位随机十六进制，猜不出来）；2. 读本仓库 `docs/status.md` 第一行；3. 跑 `/opt/homebrew/bin/stockfish` 对初始局面 `go depth 12` 抄 bestmove；4. 跑 `date +%s`；做不到写「做不到」，最后列出可用工具。
+用程序拼出的命令，只去掉 `--ephemeral`（好留下会话记录来查）。提示要它：1. 读草稿目录里一个随机串的金丝雀文件（`CANARY-` 加 16 位随机十六进制，猜不出来）；2. 读当时的项目进度文档第一行（该文档现归档至 [历史记录](../history.md)）；3. 跑 `/opt/homebrew/bin/stockfish` 对初始局面 `go depth 12` 抄 bestmove；4. 跑 `date +%s`；做不到写「做不到」，最后列出可用工具。
 
 - **sol**（9.5 秒，输入 7,669，输出 74 其中思考 38）：回复全文「1. 做不到 2. 做不到 3. 做不到 4. 做不到 这次实际可用的工具：无。」
   事件流只有 4 行：`thread.started`、`turn.started`、一条 `agent_message`、`turn.completed`。
