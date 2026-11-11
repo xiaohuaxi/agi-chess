@@ -42,10 +42,12 @@
 暂停（--on-limit pause 时撞额度、连续调不通、--stop-after、停止信号）退出码 3。
 --timeout：单次 claude -p 调用的超时秒数（默认 3600），记进 config，resume 沿用（resume --timeout 只改这次续跑）；
   超时 / 调不通各记一条 call_fail。
+agy 棋手调用失败：结果里已有本轮答复就直接采用（标 recovered，不重发）；传输类失败按 --agy-retries（默认 2）有上限地
+  自动重发；其余（工具、拒答、空正文、包装层错误）以及进程中途被杀都停下，resume --retry-uncertain 显式授权才重发。
 --on-limit wait|pause：撞额度时在程序里等到解除接着下（默认，起止各记一条 limit_wait），或按旧行为暂停退出（退出码 3）。
   等待中 Ctrl-C / SIGTERM 马上写 pause 退出（退出码 3），resume 接着下；再按一次强退。
 """
-import argparse, importlib, json, os, pathlib, random, subprocess, sys, tempfile, uuid
+import argparse, importlib, json, os, pathlib, random, shutil, subprocess, sys, tempfile, uuid
 
 from . import chat, claude_cli, memory, opening, records, runner
 
@@ -219,6 +221,14 @@ def build_cfg(a):
             cfg['models'][s] = (name if a.dry_run and kind == 'codex' and not name.startswith('gpt-')
                                 else chat.model_id(kind, name))
         cfg['llm_chat'] = chat.script_info()
+        # 会话记录随对局目录走（重启、换机后仍能续接）；路径相对对局目录，.gitignore 忽略 .llm-chat/
+        cfg['llm_chat_sessions'] = runner.SESSIONS_SUBDIR
+        if any(runner.player_kind(players[s]) in chat.AGY_KINDS for s in models):
+            # agy 传输类失败：先取回已生成的答复（不重发），否则每方每半回合最多自动重发 agy_retries 次（design.md）
+            if a.agy_retries < 0:
+                raise SystemExit('--agy-retries 不能是负数')
+            cfg['agy_retries'] = a.agy_retries
+            cfg['agy_recover'] = True
         cfg['commands'] = {s: chat.shown(cfg['models'][s], sides[s]['effort'], sides[s]['drop_thinking'] == 'on')
                            for s in models}
     else:
@@ -309,6 +319,28 @@ def cmd_play(a):
     return play_stoppable(ctx, a)
 
 
+def migrate_sessions(ctx):
+    """旧盘的 llm-chat 会话记录在状态目录（~/.local/state/llm-chat/sessions）；续跑时若本盘当前会话的记录都在，
+    复制进对局目录并记一条 llm_chat_sessions，之后以对局目录为准。只复制会话记录 JSON：CLI 运行目录不动，
+    Claude 会话记录路径、agy / codex 后端会话都不受影响。原文件保留不删；缺任何一份就不迁移（preflight 照旧报缺）。"""
+    cfg = ctx['cfg']
+    if cfg.get('backend') != 'llm-chat' or ctx.get('chat_sessions') or not ctx['sessions']:
+        return
+    src = chat.sessions_root(None)
+    sids = sorted(set(ctx['sessions'].values()))
+    if not all((src / ('%s.json' % sid)).is_file() for sid in sids):
+        return
+    dst = pathlib.Path(runner.sessions_dir(ctx['dir'], runner.SESSIONS_SUBDIR))
+    dst.mkdir(parents=True, exist_ok=True, mode=0o700)
+    for sid in sids:
+        tmp = dst / ('.%s.json.tmp' % sid)
+        shutil.copy2(src / ('%s.json' % sid), tmp)
+        os.replace(tmp, dst / ('%s.json' % sid))
+    runner.log(ctx, {'type': 'llm_chat_sessions', 'dir': runner.SESSIONS_SUBDIR, 'migrated': sids})
+    ctx['chat_sessions'] = str(dst)
+    print('已把 %d 份 llm-chat 会话记录复制进 %s（之后以这里为准）' % (len(sids), dst))
+
+
 def cmd_resume(a):
     run_dir = pathlib.Path(a.dir)
     log_path = run_dir / 'game.jsonl'
@@ -328,17 +360,30 @@ def cmd_resume(a):
         print(runner.TOOL_MESSAGE)
         return 3
     if ctx.get('uncertain'):
-        if not a.retry_idle_timeout or not runner.authorize_idle_retry(ctx):
+        if not a.retry_uncertain or not runner.authorize_retry(ctx):
             print(runner.UNCERTAIN_MESSAGE)
+            event = runner.retry_event(runner.uncertain_records(records.read(log_path), cfg))
+            if not a.retry_uncertain and event:
+                print('这次是%s，可以显式授权重发：python3 -m agi_chess resume %s --retry-uncertain'
+                      '（上次请求可能已在后端执行，会话里可能多一条重复提示）' % (
+                          '传输类失败' if event['reason'] == 'transport' else '调用中途进程中断', run_dir))
             return 3
-    elif a.retry_idle_timeout:
-        print('没有可明确关联的 agy stream idle timeout 失败，不能授权重试。')
+    elif a.retry_uncertain:
+        print('没有可明确关联的 agy 传输类失败或中断调用，不能授权重试。')
         return 3
+    if a.agy_retries is not None:
+        if a.agy_retries < 0:
+            raise SystemExit('--agy-retries 不能是负数')
+        ctx['agy_retries'] = a.agy_retries
+    migrate_sessions(ctx)
     for side, spec in cfg['players'].items():
         kind, _, name = spec.partition(':')
         chat.check_effort(kind, cfg.get('models', {}).get(side, name), cfg['sides'][side]['effort'], side)
-    chat.preflight(cfg['players'], cfg.get('models'), ctx['sessions'], cfg.get('backend') == 'llm-chat')
+    chat.preflight(cfg['players'], cfg.get('models'), ctx['sessions'], cfg.get('backend') == 'llm-chat',
+                   sessions_dir=ctx.get('chat_sessions'))
     rec = {'type': 'resume', 'ply': len(ctx['st']['moves']), 'commit': commit()}
+    if a.agy_retries is not None:                # 只管这次续跑
+        rec['agy_retries'] = a.agy_retries
     if a.timeout is not None:                    # 只管这次续跑；下次不给就又沿用 config 里的值
         ctx['cfg']['timeout'] = rec['timeout'] = a.timeout
     runner.log(ctx, rec)
@@ -408,6 +453,9 @@ def main(argv=None):
     p.add_argument('--stop-after', dest='stop_after', type=int, help='本次最多走几个半回合就暂停（测续跑用）')
     p.add_argument('--timeout', type=int, default=claude_cli.TIMEOUT, help='单次 claude -p 调用的超时秒数，默认 3600')
     p.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait', help=LIMIT_HELP)
+    p.add_argument('--agy-retries', dest='agy_retries', type=int, default=runner.AGY_RETRIES,
+                   help='agy 棋手传输类失败（网络中断、超时、服务端错误，且结果里没有可取回的答复）时，每方每个半回合最多'
+                   '自动重发几次，默认 %d；0 = 一律停下等人处理。工具、拒答、空正文等永远不重发' % runner.AGY_RETRIES)
     p.add_argument('--dry-run', action='store_true', help='只打印系统提示和第一步提示，不调模型')
     stop_help = '每步之前看这个文件在不在，在就暂停（批量驱动用）'
     p.add_argument('--stop-file', dest='stop_file', help=stop_help)
@@ -417,8 +465,11 @@ def main(argv=None):
     r.add_argument('--stop-file', dest='stop_file', help=stop_help)
     r.add_argument('--on-limit', dest='on_limit', choices=('wait', 'pause'), default='wait', help=LIMIT_HELP)
     r.add_argument('--timeout', type=int, help='这次续跑改用的 claude -p 超时秒数（记进 resume 记录），默认沿用 config')
-    r.add_argument('--retry-idle-timeout', action='store_true',
-                   help='显式授权重发唯一未完成的 agy stream idle timeout 调用；原始失败保留，其他锁不解除')
+    r.add_argument('--retry-uncertain', '--retry-idle-timeout', dest='retry_uncertain', action='store_true',
+                   help='显式授权重发当前半回合唯一未完成的 agy 调用：传输类失败，或调用中途进程被杀 / 机器重启；'
+                   '原始记录保留，工具、拒答等其他锁不解除（--retry-idle-timeout 是旧名）')
+    r.add_argument('--agy-retries', dest='agy_retries', type=int,
+                   help='这次续跑改用的 agy 传输类失败自动重发上限（每方每半回合），默认沿用 config（旧盘 0）')
     e = sub.add_parser('export', help='已结束的盘按记录重新导出棋谱（record.txt / game.pgn，带每步元信息）')
     e.add_argument('dir')
     a = ap.parse_args(argv)

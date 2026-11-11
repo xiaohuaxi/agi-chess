@@ -4,6 +4,7 @@
 Standard library only. The user message comes from stdin, the answer goes to
 stdout, and one metadata line (prefixed ``LLM_CHAT_META``) goes to stderr.
 Every failure is loud: a message on stderr and a non-zero exit, no retries.
+agy failures add one ``LLM_CHAT_ERROR {json}`` line naming which check failed.
 """
 
 import argparse
@@ -44,6 +45,7 @@ DEEPSEEK_OPENROUTER_MODELS = {
 }
 DEFAULT_TIMEOUT = 600.0
 META_PREFIX = "LLM_CHAT_META "
+ERROR_PREFIX = "LLM_CHAT_ERROR "
 # Verified OpenRouter provider slugs for a vendor prefix. Only add entries
 # after checking the real slug; unknown vendors go through the endpoint lookup.
 # DeepSeek has no first-party endpoint tag on OpenRouter (all are third-party providers).
@@ -100,7 +102,14 @@ UUID_LINKS = ("parentUuid", "leafUuid", "logicalParentUuid")
 
 
 class ChatError(Exception):
-    """A user-facing failure; the process exits non-zero."""
+    """A user-facing failure; the process exits non-zero.
+
+    detail (optional dict) is printed as one LLM_CHAT_ERROR line so callers can
+    classify the failure without matching message wording."""
+
+    def __init__(self, message, detail=None):
+        super().__init__(message)
+        self.detail = detail
 
 
 class SessionBusy(ChatError):
@@ -232,6 +241,20 @@ def ensure_state():
     return root
 
 
+def sessions_dir(opts, root):
+    """Where session records live: --sessions-dir, else <state>/sessions.
+
+    Only the records (and their locks) move; the CLI working directories
+    (empty/, agy/<id>/, codex-home/) stay under the state directory, because
+    their paths are part of what the model sees (Claude's environment note
+    names its working directory) and of the verified isolation."""
+    if not getattr(opts, "sessions_dir", None):
+        return root / "sessions"
+    path = Path(opts.sessions_dir).expanduser().resolve()
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    return path
+
+
 def atomic_write(path, text):
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix="." + path.name + ".")
     try:
@@ -252,8 +275,8 @@ def atomic_write(path, text):
 class SessionLock:
     """Exclusive, non-blocking flock on sessions/<id>.lock for one whole turn."""
 
-    def __init__(self, root, session_id):
-        self.path = root / "sessions" / f"{session_id}.lock"
+    def __init__(self, sdir, session_id):
+        self.path = sdir / f"{session_id}.lock"
         self.handle = None
 
     def __enter__(self):
@@ -270,12 +293,12 @@ class SessionLock:
         self.handle.close()
 
 
-def session_path(root, session_id):
-    return root / "sessions" / f"{session_id}.json"
+def session_path(sdir, session_id):
+    return sdir / f"{session_id}.json"
 
 
-def load_session(root, session_id):
-    path = session_path(root, session_id)
+def load_session(sdir, session_id):
+    path = session_path(sdir, session_id)
     if not path.exists():
         raise ChatError(f"session {session_id} not found in {path.parent}")
     try:
@@ -284,9 +307,9 @@ def load_session(root, session_id):
         raise ChatError(f"session file {path} is unreadable: {exc}")
 
 
-def save_session(root, session):
+def save_session(sdir, session):
     session["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
-    atomic_write(session_path(root, session["id"]), json.dumps(session, ensure_ascii=False, indent=1))
+    atomic_write(session_path(sdir, session["id"]), json.dumps(session, ensure_ascii=False, indent=1))
 
 
 def sha256(text):
@@ -802,7 +825,7 @@ def call_codex(session, user_text, opts, root):
     ensure_codex_auth(codex_home)
     workdir = root / "empty"
     check_empty_dir(workdir)
-    instructions = root / "sessions" / f"{session['id']}.instructions.md"
+    instructions = opts.sessions_path / f"{session['id']}.instructions.md"
     atomic_write(instructions, session["system"] + NO_TOOLS_NOTE)
     common = ["--json", *CODEX_ISOLATION, "-c", "model_instructions_file=" + json.dumps(str(instructions)),
               "-m", session["model"]]
@@ -900,9 +923,15 @@ def call_agy(session, user_text, opts, root):
         try:
             result = core.turn(AGY_AGENT, prompt, workdir, allowed_tools=("view_file",), model=session["model"],
                                effort=opts.effort, conversation=session.get("conversation_id"),
-                               timeout=opts.timeout)
+                               timeout=opts.timeout, accept_recovered=opts.accept_recovered)
         except core.AgyError as exc:
-            raise ChatError(str(exc))
+            raise ChatError(str(exc), {"backend": "agy", "kind": exc.kind,
+                                       "source": getattr(exc, "source", None)})
+        digest = sha256(result["response"])
+        if result.get("recovered") and session["turns"] and session["turns"][-1].get("response_sha256") == digest:
+            # A recovered answer identical to the previous turn's is most likely that turn replayed.
+            raise ChatError("agy status %s: recovered answer repeats the previous turn; not accepted"
+                            % result["recovered"]["status"], {"backend": "agy", "kind": "error", "source": "stale"})
         # Only files attached on a saved turn or on this one may be opened.
         allowed = {os.path.realpath(p) for p in session.get("agy_files", [])} | \
             {os.path.realpath(str(p)) for p in staged}
@@ -923,6 +952,8 @@ def call_agy(session, user_text, opts, root):
         "cache_read": usage.get("cache_read_tokens", 0), "cache_write": None,
         "input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens"),
         "reasoning_tokens": usage.get("thinking_tokens"), "attachments": len(staged),
+        "response_sha256": digest,
+        **({"recovered": result["recovered"]} if result.get("recovered") else {}),
     }
 
 
@@ -940,6 +971,10 @@ def build_parser():
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT, help="seconds, default 600")
     parser.add_argument("--drop-thinking", action="store_true",
                         help="resend earlier turns without their thinking (fixed on the first turn)")
+    parser.add_argument("--sessions-dir", metavar="DIR",
+                        help="directory for session records (default <state>/sessions); pass the same one on every turn")
+    parser.add_argument("--accept-recovered", action="store_true",
+                        help="agy only: accept an answer agy returned with a non-SUCCESS status (marked 'recovered')")
     parser.add_argument("--attach", action="append", metavar="PATH",
                         help="file for the model to read (audio, video, image, PDF, text); agy models only, repeatable")
     return parser
@@ -1004,18 +1039,21 @@ def run_turn(opts, user_text, root):
                         "in its own state and offers no way to leave thinking out")
     if opts.attach and FAMILY[backend] != "agy":
         raise ChatError("--attach is supported only on agy models (gemini-* or agy/<slug>)")
+    if getattr(opts, "accept_recovered", False) and FAMILY[backend] != "agy":
+        raise ChatError("--accept-recovered is supported only on agy models (gemini-* or agy/<slug>)")
+    sdir = opts.sessions_path = sessions_dir(opts, root)
     if opts.session:
         if not SESSION_PATTERN.match(opts.session):
             raise ChatError(f"invalid session id {opts.session!r}")
         sid = opts.session
-        if not session_path(root, sid).exists():
-            raise ChatError(f"session {sid} not found in {root / 'sessions'}")
+        if not session_path(sdir, sid).exists():
+            raise ChatError(f"session {sid} not found in {sdir}")
     else:
         session = new_session(opts, backend, backend_model, system)
         sid = session["id"]
-    with SessionLock(root, sid):
+    with SessionLock(sdir, sid):
         if opts.session:
-            session = load_session(root, sid)
+            session = load_session(sdir, sid)
             continue_session(session, opts, backend, backend_model, system)
         backend = session["backend"]
         if backend == "openrouter":
@@ -1036,7 +1074,7 @@ def run_turn(opts, user_text, root):
         session["model"] = result["model"]
         meta = {"session": sid, **{k: v for k, v in result.items() if k != "text"}}
         session["turns"].append({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **meta})
-        save_session(root, session)
+        save_session(sdir, session)
     return result["text"], meta
 
 
@@ -1056,6 +1094,8 @@ def main(argv=None, stdin=None, stdout=None, stderr=None):
         text, meta = run_turn(opts, user_text, root)
     except ChatError as exc:
         print("llm-chat: error: " + sanitize(exc), file=stderr)
+        if exc.detail:
+            print(ERROR_PREFIX + json.dumps(exc.detail, ensure_ascii=False), file=stderr)
         return 1
     except Cancelled as exc:
         print(f"llm-chat: error: cancelled by signal {exc.signum}; nothing saved for this turn", file=stderr)

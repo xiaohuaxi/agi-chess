@@ -46,7 +46,7 @@
 
 ## 验证
 
-- Python（首次需 `pip install -r requirements.txt`）：`python3 -m unittest discover -s tests -t . -v`（离线，不调模型；共 338 项，其中 21 项真引擎测试需本机 `stockfish` 与 `fairy-stockfish`，未装自动 skip）。题库离线校验：`python3 data/batch1/select_positions.py check` 与 `batch2`。
+- Python（首次需 `pip install -r requirements.txt`）：`python3 -m unittest discover -s tests -t . -v`（离线，不调模型；共 347 项，其中 21 项真引擎测试需本机 `stockfish` 与 `fairy-stockfish`，未装自动 skip）。题库离线校验：`python3 data/batch1/select_positions.py check` 与 `batch2`。
 - 阅读器：`node --test 'viewer/test/*.test.js'`（引号通配需 Node 22+；Node 18/20 去掉单引号）。`runs/` 下已入库 74 个正式对局/局面题目录（含 171 盘 `game.pgn`），58 项纯 JS 与棋谱回归直接可跑；29 项浏览器播放测试需执行 `npm --prefix viewer ci` 安装开发依赖并具备 Chromium，3 项往返测试需 Python 规则库（共 32 项，未装自动跳过）。
 - 冒烟会消耗模型额度：只用 medium，半回合数压到个位数（免模型本地冒烟可用 `--white random --black random` 或 `engine:fsf:nodes=100`）。
 

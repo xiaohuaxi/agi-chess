@@ -233,7 +233,7 @@ def _iso(t):
 
 
 def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, on_fail=None, on_wait=None, parse=None,
-         run=None, refusal_check=None, fail_closed=False, on_start=None):
+         run=None, refusal_check=None, fail_closed=False, on_start=None, transient=None, retry_wait=None, on_retry=None):
     """跑一次 claude -p。返回 (解析后的 JSON, 用时秒)。调不通按 waits 重试；撞额度见下。
     rebuild：每次重试前重新拼命令（新会话第一次调用超时时，会话可能已经建好，重试要改用 --resume）。
     timeout：单次调用的超时秒数。
@@ -251,6 +251,10 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, 
     refusal_check(d)：每次收到返回后、任何重试前检查 transcript，返回新拦截的原文列表。
     fail_closed：失败时结果可能已写进远端会话，记录完整 stdout/stderr 后立即暂停，不走重试或额度等待。
     仅 agy 后端（Gemini / agy 棋手）整盘调用启用；明确拒答仍优先返回拒答结果。
+    transient(out, err, rc, timed_out) / retry_wait() / on_retry(info)：fail_closed 下唯一的重发口子。transient 认定是传输类
+    失败、且 retry_wait() 给出等待秒数（调用方按持久记录数的每步上限，None 表示用完）时：on_fail 记下失败（带
+    failure_class 与 next_wait），on_retry 落审计记录（出错则不重发，异常照常抛出），等待后重新走 on_start 再发。
+    重发不证明上次没执行；记录里保留每次失败与重发。
     on_start()：通过停止检查后、真正 dispatch 前持久记录调用；失败直接退出，不发送提示。
     run(cmd, prompt, cwd, env, timeout) -> (stdout, stderr, 退出码)：换掉「提示放在命令行最后一个参数」这种跑法，超时抛
     subprocess.TimeoutExpired。整盘走 llm-chat（chat.run）时用它：提示走 stdin，输出折成一个 JSON 串。"""
@@ -319,10 +323,20 @@ def call(cmd, prompt, cwd, waits=(30, 120, 300), rebuild=None, timeout=TIMEOUT, 
             return d, dt
         if fail_closed:
             # CLI 失败不证明后端没执行；额度错误也可能是恢复会话时重放的旧错误。
+            cls = 'transport' if transient and transient(out, err, rc, timed_out) else 'other'
+            wait = retry_wait() if cls == 'transport' and retry_wait and not STOP.is_set() else None
             info = {'try': calls, 'timeout': timed_out, 'rc': rc, 'elapsed': round(dt, 1),
-                    'stderr': err, 'stdout': out, 'next_wait': None, 'outcome': 'uncertain'}
+                    'stderr': err, 'stdout': out, 'next_wait': wait, 'outcome': 'uncertain', 'failure_class': cls}
             notify(on_fail, info)
-            raise Paused('会话调用结果不确定，禁止自动重发；请核验本地记录（%s）' % err[-500:])
+            if wait is None:
+                raise Paused('会话调用结果不确定，禁止自动重发；请核验本地记录（%s）' % err[-500:])
+            if on_retry:
+                on_retry(dict(info))             # 审计记录写不进去就不重发
+            print('  agy 传输类失败，%d 秒后有上限地重发（第 %d 次调用）：%s' % (wait, calls, err.strip()[-200:]),
+                  flush=True)
+            if _wait(wait):
+                raise Paused('等待重发时收到停止信号（上次失败：%s）' % err[-300:])
+            continue
         last = {'rc': rc, 'stdout': out[-2000:], 'stderr': err[-2000:]}
         text = err + ((d.get('result') or '') if d else out)
         if limit_hit(text) or (d and d.get('api_error_status') == 429):

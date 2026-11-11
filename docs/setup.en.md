@@ -99,7 +99,7 @@ python -m unittest discover -s tests -t . -v
 
 `python3 data/batch1/select_positions.py check` and `python3 data/batch2/select_positions.py check` rely only on the two rule libraries above to validate the checked-in Batch 1 and Batch 2 position banks (`data/batch1/{xiangqi,chess}.jsonl` and `data/batch2/{xiangqi,chess}.jsonl` FENs, side to move, and move legality) offline, without launching engines or reading `runs/`.
 
-The full Python test suite (338 tests) includes 21 live-engine handshake and move-generation tests that require `stockfish` and `fairy-stockfish`. **When local engines are not installed, `unittest -v` automatically skips those 21 engine tests while passing all 317 offline tests**; with both engines installed, all 338 tests pass (0 fail / 0 skip). Engines are standalone executables not installed by `pip`; their licenses are documented separately in [Dependencies & Provenance](dependencies.en.md).
+The full Python test suite (347 tests) includes 21 live-engine handshake and move-generation tests that require `stockfish` and `fairy-stockfish`. **When local engines are not installed, `unittest -v` automatically skips those 21 engine tests while passing all 326 offline tests**; with both engines installed, all 347 tests pass (0 fail / 0 skip). Engines are standalone executables not installed by `pip`; their licenses are documented separately in [Dependencies & Provenance](dependencies.en.md).
 
 ## Model Matches: Built-in `llm-chat`, Local CLI Subscriptions & HTTP API Keys
 

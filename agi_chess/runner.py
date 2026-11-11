@@ -14,6 +14,13 @@ FORFEIT_NOTE = ('重试用完仍非法判负：替它随便走一步会把随机
                 '实际很少触发，触发了也在记录里单列')
 MAX_FLAGS = 2          # 一个半回合里正文为空的次数上限；明确拒答一次即终止
 CAP_MARGIN = 300       # 有引擎一方的对局满半回合上限时，一方领先这么多厘兵判胜，否则判和（用户 2026-10-04 定，cli.cap_margin）
+# agy 传输类失败的自动重发（design.md「agy 会话失败不能重发」2026-11-11 段）：新盘默认每方每个半回合最多重发
+# AGY_RETRIES 次，第 n 次前等 AGY_RETRY_WAITS[n-1] 秒（超出取最后一个）；config 没有 agy_retries 的旧盘按 0（不自动重发）。
+AGY_RETRIES = 2
+AGY_RETRY_WAITS = (30, 120, 300)
+# 新盘 llm-chat 会话记录放在对局目录下的这里（相对对局目录，随目录搬走；.gitignore 忽略 .llm-chat/）
+SESSIONS_SUBDIR = os.path.join('.llm-chat', 'sessions')
+RETRY_EVENTS = ('retry_uncertain', 'agy_retry')
 
 
 def other(side):
@@ -36,7 +43,13 @@ def new_ctx(G, cfg, run_dir):
     cwd = cfg.get('claude_cwd') or os.path.join(run_dir, 'cwd')
     return {'G': G, 'cfg': cfg, 'st': G.start(), 'dir': run_dir, 'log': os.path.join(run_dir, 'game.jsonl'),
             'cwd': cwd, 'stats': [], 'sessions': {}, 'notes': {'w': [], 'b': []}, 'seen_flags': {},
-            'cost_total': {}, 'end': None, 'engines': {}}
+            'cost_total': {}, 'end': None, 'engines': {},
+            'chat_sessions': sessions_dir(run_dir, cfg.get('llm_chat_sessions'))}
+
+
+def sessions_dir(run_dir, rel):
+    """llm-chat 会话记录目录（绝对路径）；rel 为空表示旧盘，用 llm-chat 默认位置（返回 None）。"""
+    return os.path.join(os.path.abspath(run_dir), rel) if rel else None
 
 
 def load(G, run_dir):
@@ -60,6 +73,8 @@ def load(G, run_dir):
             ctx['sessions'][r['side']] = r['session']      # 第一次调用没成功回来，但会话已经建好
         elif t == 'flag' and r.get('source') == 'transcript':
             ctx['seen_flags'][r['session']] = r['count']
+        elif t == 'llm_chat_sessions':
+            ctx['chat_sessions'] = sessions_dir(run_dir, r['dir'])   # 旧盘续跑时迁进对局目录（cli.migrate_sessions）
         elif t == 'forfeit':
             ctx['stats'].append(r['stat'])
             ctx['end'] = r['end']
@@ -80,7 +95,8 @@ def uncertain_record(recs, cfg):
 
 
 def idle_retry_event(blockers):
-    """只授权一个有明确 idle timeout 失败的调用；索引是解析后的记录序号（从 0 起）。"""
+    """旧审计事件 retry_idle_timeout（2026-10-20 起）的校验：只认精确 idle timeout 文本。新记录不再写它，
+    保留它是为了让旧盘里已经写下的授权照旧生效；新授权见 retry_event。索引是解析后的记录序号（从 0 起）。"""
     starts = [(i, r) for i, r in blockers.items() if r['type'] == 'call_started']
     fails = [(i, r) for i, r in blockers.items() if r['type'] == 'call_fail']
     if len(starts) != 1 or len(fails) != 1:
@@ -99,8 +115,45 @@ def idle_retry_event(blockers):
             'call_id': start['call_id'], 'side': start['side'], 'ply': start['ply']}
 
 
+def transport_record(fail):
+    """call_fail 是不是传输类失败。新记录看调用时定下的 failure_class；旧记录没有，用 chat.transport_failure 重判。
+    工具事件、明确拒答的证据一律优先，不算传输类。"""
+    evidence = '\n'.join(str(fail.get(k) or '') for k in ('stdout', 'stderr'))
+    if claude_cli.tool_error_text(evidence) or claude_cli.refusal_text(evidence):
+        return False
+    if 'failure_class' in fail:
+        return fail['failure_class'] == 'transport'
+    return chat.transport_failure(fail.get('stdout'), fail.get('stderr'), fail.get('rc'), bool(fail.get('timeout')))
+
+
+def retry_event(blockers, kind='retry_uncertain'):
+    """能解除的唯一一个未完成调用：
+    - reason=transport：一条 call_started 加它之后同方同半回合、同 call_id（旧记录可缺）的传输类 call_fail；
+    - reason=interrupted：只有一条 call_started、没有失败记录（进程被杀、机器重启），仅限显式 resume 授权（kind=retry_uncertain）。
+    工具、拒答、空正文、包装层错误、多个未完成调用都返回 None。kind=agy_retry 是对局内自动重发的审计事件。"""
+    starts = [(i, r) for i, r in blockers.items() if r['type'] == 'call_started']
+    fails = [(i, r) for i, r in blockers.items() if r['type'] == 'call_fail']
+    if len(starts) != 1 or len(fails) > 1:
+        return None
+    si, start = starts[0]
+    if not start.get('call_id'):
+        return None
+    if fails:
+        fi, fail = fails[0]
+        if (si >= fi or (start.get('side'), start.get('ply')) != (fail.get('side'), fail.get('ply'))
+                or fail.get('call_id', start['call_id']) != start['call_id'] or not transport_record(fail)):
+            return None
+        reason = 'transport'
+    elif kind == 'retry_uncertain':
+        fi, reason = None, 'interrupted'
+    else:
+        return None
+    return {'type': kind, 'reason': reason, 'failed_record': fi, 'started_record': si,
+            'call_id': start['call_id'], 'side': start['side'], 'ply': start['ply']}
+
+
 def uncertain_records(recs, cfg):
-    """保留每个未完成调用与失败；显式授权只能解除精确匹配的旧 idle failure。"""
+    """保留每个未完成调用与失败；只有与之精确对应的审计事件（retry_uncertain / agy_retry / 旧 retry_idle_timeout）能解除。"""
     pending = {}
     failures = {}
     for i, r in enumerate(recs):
@@ -123,20 +176,42 @@ def uncertain_records(recs, cfg):
             if expected and all(r.get(k) == v for k, v in expected.items()):
                 pending.pop(expected['started_record'])
                 failures.pop(expected['failed_record'])
+        if r['type'] in RETRY_EVENTS:
+            expected = retry_event({**pending, **failures}, r['type'])
+            if expected and all(r.get(k) == v for k, v in expected.items()):
+                pending.pop(expected['started_record'])
+                if expected['failed_record'] is not None:
+                    failures.pop(expected['failed_record'])
     return {**pending, **failures}
 
 
-def authorize_idle_retry(ctx):
+def retries_used(recs, ply, side):
+    """这一方这个半回合已经自动重发了几次（持久记录里数，续跑不重置）。"""
+    return sum(1 for r in recs if r['type'] == 'agy_retry' and r.get('ply') == ply and r.get('side') == side)
+
+
+def agy_retry_limit(ctx):
+    """自动重发上限：resume --agy-retries 覆盖 > config 的 agy_retries > 旧盘 0。"""
+    if ctx.get('agy_retries') is not None:
+        return ctx['agy_retries']
+    return ctx['cfg'].get('agy_retries', 0)
+
+
+def authorize_retry(ctx):
+    """resume --retry-uncertain：用户显式授权重发当前半回合唯一的未完成 agy 调用（传输类失败或进程中断）。"""
     recs = records.read(ctx['log'])
     if refusal_record(recs) or tool_record(recs):
         return False
-    event = idle_retry_event(uncertain_records(recs, ctx['cfg']))
+    event = retry_event(uncertain_records(recs, ctx['cfg']))
     if not event or event['ply'] != len(ctx['st']['moves']) + 1 or event['side'] != ctx['G'].turn(ctx['st']):
         return False
-    # 用户显式接受这次超时可能已在后端执行的风险；不是成功回执，也不修改会话历史。
+    # 用户显式接受这次调用可能已在后端执行的风险；不是成功回执，也不修改会话历史。
     log(ctx, event)
     ctx['uncertain'] = None
     return True
+
+
+authorize_idle_retry = authorize_retry       # 旧名字（--retry-idle-timeout 现在是 --retry-uncertain 的别名）
 
 
 UNCERTAIN_MESSAGE = '会话调用结果待核验，禁止自动重发或续跑；保留原始记录，不能视为棋手输。'
@@ -243,7 +318,8 @@ def model_turn(ctx, side, moves, ban):
             new = False
             sid = ctx['sessions'].get(side) if mem == 'session' else None
             cmd = chat.command(cfg['models'][side], sc['effort'], None if sid else system, sid,
-                               cfg.get('timeout') or claude_cli.TIMEOUT, drop_thinking=drop and not sid)
+                               cfg.get('timeout') or claude_cli.TIMEOUT, drop_thinking=drop and not sid,
+                               sessions_dir=ctx.get('chat_sessions'), accept_recovered=bool(cfg.get('agy_recover')))
         elif codex:
             new, sid = False, None
             files = codex_cli.prepare(kind, model, sc['effort'], system, ctx['cwd'])
@@ -274,20 +350,33 @@ def model_turn(ctx, side, moves, ban):
             if kind != 'claude':
                 return []
             checked_sid = (((d or {}).get('meta') or {}).get('session') or sid) if via_chat else sid
-            hits = (claude_cli.transcript_flags_at(chat.claude_transcript(checked_sid)) if via_chat
+            hits = (claude_cli.transcript_flags_at(chat.claude_transcript(checked_sid, ctx.get('chat_sessions'))) if via_chat
                     else claude_cli.transcript_flags(ctx['cwd'], checked_sid)) if checked_sid else []
             return (hits or [])[ctx['seen_flags'].get(checked_sid, 0):]
         extra = {}
         call_options = {}
         if via_chat and kind in chat.AGY_KINDS:
-            extra['call_id'] = str(uuid.uuid4())
-            started = {'type': 'call_started', 'ply': ply, 'side': side, 'session': sid,
-                       'call_id': extra['call_id'], 'provider': kind, 'outcome': 'uncertain'}
             def on_start():
-                # 停止检查通过后先落盘再发送；写盘失败不得提交请求。
+                # 停止检查通过后先落盘再发送；写盘失败不得提交请求。每次发送（含自动重发）一个新 call_id。
+                extra['call_id'] = str(uuid.uuid4())
+                started = {'type': 'call_started', 'ply': ply, 'side': side, 'session': sid,
+                           'call_id': extra['call_id'], 'provider': kind, 'outcome': 'uncertain'}
                 log(ctx, started)
                 ctx['uncertain'] = started
-            call_options['on_start'] = on_start
+            def retry_wait():
+                used = retries_used(records.read(ctx['log']), ply, side)
+                if used >= agy_retry_limit(ctx):
+                    return None
+                return AGY_RETRY_WAITS[min(used, len(AGY_RETRY_WAITS) - 1)]
+            def on_retry(info):
+                # 自动重发前落审计记录；对不上唯一未完成调用就不重发（抛出 → 不发送）。
+                recs = records.read(ctx['log'])
+                event = retry_event(uncertain_records(recs, cfg), 'agy_retry')
+                if not event or (event['ply'], event['side'], event['call_id']) != (ply, side, extra['call_id']):
+                    raise Paused(UNCERTAIN_MESSAGE)
+                event.update(n=retries_used(recs, ply, side) + 1, limit=agy_retry_limit(ctx), wait=info['next_wait'])
+                log(ctx, event)
+            call_options.update(on_start=on_start, retry_wait=retry_wait, on_retry=on_retry)
         if via_chat:
             resumed = bool(sid)
             d, dt = chat.call(cmd, prompt, on_fail=on_fail, on_wait=on_wait, refusal_check=refusal_check,
@@ -318,7 +407,7 @@ def model_turn(ctx, side, moves, ban):
                 sid = ctx['sessions'][side] = d.get('session_id') or sid
             u = codex_cli.usage(d, model) if codex else claude_cli.usage(d)
         if via_chat and kind == 'codex' and d.get('meta'):
-            used = chat.codex_tool_calls(d['meta'].get('session'))
+            used = chat.codex_tool_calls(d['meta'].get('session'), ctx.get('chat_sessions'))
             if used:
                 stop_tools(ctx, side, ply, sid, {'count': used, 'text': d.get('result') or ''})
         reply = d.get('result') or ''
@@ -335,7 +424,7 @@ def model_turn(ctx, side, moves, ban):
         hits = []
         if kind == 'claude':
             if via_chat:
-                hits = claude_cli.transcript_flags_at(chat.claude_transcript(sid))
+                hits = claude_cli.transcript_flags_at(chat.claude_transcript(sid, ctx.get('chat_sessions')))
             elif sid:
                 hits = claude_cli.transcript_flags(ctx['cwd'], sid)
             transcript = 'missing' if hits is None else len(hits)
@@ -371,6 +460,18 @@ def model_turn(ctx, side, moves, ban):
         if mv and not why and mv in ban:
             why = ban[mv]
         fb = G.feedback(text, why) if real and why else None      # 新协议下告诉棋手的原因类别（memory.FEEDBACK）
+        recovered = (d.get('meta') or {}).get('recovered') if via_chat else None
+        if recovered:
+            extra['recovered'] = recovered
+            print('  ！%s 的 agy 调用报 %s，但结果里已有本轮答复，按 recovered 采用（未重发）' % (
+                G.SIDES[side], recovered.get('status')), flush=True)
+            if fb in ('no_move', 'unreadable'):
+                # 中断后取回的答复里读不出着法，可能是被截断的半截答复：不当非法、不判负、不自动重发，按结果不确定停下
+                # （resume --retry-uncertain 可显式授权重发）。读得出但不合法的，照常算一次非法。
+                log(ctx, {'type': 'call_fail', 'ply': ply, 'side': side, 'attempt': k + 1, **extra,
+                          'outcome': 'uncertain', 'failure_class': 'transport', 'recovered_reply': reply,
+                          'stdout': '', 'stderr': '', 'rc': 0, 'timeout': False, 'next_wait': None})
+                raise Paused('第 %d 个半回合%s中断后取回的答复里读不出着法，结果不确定' % (ply, G.SIDES[side]))
         note = memory.extract_note(reply) if mem == 'notes' else None
         rs = G.recite_score(st, reply) if sc['recite'] == 'on' else None
         if rs:

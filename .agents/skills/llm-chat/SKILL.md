@@ -102,6 +102,8 @@ Everything lives under `${XDG_STATE_HOME:-~/.local/state}/llm-chat/`, created on
 
 Claude runs also leave transcripts under `~/.claude/projects/` for that directory; `--drop-thinking` rewrites them as described above.
 
+`--sessions-dir DIR` moves only `sessions/` (records, locks, GPT instructions files) to `DIR`, e.g. a run directory that must survive a reboot or a machine move; pass the same `DIR` on every turn of that session. The CLI working directories above stay under the state directory on purpose: Claude's environment note shows its working directory to the model, and the isolation was verified with these paths. Backend conversations themselves stay in each CLI's own store (`~/.claude/projects/`, agy's conversation store, `codex-home/sessions/`).
+
 ## No tools, no web
 
 The model should answer from its own knowledge. Each route is locked down as below; anything detected afterwards fails the turn (exit 1, nothing saved). Detection is after the fact: whatever the tool did has already happened.
@@ -120,7 +122,9 @@ Limits of this guarantee:
 
 ## Errors
 
-Any failure prints `llm-chat: error: <reason>` on stderr, prints nothing on stdout, and exits 1 (bad arguments exit 2). SIGINT or SIGTERM cancels the turn: the CLI child and everything it started are stopped and waited for before the session lock is released, nothing is saved, and the exit code is 130. This covers HTTP errors, an error body inside an HTTP 200, empty or truncated answers, CLI failures, missing keys, and session problems. There are no retries or fallbacks; decide yourself whether to try again. Context overflow is not handled: the backend's error is reported as-is.
+Any failure prints `llm-chat: error: <reason>` on stderr, prints nothing on stdout, and exits 1 (bad arguments exit 2). agy failures also print one `LLM_CHAT_ERROR {"backend": "agy", "kind": ..., "source": ...}` line, where `source` names the failed check (`hard_timeout`, `print_timeout`, `exit`, `no_result`, `status`, `denied`, `tool`, `filtered`, `empty`, `conversation`, `stale`, `missing_cli`, `stop`), so a caller can classify the failure without matching agy's wording, which changes between agy versions.
+
+`--accept-recovered` (agy only): agy 1.5.5 can end a turn with status `ERROR` ("The stream was interrupted.") after its own transport retry already produced the answer, and then keeps that status on later turns of the conversation. With the flag such an answer is returned when agy exited 0, the answer is non-empty, matches any answer text streamed in the same run, is not identical to the previous turn's answer, and passes every tool, denial and filter check; the META line then carries `"recovered": {"status", "error"}`. Without the flag it is an error as before. SIGINT or SIGTERM cancels the turn: the CLI child and everything it started are stopped and waited for before the session lock is released, nothing is saved, and the exit code is 130. This covers HTTP errors, an error body inside an HTTP 200, empty or truncated answers, CLI failures, missing keys, and session problems. There are no retries or fallbacks; decide yourself whether to try again. Context overflow is not handled: the backend's error is reported as-is.
 
 ## Notes
 

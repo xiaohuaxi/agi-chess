@@ -91,3 +91,6 @@ venv/
 !/runs/**/summary.md
 !/runs/quiz-*/**/judged.jsonl
 !/runs/quiz-*/**/report.txt
+
+# llm-chat 会话记录（棋手会话 → 后端会话 id 的映射）：新盘放在对局目录的 .llm-chat/ 下随盘走，属于本地原始数据，不入库
+.llm-chat/

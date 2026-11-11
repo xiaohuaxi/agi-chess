@@ -70,11 +70,19 @@ PERMISSION_GLOBS = ("~/.gemini/config/projects/*.json",)
 
 
 class AgyError(Exception):
-    """A user-facing failure. ``kind`` lets callers pick an exit code."""
+    """A user-facing failure. ``kind`` lets callers pick an exit code.
 
-    def __init__(self, message, kind="error"):
+    ``source`` names the check that failed, so callers can classify a failure
+    without matching agy's wording (which changes between agy versions):
+    "hard_timeout" / "print_timeout" (kind "timeout"), "exit" (non-zero exit),
+    "no_result" (no result event), "status" (result status other than
+    SUCCESS), "denied", "tool", "filtered", "empty", "conversation",
+    "missing_cli", "stop"."""
+
+    def __init__(self, message, kind="error", source=None):
         super().__init__(message)
         self.kind = kind
+        self.source = source
 
 
 class Cancelled(BaseException):
@@ -175,7 +183,7 @@ def stop_group(proc, grace=STOP_GRACE):
     except subprocess.TimeoutExpired:
         pass
     if group_alive(pgid):
-        raise AgyError(f"could not stop agy process group {pgid}")
+        raise AgyError(f"could not stop agy process group {pgid}", source="stop")
 
 
 class signals_ignored:
@@ -254,13 +262,13 @@ def run_agy(cmd, prompt, cwd, timeout, env=None):
                 pass
         held.release()  # a cancel that arrived during the start now finds the child
         if proc is None:
-            raise AgyError(f"{cmd[0]} CLI not found in PATH (Antigravity CLI)")
+            raise AgyError(f"{cmd[0]} CLI not found in PATH (Antigravity CLI)", source="missing_cli")
         out, err = proc.communicate(stdin_line, timeout=timeout + HARD_KILL_GRACE)
     except subprocess.TimeoutExpired:
         with signals_ignored():
             stop_group(proc)
         raise AgyError(f"agy did not finish within {timeout:.0f}s (+{HARD_KILL_GRACE:.0f}s grace); killed",
-                       kind="timeout")
+                       kind="timeout", source="hard_timeout")
     except BaseException:
         # A second Ctrl-C during cleanup must not skip the SIGTERM/SIGKILL steps.
         if proc is not None:
@@ -345,55 +353,73 @@ def describe_denials(denied, tool_calls):
     return "; ".join(parts)
 
 
-def check_turn(code, out, err, allowed_tools):
-    """Turn agy's output into (info, response) or raise AgyError with a readable reason."""
+def check_turn(code, out, err, allowed_tools, accept_recovered=False):
+    """Turn agy's output into (info, response) or raise AgyError with a readable reason.
+
+    accept_recovered: agy sometimes ends a turn with a non-SUCCESS status (seen
+    with agy 1.5.5: "The stream was interrupted.") although its own transport
+    retry already produced the answer, which it puts in the result event; the
+    status then stays ERROR on later turns of the same conversation too. With
+    this flag such an answer is accepted, provided the process exited 0, the
+    answer is non-empty, it matches whatever answer text was streamed in this
+    process, and every tool / denial / filter check below still passes.
+    info["recovered"] then holds the original status and error. Resending the
+    prompt instead would add a duplicate user turn to the conversation."""
     info = parse_stream(out)
+    info["recovered"] = None
     result = info["result"]
     stderr_tail = clip(err.strip(), 800) if err.strip() else ""
     if PRINT_TIMEOUT_NOTICE.search(err):
         raise AgyError("agy hit --print-timeout with the turn still running; partial output discarded "
-                       f"({len((result or {}).get('response') or info['text'])} chars)", kind="timeout")
+                       f"({len((result or {}).get('response') or info['text'])} chars)", kind="timeout",
+                       source="print_timeout")
     if code != 0:
         match = AGY_ERROR_LINE.search(err)
         detail = match.group(1) if match else ((result or {}).get("error") or stderr_tail or out[-800:])
-        raise AgyError(f"agy exited {code}: {clip(detail)}", kind="api" if code == 3 else "error")
+        raise AgyError(f"agy exited {code}: {clip(detail)}", kind="api" if code == 3 else "error", source="exit")
     if result is None:
-        raise AgyError(f"agy produced no result event: {stderr_tail or clip(out)}")
+        raise AgyError(f"agy produced no result event: {stderr_tail or clip(out)}", source="no_result")
     status = result.get("status")
     if status != "SUCCESS":
-        raise AgyError(f"agy status {status}: {clip(result.get('error') or stderr_tail)}")
+        answer = (result.get("response") or "").strip()
+        streamed = info["text"].strip()
+        if not (accept_recovered and answer and (not streamed or streamed == answer)):
+            raise AgyError(f"agy status {status}: {clip(result.get('error') or stderr_tail)}", source="status")
+        info["recovered"] = {"status": status, "error": clip(result.get("error") or stderr_tail, 300)}
     denied = result.get("denied_actions") or []
     if denied:
         raise AgyError("agy soft-denied a tool and ended the turn (headless mode cannot ask): "
-                       + describe_denials(denied, info["tool_calls"]), kind="denied")
+                       + describe_denials(denied, info["tool_calls"]), kind="denied", source="denied")
     allowed = set(allowed_tools) | INTERNAL_TOOLS
     bad = [c for c in info["tool_calls"] if c.get("name") not in allowed]
     if bad:
         raise AgyError("agy called tools outside this preset: "
-                       + "; ".join(f"{c.get('name')} {tool_target(c)}" for c in bad), kind="tool")
+                       + "; ".join(f"{c.get('name')} {tool_target(c)}" for c in bad), kind="tool", source="tool")
     response = result.get("response") or ""
     if FILTER_NOTICE in response:
         raise AgyError("Gemini's safety filter blocked the answer (agy wrote its notice into the reply)",
-                       kind="filtered")
+                       kind="filtered", source="filtered")
     if not response.strip():
         reason = "agy returned an empty answer"
         if NO_OUTPUT_NOTICE in err:
             reason += ": " + stderr_tail
-        raise AgyError(reason)
+        raise AgyError(reason, source="empty")
     return info, response
 
 
 def turn(agent, prompt, cwd, *, allowed_tools, model=None, effort=None, conversation=None,
-         add_dirs=(), extra_flags=(), timeout=600.0, env=None):
-    """Run and check one turn. Returns a dict with response, conversation_id, usage and tool calls."""
+         add_dirs=(), extra_flags=(), timeout=600.0, env=None, accept_recovered=False):
+    """Run and check one turn. Returns a dict with response, conversation_id, usage and tool calls
+    (plus "recovered", see check_turn)."""
     cmd = build_command(agent, model, effort, conversation, add_dirs, extra_flags, timeout)
     started = time.monotonic()
     code, out, err = run_agy(cmd, prompt, cwd, timeout, env)
-    info, response = check_turn(code, out, err, allowed_tools)
+    info, response = check_turn(code, out, err, allowed_tools, accept_recovered)
     if not info["conversation_id"]:
-        raise AgyError("agy did not report a conversation id")
+        raise AgyError("agy did not report a conversation id", source="conversation")
     if conversation and info["conversation_id"] != conversation:
-        raise AgyError(f"agy answered in conversation {info['conversation_id']}, not {conversation}")
+        raise AgyError(f"agy answered in conversation {info['conversation_id']}, not {conversation}",
+                       source="conversation")
     return {
         "response": response,
         "conversation_id": info["conversation_id"],
@@ -401,6 +427,7 @@ def turn(agent, prompt, cwd, *, allowed_tools, model=None, effort=None, conversa
         "turn_usage": info["turn_usage"],
         "conversation_usage": (info["result"] or {}).get("usage") or {},
         "tool_calls": info["tool_calls"],
+        "recovered": info["recovered"],
         "seconds": round(time.monotonic() - started, 1),
     }
 

@@ -45,6 +45,8 @@ if step.get('empty'):
     sys.stderr.write('llm-chat: error: claude returned an empty answer\n')
     sys.exit(1)
 sys.stderr.write('llm-chat: error: ' + step['error'] + '\n')
+if 'error_meta' in step:
+    sys.stderr.write('LLM_CHAT_ERROR ' + json.dumps(step['error_meta']) + '\n')
 sys.exit(1)
 '''
 
@@ -152,6 +154,7 @@ class FakeChat(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(self.tmp, 'calls.jsonl')))
 
     def test_agy_failure_blocks_retry_and_resume(self):
+        # --agy-retries 0：传输类失败也不自动重发（旧的严格行为仍可选）；空正文等非传输类失败任何设置下都不重发。
         for n, failure in enumerate(({'error': '503 No capacity available'},
                                      {'error': 'rate limit exceeded'}, {'empty': True}, {'text': ''})):
             with self.subTest(failure=failure):
@@ -160,7 +163,7 @@ class FakeChat(unittest.TestCase):
                 with mock.patch.object(runner.claude_cli, '_wait') as wait:
                     self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white',
                                                'agy:claude-opus-5-5-high', '--black', 'random',
-                                               '--max-plies', '1']), 3)
+                                               '--max-plies', '1'] + (['--agy-retries', '0'] if n < 2 else [])), 3)
                 wait.assert_not_called()
                 recs = self.recs(tag)
                 self.assertEqual(sum(r['type'] == 'call_started' for r in recs), 1)
@@ -196,20 +199,21 @@ class FakeChat(unittest.TestCase):
         path = os.path.join(self.tmp, tag)
         self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white',
                                     'agy:gemini-4-argon-high', '--black', 'random',
-                                    '--max-plies', '1']), 3)
+                                    '--max-plies', '1', '--agy-retries', '0']), 3)
         before = self.recs(tag)
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(cli.main(['resume', path]), 3)
             self.assertEqual(len(self.calls()), 1)
-            self.assertEqual(cli.main(['resume', path, '--retry-idle-timeout']), 3)
+            self.assertEqual(cli.main(['resume', path, '--retry-idle-timeout']), 3)   # 旧名字仍可用
             self.assertEqual(cli.main(['resume', path]), 3)
             self.assertEqual(len(self.calls()), 2)
-            self.assertEqual(cli.main(['resume', path, '--retry-idle-timeout']), 0)
+            self.assertEqual(cli.main(['resume', path, '--retry-uncertain']), 0)
         after = self.recs(tag)
         self.assertEqual(after[:len(before)], before)
-        retries = [r for r in after if r['type'] == 'retry_idle_timeout']
+        retries = [r for r in after if r['type'] == 'retry_uncertain']
         self.assertEqual(len(retries), 2)
         for r in retries:
+            self.assertEqual(r['reason'], 'transport')
             self.assertEqual(after[r['failed_record']]['type'], 'call_fail')
             self.assertEqual(after[r['started_record']]['call_id'], r['call_id'])
             self.assertEqual(after[r['failed_record']]['call_id'], r['call_id'])
@@ -243,20 +247,163 @@ class FakeChat(unittest.TestCase):
             recs, {'players': {'w': 'claude:opus'}})))
 
     def test_idle_retry_cli_cannot_bypass_nonidle_tools_or_refusal(self):
-        for n, failure in enumerate(({'error': '503 No capacity'},
+        for n, failure in enumerate(({'error': 'agy returned an empty answer',
+                                      'error_meta': {'backend': 'agy', 'kind': 'error', 'source': 'empty'}},
                                      {'error': 'stream idle timeout (5m0s):context deadline exceeded; '
                                                'the model opened files that were not attached: /etc/hosts'},
-                                     {'refuse': True})):
+                                     {'refuse': True},
+                                     {'error': 'agy called tools outside this preset: run_command ls',
+                                      'error_meta': {'backend': 'agy', 'kind': 'tool', 'source': 'tool'}})):
             self.plan([failure] * (n + 1))
             tag = 'idle-deny%d' % n
-            self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white',
-                                        'agy:gemini-4-argon-high', '--black', 'random',
-                                        '--max-plies', '1']), 3)
+            with mock.patch.object(runner.claude_cli, '_wait') as wait:
+                self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white',
+                                            'agy:gemini-4-argon-high', '--black', 'random',
+                                            '--max-plies', '1']), 3)
+            wait.assert_not_called()                      # 默认开着自动重发，这几类也一次都不重发
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(cli.main(['resume', os.path.join(self.tmp, tag),
-                                           '--retry-idle-timeout']), 3)
+                                           '--retry-uncertain']), 3)
             self.assertEqual(len(self.calls()), n + 1)
-            self.assertFalse(any(r['type'] == 'retry_idle_timeout' for r in self.recs(tag)))
+            self.assertFalse(any(r['type'] in runner.RETRY_EVENTS for r in self.recs(tag)))
+
+    def test_agy_transport_failure_auto_retry_bounded_and_audited(self):
+        stream = {'error': 'agy status ERROR: The stream was interrupted. Please continue the task you were working on.',
+                  'error_meta': {'backend': 'agy', 'kind': 'error', 'source': 'status'}}
+        cases = (([stream, {'text': '着法: e2e4'}], 0, 1),          # 重发一次成功
+                 ([stream, stream, stream, {'text': '着法: e2e4'}], 3, 2))   # 上限 2：第三次失败后停
+        for n, (plan, rc, used) in enumerate(cases):
+            with self.subTest(n=n):
+                self.plan(plan)
+                if os.path.exists(os.path.join(self.tmp, 'calls.jsonl')):
+                    os.remove(os.path.join(self.tmp, 'calls.jsonl'))
+                tag = 'auto-retry%d' % n
+                with mock.patch.object(runner.claude_cli, '_wait', return_value=False) as wait:
+                    self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white', 'agy:gemini-4-carbon',
+                                                '--black', 'random', '--max-plies', '1']), rc)
+                self.assertEqual([c.args[0] for c in wait.call_args_list], list(runner.AGY_RETRY_WAITS[:used]))
+                recs = self.recs(tag)
+                self.assertEqual(recs[0]['cfg']['agy_retries'], runner.AGY_RETRIES)
+                events = [r for r in recs if r['type'] == 'agy_retry']
+                self.assertEqual([e['n'] for e in events], list(range(1, used + 1)))
+                for e in events:
+                    self.assertEqual(recs[e['failed_record']]['failure_class'], 'transport')
+                    self.assertEqual(recs[e['started_record']]['call_id'], e['call_id'])
+                starts = [r['call_id'] for r in recs if r['type'] == 'call_started']
+                self.assertEqual(len(set(starts)), len(starts))      # 每次发送一个新 call_id
+                if rc == 0:
+                    self.assertIsNone(runner.load(C, os.path.join(self.tmp, tag))['uncertain'])
+                    self.assertEqual(sum(r['type'] == 'move' for r in recs), 1)
+                else:
+                    # 上限用完后停下；续跑不重置次数，仍要显式授权
+                    ctx = runner.load(C, os.path.join(self.tmp, tag))
+                    self.assertIsNotNone(ctx['uncertain'])
+                    self.assertEqual(runner.retries_used(recs, 1, 'w'), 2)
+                    with contextlib.redirect_stdout(io.StringIO()) as out:
+                        self.assertEqual(cli.main(['resume', os.path.join(self.tmp, tag)]), 3)
+                    self.assertIn('--retry-uncertain', out.getvalue())
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        self.assertEqual(cli.main(['resume', os.path.join(self.tmp, tag), '--retry-uncertain']), 0)
+                    self.assertEqual(len(self.calls()), 4)
+
+    def test_agy_outer_timeout_and_cancel_not_transport(self):
+        # llm-chat 自己被外层超时杀掉时 agy 子进程组可能还在跑：重发会并发写同一会话，不算传输类。
+        meta = 'LLM_CHAT_ERROR {"backend": "agy", "kind": "timeout", "source": "hard_timeout"}'
+        self.assertTrue(chat.transport_failure('', 'llm-chat: error: agy did not finish\n' + meta, 1, False))
+        self.assertFalse(chat.transport_failure('', meta, -1, True))
+        self.assertFalse(chat.transport_failure('', 'llm-chat: error: cancelled by signal 15', 130, False))
+        for source in ('empty', 'tool', 'denied', 'filtered', 'conversation', 'stale', 'missing_cli'):
+            self.assertFalse(chat.transport_failure(
+                '', 'llm-chat: error: x\nLLM_CHAT_ERROR {"backend": "agy", "source": "%s"}' % source, 1, False))
+        # 没有结构化行时按大类匹配，不认具体版本措辞
+        for text in ('agy: stream idle timeout (5m0s):context deadline exceeded',
+                     'agy status ERROR: The stream was interrupted.', 'agy exited 1: read: connection timed out',
+                     'agy exited 3: 503 Service Unavailable'):
+            self.assertTrue(chat.transport_failure('', 'llm-chat: error: ' + text, 1, False), text)
+        for text in ('agy returned an empty answer', 'rate limit exceeded',
+                     "Opus 5.5's safeguards flagged this message (stream interrupted)"):
+            self.assertFalse(chat.transport_failure('', 'llm-chat: error: ' + text, 1, False), text)
+        self.assertFalse(chat.transport_failure('reply', 'LLM_CHAT_META {broken\n（LLM_CHAT_META 格式无效）', 1, False))
+
+    def test_killed_mid_call_needs_explicit_resume(self):
+        self.plan([{'text': '着法: e2e4'}, {'text': '着法: g1f3'}])
+        tag = 'killed'
+        path = os.path.join(self.tmp, tag)
+        self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white', 'agy:gemini-4-carbon',
+                                    '--black', 'random', '--max-plies', '3', '--stop-after', '2']), 3)
+        records.write(os.path.join(path, 'game.jsonl'),
+                      {'type': 'call_started', 'side': 'w', 'ply': 3, 'call_id': 'killed', 'session': None})
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(cli.main(['resume', path]), 3)
+        self.assertIn('进程中断', out.getvalue())
+        self.assertEqual(len(self.calls()), 1)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.main(['resume', path, '--retry-uncertain']), 0)
+        event = next(r for r in self.recs(tag) if r['type'] == 'retry_uncertain')
+        self.assertEqual((event['reason'], event['failed_record'], event['call_id']), ('interrupted', None, 'killed'))
+        self.assertEqual(len(self.calls()), 2)
+        # 两条悬空发送（无法判断哪条）时不授权
+        cfg = {'players': {'w': 'agy:gemini-4-carbon'}}
+        two = [{'type': 'call_started', 'side': 'w', 'ply': 1, 'call_id': c} for c in ('a', 'b')]
+        self.assertIsNone(runner.retry_event(runner.uncertain_records(two, cfg)))
+        self.assertIsNone(runner.retry_event(runner.uncertain_records(two[:1], cfg), 'agy_retry'))
+
+    def test_agy_recovered_answer_used_without_resend(self):
+        rec = {'status': 'ERROR', 'error': 'The stream was interrupted.'}
+        self.plan([{'text': '理由\n着法: e2e4', 'extra_meta': {'recovered': rec}}])
+        tag = 'recovered'
+        self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white', 'agy:gemini-4-carbon',
+                                    '--black', 'random', '--max-plies', '1']), 0)
+        self.assertIn('--accept-recovered', self.calls()[0]['argv'])
+        att = next(r for r in self.recs(tag) if r['type'] == 'attempt')
+        self.assertEqual((att['recovered'], att['legal']), (rec, True))
+        self.assertEqual(len(self.calls()), 1)
+        # 取回的答复里没有着法（可能被截断）：不当非法、不判负、不重发，停下
+        self.plan([{'text': '我认为应该走，因为', 'extra_meta': {'recovered': rec}}])
+        os.remove(os.path.join(self.tmp, 'calls.jsonl'))
+        tag = 'recovered-cut'
+        with mock.patch.object(runner.claude_cli, '_wait') as wait:
+            self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white', 'agy:gemini-4-carbon',
+                                        '--black', 'random', '--max-plies', '1']), 3)
+        wait.assert_not_called()
+        recs = self.recs(tag)
+        self.assertFalse(any(r['type'] in ('attempt', 'forfeit', 'move') for r in recs))
+        fail = next(r for r in recs if r['type'] == 'call_fail')
+        self.assertEqual((fail['failure_class'], fail['recovered_reply']), ('transport', '我认为应该走，因为'))
+        self.assertIsNotNone(runner.retry_event(runner.uncertain_records(recs, recs[0]['cfg'])))
+
+    def test_sessions_dir_in_run_dir_and_legacy_migration(self):
+        self.plan([{'text': '着法: e2e4'}, {'text': '着法: g1f3'}])
+        tag = 'sess'
+        path = os.path.join(self.tmp, tag)
+        self.assertEqual(self.play(['--game', 'chess', '--tag', tag, '--white', 'agy:gemini-4-carbon',
+                                    '--black', 'random', '--max-plies', '3', '--stop-after', '1']), 3)
+        recs = self.recs(tag)
+        self.assertEqual(recs[0]['cfg']['llm_chat_sessions'], runner.SESSIONS_SUBDIR)
+        argv = self.calls()[0]['argv']
+        self.assertEqual(argv[argv.index('--sessions-dir') + 1], os.path.join(os.path.abspath(path), '.llm-chat', 'sessions'))
+        # 旧盘：config 里没有 llm_chat_sessions，会话记录在状态目录；续跑时复制进对局目录并记一条迁移事件
+        cfg = dict(recs[0]['cfg'])
+        cfg.pop('llm_chat_sessions')
+        sid = next(r['session'] for r in recs if r['type'] == 'attempt')
+        legacy = chat.state_dir() / 'sessions'
+        legacy.mkdir(parents=True)
+        (legacy / ('%s.json' % sid)).write_text(json.dumps({'id': sid, 'backend': 'agy'}))
+        with open(os.path.join(path, 'game.jsonl')) as f:
+            lines = f.readlines()
+        lines[0] = json.dumps({'type': 'config', 'cfg': cfg}, ensure_ascii=False) + '\n'
+        with open(os.path.join(path, 'game.jsonl'), 'w') as f:
+            f.writelines(lines)
+        self.assertIsNone(runner.load(C, path)['chat_sessions'])
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.main(['resume', path]), 0)
+        moved = os.path.join(os.path.abspath(path), '.llm-chat', 'sessions')
+        self.assertTrue(os.path.isfile(os.path.join(moved, '%s.json' % sid)))
+        self.assertTrue((legacy / ('%s.json' % sid)).is_file())          # 原文件保留
+        self.assertEqual(runner.load(C, path)['chat_sessions'], moved)
+        argv = self.calls()[1]['argv']
+        self.assertEqual(argv[argv.index('--sessions-dir') + 1], moved)
+        self.assertEqual(argv[argv.index('--session') + 1], sid)
 
     def test_gemini_xiangqi_selfplay_sessions(self):
         self.plan([{'text': '着法: h2e2'}, {'text': '着法: h7e7'},
@@ -475,7 +622,8 @@ class FakeChat(unittest.TestCase):
                 tag = 'uncertain%d' % n
                 with mock.patch.object(runner.claude_cli, '_wait') as wait:
                     rc = self.play(['--game', 'chess', '--tag', tag, '--white',
-                                    'agy:gemini-3.8-flash-high', '--black', 'random', '--max-plies', '1'])
+                                    'agy:gemini-3.8-flash-high', '--black', 'random', '--max-plies', '1',
+                                    '--agy-retries', '0'])
                 self.assertEqual(rc, 3)
                 wait.assert_not_called()
                 self.assertEqual(len(self.calls()), before + 1)

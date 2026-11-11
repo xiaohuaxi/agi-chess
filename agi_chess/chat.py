@@ -11,7 +11,9 @@ GPT 是 codex exec resume，DeepSeek 是脚本自己回放历史正文，Gemini 
   - 安全分类器拦下（各服务商明确拒答标记）：{'result': 报错, 'stop_reason': 'refusal', 'is_error': True}，
     交给对局循环记 flag 并立即中止，不算非法、不重问。
   - 回答为空（三路的报错文字都带 empty answer）：{'result': '', 'empty_error': 报错}，对局循环照旧记「空回复」。
-  - agy 后端失败（含空正文、缺失/无效 META）结果不确定，停止并禁止重发；其余后端沿用原重试行为。
+  - agy 后端失败（含空正文、缺失/无效 META）结果不确定，默认停止；只有 transport_failure 认定的传输类失败可按
+    对局 config 的 agy_retries 有上限地重发（design.md「agy 会话失败不能重发」一节），其余后端沿用原重试行为。
+  - 会话记录（llm-chat 的 sessions/）新盘放在对局目录里（--sessions-dir，见 runner.sessions_dir），重启或换机后仍能续接。
 """
 import hashlib, importlib.util, json, os, pathlib, re, shlex, shutil, subprocess, sys, tempfile
 from functools import lru_cache
@@ -31,6 +33,13 @@ def _default_script():
 
 SCRIPT = _default_script()
 META = 'LLM_CHAT_META '
+ERROR_META = 'LLM_CHAT_ERROR '
+# llm-chat LLM_CHAT_ERROR 的 source：这些是「没拿到答复」的传输 / 服务端类失败，可以有上限地重发。
+# 工具、拒答、过滤、空正文、会话号不符、复读上一轮（stale）等一律不在其中，仍然锁住。
+TRANSPORT_SOURCES = ('hard_timeout', 'print_timeout', 'exit', 'no_result', 'status')
+# 旧记录 / 旧脚本没有 LLM_CHAT_ERROR 时的兜底：按大类匹配，不追具体版本的措辞。
+_TRANSPORT_TEXT = re.compile(r'stream|timed? ?out|timeout|deadline|connection|network|interrupted|unavailable'
+                             r'|\b5\d\d\b|reset by peer|\beof\b|capacity|overloaded', re.I)
 KINDS = ('claude', 'codex', 'deepseek', 'gemini', 'agy', 'openrouter')
 AGY_KINDS = ('gemini', 'agy')
 DEEPSEEK_DEFAULT = 'deepseek-v4-pro'
@@ -44,6 +53,18 @@ def state_dir():
     base = os.environ.get('XDG_STATE_HOME', '')
     root = pathlib.Path(base) if base and os.path.isabs(base) else pathlib.Path.home() / '.local' / 'state'
     return root / 'llm-chat'
+
+
+def sessions_root(sessions_dir=None):
+    """会话记录目录：新盘是对局目录里的 --sessions-dir；旧盘（config 里没有）照旧在状态目录的 sessions/。"""
+    return pathlib.Path(sessions_dir) if sessions_dir else state_dir() / 'sessions'
+
+
+def read_session(session, sessions_dir=None):
+    try:
+        return json.loads((sessions_root(sessions_dir) / ('%s.json' % session)).read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return None
 
 
 def script_info():
@@ -106,11 +127,18 @@ def model_id(kind, model, slugs=None):
     return full
 
 
-def command(model, effort, system=None, session=None, timeout=claude_cli.TIMEOUT, drop_thinking=False):
+def command(model, effort, system=None, session=None, timeout=claude_cli.TIMEOUT, drop_thinking=False,
+            sessions_dir=None, accept_recovered=False):
     """一次调用的命令。第一次调用给 system（新会话），续接给 session；两个都不给不行。
     drop_thinking：续接时不带此前几轮的思考。llm-chat 在会话首轮定下、存进会话，之后省略即沿用（中途加上会报错），
-    所以只在新会话那次传；续接轮不传。"""
+    所以只在新会话那次传；续接轮不传。
+    sessions_dir：会话记录放哪（llm-chat --sessions-dir）；None 用 llm-chat 默认位置（旧盘）。
+    accept_recovered：agy 报非 SUCCESS 但结果里已有本轮答复时接受并标 recovered（llm-chat --accept-recovered，只限 agy）。"""
     cmd = [sys.executable, SCRIPT, '-m', model, '--effort', effort, '--timeout', str(timeout)]
+    if sessions_dir:
+        cmd += ['--sessions-dir', str(sessions_dir)]
+    if accept_recovered and model.startswith(('gemini-', 'agy/')):
+        cmd += ['--accept-recovered']
     if session:
         return cmd + ['--session', session]
     assert system is not None, '新会话要系统提示'
@@ -153,17 +181,56 @@ def run(cmd, prompt, cwd, env, timeout):
     return out, err, rc
 
 
+def error_meta(err):
+    """llm-chat 失败时 stderr 里的 LLM_CHAT_ERROR {json}（只有 agy 失败才有）；没有或格式不对返回 None。"""
+    for line in reversed((err or '').splitlines()):
+        if line.startswith(ERROR_META):
+            try:
+                d = json.loads(line[len(ERROR_META):])
+            except ValueError:
+                return None
+            return d if isinstance(d, dict) else None
+    return None
+
+
+def transport_failure(out, err, rc=1, timed_out=False):
+    """这次 agy 调用失败是不是「传输 / 服务端类、没拿到答复」，可以有上限地重发。
+
+    优先看 llm-chat 的结构化 LLM_CHAT_ERROR（source 属于 TRANSPORT_SOURCES）；旧脚本 / 旧记录没有它时，
+    才对 llm-chat 报错做大类文字匹配（不追具体 agy 版本措辞）。下面这些一律不算：外层超时（llm-chat 自己被杀，
+    agy 子进程组可能还在跑，重发会与它并发写同一会话）、信号取消（130）、包装层错误（META 缺失 / 无效、OSError）、
+    工具事件、明确拒答。rc=None 表示旧记录没存退出码。"""
+    if timed_out or rc not in (1, None):
+        return False
+    text = '%s\n%s' % (out or '', err or '')
+    if claude_cli.tool_error_text(text) or claude_cli.refusal_text(text):
+        return False
+    meta = error_meta(err)
+    if meta is not None:
+        return meta.get('backend') == 'agy' and meta.get('source') in TRANSPORT_SOURCES
+    if 'LLM_CHAT_META' in (err or '') or '（缺少有效 LLM_CHAT_META' in (err or ''):
+        return False
+    lines = [x for x in (err or '').splitlines() if x.startswith('llm-chat: error:')]
+    if not lines and rc is None:             # 旧记录可能只存了报错正文
+        lines = [err or '']
+    return bool(lines) and bool(_TRANSPORT_TEXT.search(lines[-1])) and not _EMPTY.search(lines[-1])
+
+
 def agy_command(cmd):
     """llm-chat 的 agy 路由：保留旧 gemini-*，也覆盖 agy/claude-* 等完整型号。"""
     return '-m' in cmd and cmd[cmd.index('-m') + 1].startswith(('gemini-', 'agy/'))
 
 
-def call(cmd, prompt, **kw):
-    """返回 (dict, 用时)。agy 后端失败即停；其他后端带重试/等额度。kw 透传给 claude_cli.call。"""
+def call(cmd, prompt, retry_wait=None, on_retry=None, **kw):
+    """返回 (dict, 用时)。agy 后端失败默认即停；retry_wait() 给出下次重发前等几秒（None 不重发）时，
+    只对 transport_failure 认定的传输类失败重发，重发前先调 on_retry(info) 落审计记录。其他后端带重试/等额度。
+    kw 透传给 claude_cli.call。"""
     cwd = tempfile.gettempdir()                 # 脚本自己在它的空目录里起 CLI，这里的运行目录无所谓
     timeout = int(cmd[cmd.index('--timeout') + 1])
     if agy_command(cmd):
         kw['fail_closed'] = True
+        if retry_wait:
+            kw.update(transient=transport_failure, retry_wait=retry_wait, on_retry=on_retry)
     return claude_cli.call(cmd, prompt, cwd, timeout=timeout, run=run, **kw)
 
 
@@ -183,14 +250,14 @@ def usage(d, kind):
             'stop_reason': 'refusal' if d.get('stop_reason') == 'refusal' else 'end_turn', 'api_error_status': None}
 
 
-def claude_transcript(session):
+def claude_transcript(session, sessions_dir=None):
     """Claude 会话在 claude 那边的记录文件路径（查安全分类器自动插的那条消息用）；拿不到返回 None。
-    会话 id 对应的 claude 会话记在 llm-chat 的会话文件里（backend_session），运行目录是它的 empty/。"""
+    会话 id 对应的 claude 会话记在 llm-chat 的会话文件里（backend_session），运行目录是它的 empty/
+    （运行目录始终在状态目录下，--sessions-dir 只挪会话记录）。"""
     if not session:
         return None
-    try:
-        s = json.loads((state_dir() / 'sessions' / ('%s.json' % session)).read_text(encoding='utf-8'))
-    except (OSError, ValueError):
+    s = read_session(session, sessions_dir)
+    if s is None:
         return None
     backend = s.get('backend_session')
     return claude_cli.transcript_path(str(state_dir() / 'empty'), backend) if backend else None
@@ -200,15 +267,14 @@ TOOL_ITEMS = ('function_call', 'custom_tool_call', 'local_shell_call', 'web_sear
               'mcp_tool_call')
 
 
-def codex_tool_calls(session):
+def codex_tool_calls(session, sessions_dir=None):
     """GPT 会话里的工具调用条数（读 llm-chat 的 codex 会话记录，只读）；找不到记录返回 None。
     兜底用：llm-chat 的 GPT 路径请求里还挂着 code mode 的几件工具（执行层关着，调出来也落空），它自己又不检测
     工具调用（docs/results/llm-chat-isolation.md）。这里补上 batch5 那道「出现正文和思考以外的条目就停」。"""
     if not session:
         return None
-    try:
-        s = json.loads((state_dir() / 'sessions' / ('%s.json' % session)).read_text(encoding='utf-8'))
-    except (OSError, ValueError):
+    s = read_session(session, sessions_dir)
+    if s is None:
         return None
     thread = s.get('thread_id')
     if not thread:
@@ -249,7 +315,7 @@ def check_effort(kind, model, effort, side):
                               (side, model.rsplit('-', 1)[-1])) from e
 
 
-def preflight(players, models=None, sessions=None, via_chat=True):
+def preflight(players, models=None, sessions=None, via_chat=True, sessions_dir=None):
     """仅检查可执行文件和 key 是否存在，不证明登录有效，不调用模型或切换渠道。
 
     自定义脚本拥有自己的后端契约，因此只检查脚本可读；不假设它使用本仓的 CLI/key。
@@ -290,7 +356,7 @@ def preflight(players, models=None, sessions=None, via_chat=True):
         sid = (sessions or {}).get(side)
         if via_chat and sid:
             try:
-                saved = json.loads((state_dir() / 'sessions' / (sid + '.json')).read_text())
+                saved = json.loads((sessions_root(sessions_dir) / (sid + '.json')).read_text())
             except (OSError, ValueError) as e:
                 raise ConfigError('无法检查 llm-chat 会话 %s：%s' % (sid, e)) from e
             if saved['backend'] != backend:
