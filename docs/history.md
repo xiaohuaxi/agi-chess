@@ -33,6 +33,12 @@
 - **中国象棋（37 盘，定稿，`runs/zx/`）**：在 Fairy-Stockfish 限节点阶梯上约 +121（nodes=100 为 0，95% +1 到 +236），比 nodes=100 强、和 nodes=300（+82）相当或略强、明显弱于 nodes=1000。对 nodes=30 得分反而最低（44%），是 opus 自己那几盘大失误多，按盘少的噪声看。没有满 200 个半回合的盘。不给人类段位（用户 10-02、10-04 定，见「已拍板」）。
 - 被安全防护拦 5 次（国际象棋 3、中国象棋 2，最后一次 10-02 18:31），当时按 10-02 约定重问续下、正常计入（历史事实；现行规则已改为一次即停）；警戒没触发。opus 标价合计 $1,477.09（国际象棋 $649.58、中国象棋 $827.51，不含冒烟）。
 
+## agy 认证方式交给 agy 自己（2026-11-12）
+
+- 起因：box 上 agy 设成 `modelProvider: "gemini"`（API key 模式）后，llm-chat 的环境白名单剥掉 `GEMINI_API_KEY`，agy 报 key 未设；Carbon 只能靠本地 LOCAL ONLY 补丁（`LLM_CHAT_AGY_API_KEY=1` 放行 key、`LLM_CHAT_AGY_SETTINGS` 传 `--settings` 注册自定义模型）跑。用户认为认证方式与本仓库无关，仓库不应为此写特殊处理。
+- 实施：agy 子进程的白名单除原有基础变量外，原样放行 agy 自身的配置变量（`GEMINI_API_KEY`、`GOOGLE_GEMINI_BASE_URL`、`GOOGLE_APPLICATION_CREDENTIALS`、`GOOGLE_CLOUD_PROJECT`、`GOOGLE_CLOUD_LOCATION`、`CLOUDSDK_CONFIG`、`AGY_*`、`ANTIGRAVITY_*`），用哪种登录由 agy 的 `settings.json` 决定；不加开关、不加 `--settings`（自定义模型写进 agy 自己的 settings）。claude / codex 的白名单不变，其他厂商密钥和仓库 token 仍不传给 agy。agy 报错文本里，名字含 KEY/TOKEN/SECRET/PASSWORD/CREDENTIAL 的已放行变量的值替换为 `[REDACTED]`。agy 记录的 provider 从 `google (agy subscription)` 改为 `google (agy)`。
+- 离线测试 351 项通过（21 项真引擎跳过），没有调用真实模型或 agy。
+
 ## agy 失败恢复与会话记录随对局目录（2026-11-11）
 
 - 起因：独立 clone 冷读跑 Carbon 自弈时，agy 1.5.5 把网络中断报成 `The stream was interrupted.`，不在 10-20 授权的精确 idle timeout 文本里，整盘锁住；放宽后重发 5 次，agy 会话里多出 6 条相同提示（中断后该会话每轮都报 ERROR，但结果里已有答复）。随后 box 重启清掉 `~/.local/state/llm-chat/`，两段会话映射丢失、无法续跑。

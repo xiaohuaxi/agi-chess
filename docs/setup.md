@@ -99,7 +99,7 @@ python -m unittest discover -s tests -t . -v
 
 `python3 data/batch1/select_positions.py check` 与 `python3 data/batch2/select_positions.py check` 仅依赖上述规则库，离线校验已入库的第一批与第二批局面题（`data/batch1/{xiangqi,chess}.jsonl` 与 `data/batch2/{xiangqi,chess}.jsonl` 的 FEN、行棋方与着法合法性），不启动引擎、不读取 `runs/`。
 
-完整单元测试（共 347 项）包含 21 项真引擎握手与走子测试，需要能找到 `stockfish` 和 `fairy-stockfish`。**当本机未安装这两个引擎时，`unittest -v` 会自动跳过这 21 项真引擎测试（其余 326 项全部通过属正常预期）**；安装两个引擎后 347 项全部通过（0 fail / 0 skip）。引擎是单独安装的程序，不会由 `pip` 提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
+完整单元测试（共 351 项）包含 21 项真引擎握手与走子测试，需要能找到 `stockfish` 和 `fairy-stockfish`。**当本机未安装这两个引擎时，`unittest -v` 会自动跳过这 21 项真引擎测试（其余 330 项全部通过属正常预期）**；安装两个引擎后 351 项全部通过（0 fail / 0 skip）。引擎是单独安装的程序，不会由 `pip` 提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
 
 ## 模型对弈：内置 `llm-chat`、本地 CLI 订阅与 HTTP API 配置
 
@@ -111,6 +111,7 @@ python -m unittest discover -s tests -t . -v
    - **Claude**：通过本机 `claude` CLI 调用（如 `--white claude:opus`）；
    - **GPT**：通过本机 `codex` CLI 调用（如 `--black codex:astra`）；
    - **Gemini（或经 agy 路由的模型）**：通过本机 `agy` CLI 调用（如 `--white agy:gemini-3.8-flash --effort medium` 或 `agy:claude-opus-5-5-high`）。
+   - agy 用哪种登录方式（订阅账号、`modelProvider: "gemini"` + `GEMINI_API_KEY`、`AGY_ADC_AUTH` 等）完全由 agy 自己的配置决定，仓库不做任何判断，只把 agy 自身的配置变量（`GEMINI_API_KEY`、`GOOGLE_GEMINI_BASE_URL`、`AGY_*` 等）原样传给它；key 只留在环境变量里，不进命令行、会话记录和报错文本。agy 只能靠自定义模型条目识别的型号（例如 API key 下的 Gemini 4 Carbon），请写进 agy 自己的 `~/.gemini/antigravity-cli/settings.json` 的 `customModelsConfig`。用 API key 时 Google 按 token 计费，记录里的成本仍为空。
    - 该通道直接使用用户本机已安装并登录的对应 CLI 订阅额度（研发实测版本：`claude 2.1.282`、`codex 0.156.1+`；开工前可用 `claude --version`、`codex --version`、`agy --version` 检查版本，并用 `python3 -m agi_chess play --game chess --white claude:opus --black random --dry-run` 离线核对提示生成）。正式开盘前检查双方所需 CLI 与 API Key；配置错误退出码为 2，不先调用任何一方；此检查不验证登录、额度或线上型号可用性。缺 CLI 时给出保留其他参数的 OpenRouter 命令模板，模板保留已知厂商名（`anthropic` / `openai` / `google`），须把 `<model-id>` 等占位项换成已确认的具体值；程序不猜型号、不自动安装或登录 CLI，也不自动换渠道。
 
 2. **HTTP API 通道（DeepSeek 及 OpenRouter）：**

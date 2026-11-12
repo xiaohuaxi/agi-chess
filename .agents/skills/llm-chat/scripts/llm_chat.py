@@ -948,7 +948,7 @@ def call_agy(session, user_text, opts, root):
     usage = result["turn_usage"]
     return {
         "text": result["response"], "model": result["model"] or session["model"],
-        "provider": "google (agy subscription)", "cost_usd": None, "cost_basis": None,
+        "provider": "google (agy)", "cost_usd": None, "cost_basis": None,
         "cache_read": usage.get("cache_read_tokens", 0), "cache_write": None,
         "input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens"),
         "reasoning_tokens": usage.get("thinking_tokens"), "attachments": len(staged),

@@ -164,3 +164,57 @@ class LlmChatAgyMain(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class AgyEnvAndRedaction(unittest.TestCase):
+    """agy 的认证方式由 agy 自己的配置决定：仓库原样放行 agy 自身的配置变量、挡住其他密钥，且不让 key 进命令行或报错文本。"""
+
+    FAKE = 'fake-agy-secret-value-0123456789'
+
+    def setUp(self):
+        mod = load_llm_chat()
+        for p in (mock.patch.object(sys, 'path', list(sys.path)), mock.patch.dict(sys.modules)):
+            p.start()
+            self.addCleanup(p.stop)
+        sys.modules.pop('agy_core', None)
+        self.core = mod.agy_core()
+
+    def env(self, **extra):
+        base = {'HOME': '/home/x', 'PATH': '/bin', 'LC_ALL': 'C.UTF-8'}
+        base.update(extra)
+        return mock.patch.dict(os.environ, base, clear=True)
+
+    def test_agy_own_variables_pass_others_do_not(self):
+        with self.env(GEMINI_API_KEY=self.FAKE, GOOGLE_GEMINI_BASE_URL='https://example.invalid',
+                      AGY_ADC_AUTH='1', AGY_LLM_GATEWAY_URL='https://gw.invalid', ANTIGRAVITY_X='1',
+                      GOOGLE_APPLICATION_CREDENTIALS='/tmp/adc.json',
+                      ANTHROPIC_API_KEY='a' * 20, OPENAI_API_KEY='o' * 20, API_KEY_OPENROUTER='r' * 20,
+                      GH_TOKEN='g' * 20, LLM_CHAT_AGY_API_KEY='1'):
+            env = self.core.agy_env()
+        for name in ('HOME', 'PATH', 'LC_ALL', 'GEMINI_API_KEY', 'GOOGLE_GEMINI_BASE_URL', 'AGY_ADC_AUTH',
+                     'AGY_LLM_GATEWAY_URL', 'ANTIGRAVITY_X', 'GOOGLE_APPLICATION_CREDENTIALS'):
+            self.assertIn(name, env)
+        for name in ('ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'API_KEY_OPENROUTER', 'GH_TOKEN', 'LLM_CHAT_AGY_API_KEY'):
+            self.assertNotIn(name, env)
+
+    def test_no_opt_in_switch_or_settings_flag(self):
+        with self.env(LLM_CHAT_AGY_SETTINGS='{"modelProvider": "gemini"}', GEMINI_API_KEY=self.FAKE):
+            cmd = self.core.build_command('a', model='gemini-4-carbon', effort='high', conversation='c')
+        self.assertNotIn('--settings', cmd)
+        self.assertFalse(any(self.FAKE in part for part in cmd))
+
+    def test_key_value_redacted_from_errors(self):
+        out = stream('ERROR', '', 'bad key ' + self.FAKE)
+        with self.env(GEMINI_API_KEY=self.FAKE):
+            for code, o, err in ((0, out, ''), (1, '', 'denied for ' + self.FAKE), (0, '', 'x ' + self.FAKE)):
+                with self.assertRaises(self.core.AgyError) as cm:
+                    self.core.check_turn(code, o, err, allowed_tools=('view_file',))
+                self.assertNotIn(self.FAKE, str(cm.exception))
+                self.assertIn('[REDACTED]', str(cm.exception))
+            info, _ = self.core.check_turn(0, stream('ERROR', '着法: e2e4', 'oops ' + self.FAKE), '',
+                                           allowed_tools=('view_file',), accept_recovered=True)
+            self.assertNotIn(self.FAKE, json.dumps(info['recovered']))
+
+    def test_redact_leaves_short_and_unrelated_values(self):
+        with self.env(GEMINI_API_KEY='short', OTHER_TOKEN=self.FAKE):
+            self.assertEqual(self.core.redact('short ' + self.FAKE), 'short ' + self.FAKE)

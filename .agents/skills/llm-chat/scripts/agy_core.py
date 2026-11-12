@@ -24,12 +24,24 @@ import time
 from pathlib import Path
 
 AGY_BIN = "agy"
-# Environment handed to agy. A whitelist on purpose: GEMINI_API_KEY or the
-# AGY_LLM_GATEWAY_* variables would move the call off the subscription login.
+# Environment handed to agy. A whitelist (so unrelated secrets in the caller's
+# environment, e.g. other providers' API keys or repository tokens, do not reach
+# the agent) plus agy's own configuration variables. How agy authenticates is
+# agy's business, not this script's: agy's settings.json decides (subscription
+# login, `modelProvider: "gemini"` with GEMINI_API_KEY, Application Default
+# Credentials via AGY_ADC_AUTH, an enterprise gateway via AGY_LLM_GATEWAY_*), and
+# agy reads the secrets for those modes only from its environment, so they are
+# passed through unchanged and never interpreted, logged or put on the command line.
 ENV_KEEP = {"HOME", "PATH", "USER", "LOGNAME", "SHELL", "LANG", "TMPDIR", "TERM",
             "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY",
             "http_proxy", "https_proxy", "all_proxy", "no_proxy",
             "SSL_CERT_FILE", "SSL_CERT_DIR", "NODE_EXTRA_CA_CERTS"}
+AGY_OWN_ENV = {"GEMINI_API_KEY", "GOOGLE_GEMINI_BASE_URL", "GOOGLE_APPLICATION_CREDENTIALS",
+               "GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION", "CLOUDSDK_CONFIG"}
+AGY_OWN_PREFIXES = ("AGY_", "ANTIGRAVITY_")
+# Values of passed-through variables with these name parts are scrubbed from any
+# error text this module produces (stderr tails, agy's own error messages).
+SECRET_NAME = re.compile(r"KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL", re.I)
 # agy writes this into the answer text (status SUCCESS, exit 0) when Gemini's
 # safety filter blocks a reply part-way. Seen with agy 1.3.5.
 FILTER_NOTICE = "This request was blocked by Gemini's filters"
@@ -102,13 +114,28 @@ def raise_cancelled(signum, _frame):
     raise Cancelled(signum)
 
 
-def clip(text, limit=1500):
+def passed_through(name):
+    return (name in ENV_KEEP or name in AGY_OWN_ENV or name.startswith("LC_")
+            or name.startswith(AGY_OWN_PREFIXES))
+
+
+def redact(text):
+    """Replace the value of every secret-looking variable handed to agy with [REDACTED]."""
     text = str(text)
+    for name, value in os.environ.items():
+        if value and len(value) >= 8 and SECRET_NAME.search(name) and passed_through(name):
+            text = text.replace(value, "[REDACTED]")
+    return text
+
+
+def clip(text, limit=1500):
+    # Redact the full text first: cutting first could leave a secret's tail behind.
+    text = redact(text)
     return text if len(text) <= limit else "..." + text[-limit:]
 
 
 def agy_env(extra=None):
-    env = {k: v for k, v in os.environ.items() if k in ENV_KEEP or k.startswith("LC_")}
+    env = {k: v for k, v in os.environ.items() if passed_through(k)}
     env.update(extra or {})
     return env
 
