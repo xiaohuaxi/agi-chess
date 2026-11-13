@@ -476,6 +476,238 @@ class FakeClaudeLimit(unittest.TestCase):
         self.assertIn('--on-limit', rs[0]['cfg']['argv'])
 
 
+class RealBatchResumeSessionsDir(unittest.TestCase):
+    """real 协议（走 llm-chat --sessions-dir）下暂停批次再次 batch run 时，整批预检须读取对局目录内 .llm-chat/sessions（并兼容旧盘迁移）。"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix='agi-chess-real-batch-')
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        CL.STOP.clear()
+        self.addCleanup(CL.STOP.clear)
+        bin_dir = os.path.join(self.tmp, 'bin')
+        os.makedirs(bin_dir)
+        fake_claude = os.path.join(bin_dir, 'claude')
+        with open(fake_claude, 'w', encoding='utf-8') as f:
+            f.write(
+                '#!%s\n'
+                'import json, sys\n'
+                'if "--version" in sys.argv:\n'
+                '    print("0.0.0 (fake)"); sys.exit(0)\n'
+                '_ = sys.stdin.read()\n'
+                'is_resume = "--resume" in sys.argv\n'
+                'sid = sys.argv[sys.argv.index("--resume") + 1] if is_resume else '
+                'sys.argv[sys.argv.index("--session-id") + 1]\n'
+                'is_black = any("sonnet" in a for a in sys.argv)\n'
+                'mv = ("b8c6" if is_resume else "g8f6") if is_black else ("b1c3" if is_resume else "g1f3")\n'
+                'print(json.dumps({"type": "result", "subtype": "success", "is_error": False, '
+                '"result": "着法: " + mv, "session_id": sid, '
+                '"usage": {"input_tokens": 5, "output_tokens": 3}, "total_cost_usd": 0.0}))\n'
+                % sys.executable
+            )
+        os.chmod(fake_claude, 0o755)
+        self.state_home = os.path.join(self.tmp, 'xdg_state')
+        os.makedirs(self.state_home)
+        self.env = dict(
+            os.environ,
+            PATH=bin_dir + os.pathsep + os.environ.get('PATH', ''),
+            XDG_STATE_HOME=self.state_home,
+        )
+        self.env.pop('AGI_CHESS_LLM_CHAT', None)
+        self.env.pop('AGICHESS_LLM_CHAT', None)
+        self.env.pop('LLMCHESS_LLM_CHAT', None)
+
+    def run_batch(self, argv):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = B.main(argv)
+        return rc, out.getvalue(), err.getvalue()
+
+    def test_paused_real_batch_resumes_with_per_game_sessions_dir_and_legacy_migration(self):
+        from agi_chess import chat
+        base_argv = [
+            'run', '--game', 'chess', '--batch', 'rb', '--out', self.tmp,
+            '--player', 'claude:opus', '--opp', 'random', '--seeds', '1', '--colors', 'w',
+            '--opening', 'none', '--max-plies', '4', '--retries', '0', '--no-analyze',
+        ]
+        with mock.patch.object(chat, 'SCRIPT', str(chat._REPO_SCRIPT)), \
+                mock.patch.dict(os.environ, self.env, clear=True):
+            rc1, out1, err1 = self.run_batch(base_argv + ['--stop-after', '2'])
+            self.assertEqual(rc1, 3, out1 + err1)
+            gdir = os.path.join(self.tmp, 'rb', 'random-s1-w')
+            self.assertTrue(os.path.isdir(os.path.join(gdir, '.llm-chat', 'sessions')))
+            self.assertEqual(os.listdir(os.path.join(self.state_home, 'llm-chat', 'sessions')), [])
+
+            # 再次执行 batch run（续跑未完盘）：预检读取 gdir/.llm-chat/sessions 成功并续跑完盘
+            rc2, out2, err2 = self.run_batch(base_argv)
+            self.assertEqual(rc2, 0, out2 + err2)
+            self.assertEqual(B.game_state(gdir), 'done')
+
+        # 再测旧盘（config 无 chat_sessions、会话在 XDG_STATE_HOME/llm-chat/sessions）在 batch run 预检时自动迁移
+        base_legacy = [
+            'run', '--game', 'chess', '--batch', 'rb-old', '--out', self.tmp,
+            '--player', 'claude:opus', '--opp', 'random', '--seeds', '1', '--colors', 'w',
+            '--opening', 'none', '--max-plies', '4', '--retries', '0', '--no-analyze',
+        ]
+        with mock.patch.object(chat, 'SCRIPT', str(chat._REPO_SCRIPT)), \
+                mock.patch.dict(os.environ, self.env, clear=True):
+            rc3, out3, err3 = self.run_batch(base_legacy + ['--stop-after', '2'])
+            self.assertEqual(rc3, 3, out3 + err3)
+            gdir2 = os.path.join(self.tmp, 'rb-old', 'random-s1-w')
+            local_sdir = os.path.join(gdir2, '.llm-chat', 'sessions')
+            global_sdir = os.path.join(self.state_home, 'llm-chat', 'sessions')
+            for fname in os.listdir(local_sdir):
+                if fname.endswith('.json'):
+                    shutil.move(os.path.join(local_sdir, fname), os.path.join(global_sdir, fname))
+            shutil.rmtree(os.path.join(gdir2, '.llm-chat'))
+            log_p = os.path.join(gdir2, 'game.jsonl')
+            rows = records.read(log_p)
+            rows[0]['cfg'].pop('llm_chat_sessions', None)
+            with open(log_p, 'w', encoding='utf-8') as f:
+                for r in rows:
+                    f.write(json.dumps(r, ensure_ascii=False) + '\n')
+
+            rc4, out4, err4 = self.run_batch(base_legacy)
+            self.assertEqual(rc4, 0, out4 + err4)
+            self.assertEqual(B.game_state(gdir2), 'done')
+            self.assertTrue(os.path.isdir(local_sdir))
+
+    def test_prelock_and_check_meta_failure_do_not_mutate_legacy_game_or_downgrade_session(self):
+        from agi_chess import chat, cli, runner
+        base_argv = [
+            'run', '--game', 'chess', '--batch', 'rb-guard', '--out', self.tmp,
+            '--player', 'claude:opus', '--opp', 'random', '--seeds', '1', '--colors', 'w',
+            '--opening', 'none', '--max-plies', '4', '--retries', '0', '--no-analyze',
+        ]
+        with mock.patch.object(chat, 'SCRIPT', str(chat._REPO_SCRIPT)), \
+                mock.patch.dict(os.environ, self.env, clear=True):
+            rc1, out1, err1 = self.run_batch(base_argv + ['--stop-after', '2'])
+            self.assertEqual(rc1, 3, out1 + err1)
+            bdir = os.path.join(self.tmp, 'rb-guard')
+            gdir = os.path.join(bdir, 'random-s1-w')
+            local_sdir = os.path.join(gdir, '.llm-chat', 'sessions')
+            global_sdir = os.path.join(self.state_home, 'llm-chat', 'sessions')
+            sfiles = [fn for fn in os.listdir(local_sdir) if fn.endswith('.json')]
+            self.assertEqual(len(sfiles), 1)
+            sid_file = sfiles[0]
+            shutil.move(os.path.join(local_sdir, sid_file), os.path.join(global_sdir, sid_file))
+            shutil.rmtree(os.path.join(gdir, '.llm-chat'))
+            log_p = os.path.join(gdir, 'game.jsonl')
+            rows = records.read(log_p)
+            rows[0]['cfg'].pop('llm_chat_sessions', None)
+            with open(log_p, 'w', encoding='utf-8') as f:
+                for r in rows:
+                    f.write(json.dumps(r, ensure_ascii=False) + '\n')
+            with open(log_p, 'rb') as f:
+                snap_bytes = f.read()
+
+            # 1) 另一个驱动持锁运行中：新启动的 batch run 在抢锁失败前不得创建 .llm-chat 或追加 game.jsonl
+            lock_p = os.path.join(bdir, B.LOCK)
+            with open(lock_p, 'w', encoding='utf-8') as f:
+                f.write(str(os.getpid()))
+            try:
+                with self.assertRaises(SystemExit):
+                    self.run_batch(base_argv)
+                self.assertFalse(os.path.exists(os.path.join(gdir, '.llm-chat')))
+                with open(log_p, 'rb') as f:
+                    self.assertEqual(f.read(), snap_bytes)
+            finally:
+                os.remove(lock_p)
+
+            # 2) 参数与 batch.json 不一致（check_meta 拒绝）：同样不得创建 .llm-chat 或修改 game.jsonl，且锁已释放
+            bad_argv = [x if x != '4' else '6' for x in base_argv]
+            with self.assertRaises(SystemExit):
+                self.run_batch(bad_argv)
+            self.assertFalse(os.path.exists(os.path.join(gdir, '.llm-chat')))
+            self.assertFalse(os.path.exists(lock_p))
+            with open(log_p, 'rb') as f:
+                self.assertEqual(f.read(), snap_bytes)
+
+            # 3) 若对局目录下已有更新后的 <sid>.json，migrate_sessions 绝不能拿全局旧快照倒退覆盖它
+            os.makedirs(local_sdir, exist_ok=True)
+            with open(os.path.join(global_sdir, sid_file), 'r', encoding='utf-8') as f:
+                old_doc = json.load(f)
+            old_doc['marker'] = 'stale_global'
+            with open(os.path.join(global_sdir, sid_file), 'w', encoding='utf-8') as f:
+                json.dump(old_doc, f)
+            newer_doc = dict(old_doc, marker='fresh_local')
+            with open(os.path.join(local_sdir, sid_file), 'w', encoding='utf-8') as f:
+                json.dump(newer_doc, f)
+
+            ctx = runner.load(cli.game_module('chess'), gdir)
+            self.assertIsNone(ctx.get('chat_sessions'))
+            with contextlib.redirect_stdout(io.StringIO()):
+                cli.migrate_sessions(ctx)
+            with open(os.path.join(local_sdir, sid_file), 'r', encoding='utf-8') as f:
+                after_doc = json.load(f)
+            self.assertEqual(after_doc['marker'], 'fresh_local')
+
+    def test_half_migrated_two_model_game_prelock_preflight_and_resume(self):
+        """双模型旧盘（尚无 llm_chat_sessions 记录）：sid1 已在本地且全局源已删，sid2 仍在全局。
+        锁前只读预检须按与 migrate_sessions 相同的逐 SID 来源规则放行且零写盘；拿锁后补齐 sid2 并续跑完盘。"""
+        from agi_chess import chat
+        two_argv = [
+            'run', '--game', 'chess', '--batch', 'rb-half', '--out', self.tmp,
+            '--player', 'claude:opus', '--opp', 'claude:sonnet', '--seeds', '1', '--colors', 'w',
+            '--opening', 'none', '--max-plies', '4', '--retries', '0', '--no-analyze',
+        ]
+        with mock.patch.object(chat, 'SCRIPT', str(chat._REPO_SCRIPT)), \
+                mock.patch.dict(os.environ, self.env, clear=True):
+            rc1, out1, err1 = self.run_batch(two_argv + ['--stop-after', '2'])
+            self.assertEqual(rc1, 3, out1 + err1)
+            bdir = os.path.join(self.tmp, 'rb-half')
+            gdir = os.path.join(bdir, 'claude-sonnet-s1-w')
+            local_sdir = os.path.join(gdir, '.llm-chat', 'sessions')
+            global_sdir = os.path.join(self.state_home, 'llm-chat', 'sessions')
+            os.makedirs(global_sdir, exist_ok=True)
+            sfiles = sorted(fn for fn in os.listdir(local_sdir) if fn.endswith('.json'))
+            self.assertEqual(len(sfiles), 2)
+            sid1_file, sid2_file = sfiles[0], sfiles[1]
+
+            # 构造半迁移状态：sid1 仅在本地（带本地标记，全局无此文件），sid2 仅在全局（本地已移走），且日志尚无 llm_chat_sessions
+            with open(os.path.join(local_sdir, sid1_file), 'r', encoding='utf-8') as f:
+                d1 = json.load(f)
+            d1['half_state'] = 'kept_local'
+            with open(os.path.join(local_sdir, sid1_file), 'w', encoding='utf-8') as f:
+                json.dump(d1, f)
+            shutil.move(os.path.join(local_sdir, sid2_file), os.path.join(global_sdir, sid2_file))
+            self.assertFalse(os.path.exists(os.path.join(global_sdir, sid1_file)))
+            self.assertFalse(os.path.exists(os.path.join(local_sdir, sid2_file)))
+
+            log_p = os.path.join(gdir, 'game.jsonl')
+            rows = records.read(log_p)
+            rows[0]['cfg'].pop('llm_chat_sessions', None)
+            with open(log_p, 'w', encoding='utf-8') as f:
+                for r in rows:
+                    f.write(json.dumps(r, ensure_ascii=False) + '\n')
+            with open(log_p, 'rb') as f:
+                snap_bytes = f.read()
+
+            # 1) 持锁冲突时：锁前只读预检通过（不报缺 sid1），停在 take_lock，且未提前复制 sid2 或写 game.jsonl
+            lock_p = os.path.join(bdir, B.LOCK)
+            with open(lock_p, 'w', encoding='utf-8') as f:
+                f.write(str(os.getpid()))
+            try:
+                with self.assertRaises(SystemExit) as cm:
+                    self.run_batch(two_argv)
+                self.assertIn('正由进程', str(cm.exception))
+                self.assertFalse(os.path.exists(os.path.join(local_sdir, sid2_file)))
+                with open(log_p, 'rb') as f:
+                    self.assertEqual(f.read(), snap_bytes)
+            finally:
+                os.remove(lock_p)
+
+            # 2) 无锁冲突时：正常补齐 sid2、保留本地 sid1，记录 llm_chat_sessions 并续跑完盘
+            rc2, out2, err2 = self.run_batch(two_argv)
+            self.assertEqual(rc2, 0, out2 + err2)
+            self.assertEqual(B.game_state(gdir), 'done')
+            self.assertTrue(os.path.isfile(os.path.join(local_sdir, sid1_file)))
+            self.assertTrue(os.path.isfile(os.path.join(local_sdir, sid2_file)))
+            with open(os.path.join(local_sdir, sid1_file), 'r', encoding='utf-8') as f:
+                self.assertEqual(json.load(f).get('half_state'), 'kept_local')
+            after_rows = records.read(log_p)
+            self.assertTrue(any(r.get('type') == 'llm_chat_sessions' for r in after_rows))
+
+
 @unittest.skipIf(FSF_MISSING, '本机没有 fairy-stockfish')
 class RunWithOpening(unittest.TestCase):
     def setUp(self):

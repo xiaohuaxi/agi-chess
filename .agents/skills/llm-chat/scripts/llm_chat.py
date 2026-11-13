@@ -86,14 +86,9 @@ ENV_KEEP = {"HOME", "PATH", "USER", "LOGNAME", "SHELL", "LANG", "TMPDIR", "TERM"
             "http_proxy", "https_proxy", "all_proxy", "no_proxy",
             "SSL_CERT_FILE", "SSL_CERT_DIR", "NODE_EXTRA_CA_CERTS"}
 FAMILY = {"openrouter": "http", "deepseek": "http", "claude": "claude", "codex": "codex", "agy": "agy"}
-# The agy route uses agy_core.py from the same directory when bundled with a
-# repository skill, or falls back to the sibling agy-run skill directory.
+# The agy route uses agy_core.py from the same scripts/ directory.
 _SCRIPT_DIR = Path(__file__).resolve().parent
-AGY_CORE_DIR = (
-    _SCRIPT_DIR
-    if (_SCRIPT_DIR / "agy_core.py").is_file()
-    else Path(__file__).resolve().parents[2] / "agy-run" / "scripts"
-)
+AGY_CORE_DIR = _SCRIPT_DIR
 AGY_AGENT = "llm-chat-session"
 # Content blocks removed from claude's session transcript under --drop-thinking,
 # and the record fields that point at another record's uuid.
@@ -148,14 +143,14 @@ def find_api_key(backend):
 
 
 def sanitize(text):
-    """Remove any known API key value from text that may reach stderr."""
+    """Remove any known API key or passed-through agy secret value from text that may reach stderr."""
     text = str(text)
     for backend in KEY_ENV:
         for name in key_env_names(backend):
             value = os.environ.get(name)
             if value and len(value) >= 8:
                 text = text.replace(value, "[REDACTED]")
-    return text
+    return agy_core().redact(text)
 
 
 def clip(text, limit=2000):
@@ -870,21 +865,39 @@ def agy_core():
     return agy_core
 
 
-def agy_workspace(root, session, core):
+def agy_workspace(root, session, core, tools):
     """Per-session agy workspace: the session agent (system message as its prompt) and attachments.
 
-    The agent gets view_file and nothing else, inherits no rules, skills or MCP
-    servers, and cannot be called as a subagent. agy fixes an agent's tools when
-    the conversation starts, so view_file is there from the first turn even
-    when no file is ever attached.
+    Plain chat defaults to ``tools: []`` (zero tools). Attachment-enabled sessions
+    (started with ``--attach`` or ``--allow-attach``) receive ``tools: [read_file]`` only.
+    The agent inherits no rules, skills or MCP servers, and cannot be called as a subagent.
     """
     workdir = root / "agy" / session["id"]
     agent_file = workdir / ".agents" / "agents" / f"{AGY_AGENT}.md"
-    if not agent_file.exists():
-        agent_file.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        atomic_write(agent_file, core.agent_markdown(
-            AGY_AGENT, "llm-chat session agent", ["view_file"], False, session["system"]))
+    desired = core.agent_markdown(AGY_AGENT, "llm-chat session agent", tools, False, session["system"])
+    agent_file.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        current = agent_file.read_text(encoding="utf-8") if agent_file.exists() else None
+    except OSError:
+        current = None
+    if current != desired:
+        atomic_write(agent_file, desired)
     return workdir
+
+
+def agy_allow_attach(session, opts):
+    want = bool(opts.attach or getattr(opts, "allow_attach", False))
+    if "allow_attach" in session:
+        allowed = bool(session["allow_attach"])
+        if not allowed and want:
+            raise ChatError(
+                "this agy session was started without attachment support (tools: []); "
+                "start a new session with --attach or --allow-attach",
+                {"backend": "agy", "kind": "config", "source": "config"},
+            )
+        return allowed
+    # Legacy session records without allow_attach tighten to tools: [] unless --attach is passed.
+    return want
 
 
 def stage_attachments(workdir, turn_index, paths, core):
@@ -911,18 +924,34 @@ def stage_attachments(workdir, turn_index, paths, core):
 def call_agy(session, user_text, opts, root):
     if opts.max_tokens:
         raise ChatError("--max-tokens is not supported for agy models (agy has no such setting)")
+    allow_attach = agy_allow_attach(session, opts)
     core = agy_core()
-    workdir = agy_workspace(root, session, core)
+    if allow_attach:
+        grants = core.file_grants()
+        if grants:
+            raise ChatError(
+                "refusing agy attachment session because user permission settings widen file access: "
+                + "; ".join(grants),
+                {"backend": "agy", "kind": "config", "source": "config"},
+            )
+        agent_tools = ["read_file"]
+        allowed_tools = ("view_file", "read_file")
+    else:
+        agent_tools = []
+        allowed_tools = ()
+    workdir = agy_workspace(root, session, core, agent_tools)
     staged = []
     try:
         staged = stage_attachments(workdir, len(session["turns"]) + 1, opts.attach or [], core)
         prompt = user_text
         if staged:
-            prompt += "\n\nAttached files (open each one with view_file before answering):\n" + \
+            prompt += "\n\nAttached files (open each one with read_file before answering):\n" + \
                 "".join(f"- {p}\n" for p in staged)
+        _, req_backend_model = route(session.get("model_requested") or session["model"])
+        effective_effort = opts.effort or agy_implied_effort(session["model"]) or agy_implied_effort(req_backend_model)
         try:
-            result = core.turn(AGY_AGENT, prompt, workdir, allowed_tools=("view_file",), model=session["model"],
-                               effort=opts.effort, conversation=session.get("conversation_id"),
+            result = core.turn(AGY_AGENT, prompt, workdir, allowed_tools=allowed_tools, model=session["model"],
+                               effort=effective_effort, conversation=session.get("conversation_id"),
                                timeout=opts.timeout, accept_recovered=opts.accept_recovered)
         except core.AgyError as exc:
             raise ChatError(str(exc), {"backend": "agy", "kind": exc.kind,
@@ -935,21 +964,49 @@ def call_agy(session, user_text, opts, root):
         # Only files attached on a saved turn or on this one may be opened.
         allowed = {os.path.realpath(p) for p in session.get("agy_files", [])} | \
             {os.path.realpath(str(p)) for p in staged}
-        stray = [core.tool_target(c) for c in result["tool_calls"]
-                 if c.get("name") == "view_file" and os.path.realpath(core.tool_target(c)) not in allowed]
+
+        def _is_allowed_attachment(resolved_path):
+            if not resolved_path:
+                return False
+            if resolved_path in allowed:
+                return True
+            if not os.path.exists(resolved_path):
+                return False
+            for a in allowed:
+                try:
+                    if os.path.exists(a) and os.path.samefile(resolved_path, a):
+                        return True
+                except OSError:
+                    continue
+            return False
+
+        stray = []
+        for call in result["tool_calls"]:
+            if call.get("name") in ("view_file", "read_file"):
+                raw_target = core.tool_path(call)
+                resolved = (
+                    os.path.realpath(raw_target if os.path.isabs(raw_target) else os.path.join(str(workdir), raw_target))
+                    if raw_target else ""
+                )
+                if not raw_target or not _is_allowed_attachment(resolved):
+                    stray.append(raw_target or core.tool_target(call) or "<missing path>")
         if stray:
-            raise ChatError("the model opened files that were not attached: " + "; ".join(stray))
+            raise ChatError(
+                "agy called tools besides attached view_file: " + "; ".join(stray),
+                {"backend": "agy", "kind": "tool", "source": "tool"},
+            )
     except BaseException:
         for path in staged:  # a failed turn leaves no attachment behind
             path.unlink(missing_ok=True)
         raise
+    session["allow_attach"] = allow_attach
     session["conversation_id"] = result["conversation_id"]
     session["agy_files"] = session.get("agy_files", []) + [str(p) for p in staged]
     usage = result["turn_usage"]
     return {
         "text": result["response"], "model": result["model"] or session["model"],
         "provider": "google (agy)", "cost_usd": None, "cost_basis": None,
-        "cache_read": usage.get("cache_read_tokens", 0), "cache_write": None,
+        "cache_read": usage.get("cache_read_tokens"), "cache_write": usage.get("cache_write_tokens"),
         "input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens"),
         "reasoning_tokens": usage.get("thinking_tokens"), "attachments": len(staged),
         "response_sha256": digest,
@@ -974,9 +1031,12 @@ def build_parser():
     parser.add_argument("--sessions-dir", metavar="DIR",
                         help="directory for session records (default <state>/sessions); pass the same one on every turn")
     parser.add_argument("--accept-recovered", action="store_true",
-                        help="agy only: accept an answer agy returned with a non-SUCCESS status (marked 'recovered')")
+                        help="agy only: accept a complete answer returned with a recoverable non-end_turn status "
+                             "(marked 'recovered')")
     parser.add_argument("--attach", action="append", metavar="PATH",
                         help="file for the model to read (audio, video, image, PDF, text); agy models only, repeatable")
+    parser.add_argument("--allow-attach", action="store_true",
+                        help="agy only: allow --attach on later turns of a session started without attachments")
     return parser
 
 
@@ -992,10 +1052,13 @@ def read_system(opts):
 def new_session(opts, backend, backend_model, system):
     if not system or not system.strip():
         raise ChatError("a new session needs a non-empty --system or --system-file")
-    return {"version": 1, "id": str(uuid.uuid4()), "backend": backend,
+    sess = {"version": 1, "id": str(uuid.uuid4()), "backend": backend,
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "system": system,
             "system_sha256": sha256(system), "model_requested": opts.model, "model": backend_model,
             "drop_thinking": bool(opts.drop_thinking), "messages": [], "turns": []}
+    if backend == "agy":
+        sess["allow_attach"] = bool(opts.attach or getattr(opts, "allow_attach", False))
+    return sess
 
 
 def continue_session(session, opts, backend, backend_model, system):
@@ -1015,11 +1078,21 @@ def continue_session(session, opts, backend, backend_model, system):
         session.pop("provider_only", None)
 
 
+def agy_implied_effort(model):
+    base, sep, suffix = (model or "").rpartition("-")
+    if sep and base and suffix.lower() in ("low", "medium", "high", "xhigh", "extra", "max"):
+        return suffix.lower()
+    return None
+
+
 def check_agy_effort(model, effort):
-    suffix = model.rsplit("-", 1)[-1]
-    if effort and suffix in ("low", "medium", "high", "xhigh", "max") and suffix != effort:
-        raise ChatError(f"agy model {model!r} has effort {suffix}, conflicting with --effort {effort}; "
-                        f"use --effort {suffix} or explicitly choose a matching model")
+    suffix = agy_implied_effort(model)
+    if effort and suffix:
+        norm_s = "xhigh" if suffix == "extra" else suffix
+        norm_e = "xhigh" if effort.lower() == "extra" else effort.lower()
+        if norm_s != norm_e:
+            raise ChatError(f"agy model {model!r} has effort {suffix}, conflicting with --effort {effort}; "
+                            f"use --effort {suffix} or explicitly choose a matching model")
 
 
 def run_turn(opts, user_text, root):
@@ -1039,6 +1112,8 @@ def run_turn(opts, user_text, root):
                         "in its own state and offers no way to leave thinking out")
     if opts.attach and FAMILY[backend] != "agy":
         raise ChatError("--attach is supported only on agy models (gemini-* or agy/<slug>)")
+    if getattr(opts, "allow_attach", False) and FAMILY[backend] != "agy":
+        raise ChatError("--allow-attach is supported only on agy models (gemini-* or agy/<slug>)")
     if getattr(opts, "accept_recovered", False) and FAMILY[backend] != "agy":
         raise ChatError("--accept-recovered is supported only on agy models (gemini-* or agy/<slug>)")
     sdir = opts.sessions_path = sessions_dir(opts, root)

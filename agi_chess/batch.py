@@ -364,22 +364,30 @@ def cmd_run(a):
                              'summary.md', 'summary.json', 'judged.jsonl', 'report.txt'))):
         raise SystemExit('批次 %s 下已有已入库或已导出的对局目录（%s，无原始 game.jsonl），请换个 --batch'
                          % (bdir, '、'.join(exported_only[:3]) or 'summary.*'))
-    # 整批启动前也检查将续跑的记录，避免前几盘已付费才发现后面的配置失效。
-    for name, _, _, _ in games:
-        log_path = os.path.join(bdir, name, 'game.jsonl')
-        if os.path.isfile(log_path):
-            old = records.read(log_path)
-            cfg = old[0]['cfg']
-            if not any(r.get('type') == 'end' for r in old):
-                ctx = runner.load(cli.game_module(cfg['game']), os.path.dirname(log_path))
-                for side, spec in cfg['players'].items():
-                    kind, _, model = spec.partition(':')
-                    cli.chat.check_effort(kind, cfg.get('models', {}).get(side, model), cfg['sides'][side]['effort'], side)
-                cli.chat.preflight(cfg['players'], cfg.get('models'), ctx['sessions'], cfg.get('backend') == 'llm-chat')
+    # 整批启动前先只读检查将续跑的记录（不写盘、不迁移会话），避免前几盘已付费才发现后面的配置失效，
+    # 也避免在获取批次锁和 check_meta 之前产生任何写盘副作用。
+    def _preflight_unfinished(migrate=False):
+        for name, _, _, _ in games:
+            log_path = os.path.join(bdir, name, 'game.jsonl')
+            if os.path.isfile(log_path):
+                old = records.read(log_path)
+                cfg = old[0]['cfg']
+                if not any(r.get('type') == 'end' for r in old):
+                    ctx = runner.load(cli.game_module(cfg['game']), os.path.dirname(log_path))
+                    if migrate and not (ctx.get('refusal') or ctx.get('tool_call') or ctx.get('uncertain')):
+                        cli.migrate_sessions(ctx)
+                    for side, spec in cfg['players'].items():
+                        kind, _, model = spec.partition(':')
+                        cli.chat.check_effort(kind, cfg.get('models', {}).get(side, model), cfg['sides'][side]['effort'], side)
+                    cli.chat.preflight(cfg['players'], cfg.get('models'), ctx['sessions'], cfg.get('backend') == 'llm-chat',
+                                       sessions_dir=ctx.get('chat_sessions') or cli.resolve_session_sources(ctx))
+
+    _preflight_unfinished(migrate=False)
     os.makedirs(bdir, exist_ok=True)
     lock = take_lock(bdir)
     try:
         check_meta(bdir, batch_meta(a))
+        _preflight_unfinished(migrate=True)
         stop = os.path.join(bdir, STOP)
         if os.path.exists(stop):
             os.remove(stop)                      # 上次暂停留下的停止标记（本驱动自己建的）

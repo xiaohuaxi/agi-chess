@@ -99,16 +99,28 @@ def limit_hit(text):
 
 def refusal_text(text):
     """只认明确拦截标记或拒绝披露内部思考的句子；提到理由、思考本身不算。"""
-    t = (text or '').lower().replace('’', "'")
+    raw = text or ''
+    t = raw.lower().replace('’', "'")
     if any(mark in t for mark in ('safeguards flagged', '[reasoning_extraction]',
                                   'safety filter blocked the answer',
                                   'flagged by our safeguards',
                                   "unexpected codex item 'refusal'")):
         return True
     # CLI 常把后端元数据串进 stderr（有时同时写 empty answer），仍属明确拒答。
-    if re.search(r"\b(?:stop_reason|finish_reason|finishreason)[\"']?\s*[:=]\s*[\"']?"
+    if re.search(r"\b(?:stop_reason|stopreason|finish_reason|finishreason)[\"']?\s*[:=]\s*[\"']?"
                  r"(?:refusal|content_filter|safety)\b", t):
         return True
+    for line in raw.splitlines():
+        if line.startswith('LLM_CHAT_ERROR '):
+            try:
+                meta = json.loads(line[len('LLM_CHAT_ERROR '):])
+            except ValueError:
+                continue
+            if isinstance(meta, dict) and (
+                meta.get('source') in ('filtered', 'refusal')
+                or meta.get('kind') in ('filtered', 'refusal')
+            ):
+                return True
     return bool(re.search(
         r"(?:i (?:cannot|can't|won't|am unable to)|i'm unable to)\s+"
         r"(?:provide|share|reveal|disclose|show)[^.!?\n]{0,100}"
@@ -128,15 +140,30 @@ def flagged(d):
 
 def tool_error_text(text):
     """只认包装器明确报告的工具事件；普通网络错误或正文提到工具不算。"""
-    text = (text or '').lower()
-    return any(mark in text for mark in (
+    raw = text or ''
+    low = raw.lower()
+    if any(mark in low for mark in (
         'the model called a tool; plain chat allows none',
         'the model used server-side tools (',
         'the answer carries annotations (web citations); plain chat allows no web access',
         'the model opened files that were not attached:',
+        'called tools besides attached view_file',
         'agy soft-denied a tool and ended the turn',
         'agy called tools outside this preset:',
-    )) or bool(re.search(r"unexpected codex item ['\"](?!refusal['\"])[^'\"]+['\"]; plain chat allows no tools", text))
+    )) or bool(re.search(r"unexpected codex item ['\"](?!refusal['\"])[^'\"]+['\"]; plain chat allows no tools", low)):
+        return True
+    for line in raw.splitlines():
+        if line.startswith('LLM_CHAT_ERROR '):
+            try:
+                meta = json.loads(line[len('LLM_CHAT_ERROR '):])
+            except ValueError:
+                continue
+            if isinstance(meta, dict) and (
+                meta.get('source') in ('tool', 'denied')
+                or meta.get('kind') in ('tool', 'permission', 'denied')
+            ):
+                return True
+    return False
 
 
 def tool_used(d):

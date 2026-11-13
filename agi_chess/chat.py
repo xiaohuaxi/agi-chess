@@ -355,8 +355,9 @@ def preflight(players, models=None, sessions=None, via_chat=True, sessions_dir=N
                 raise ConfigError(str(e)) from e
         sid = (sessions or {}).get(side)
         if via_chat and sid:
+            sdir = sessions_dir.get(sid) if isinstance(sessions_dir, dict) else sessions_dir
             try:
-                saved = json.loads((sessions_root(sessions_dir) / (sid + '.json')).read_text())
+                saved = json.loads((sessions_root(sdir) / (sid + '.json')).read_text())
             except (OSError, ValueError) as e:
                 raise ConfigError('无法检查 llm-chat 会话 %s：%s' % (sid, e)) from e
             if saved['backend'] != backend:

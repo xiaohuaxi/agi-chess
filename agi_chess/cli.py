@@ -319,26 +319,52 @@ def cmd_play(a):
     return play_stoppable(ctx, a)
 
 
+def resolve_session_sources(ctx):
+    """只读解析本盘各 llm-chat 会话 JSON 所在目录（sid -> Path），不建目录不写盘。
+    已记 llm_chat_sessions 的盘固定用该目录；未记的旧盘逐个 sid 优先取对局目录已有文件，否则取全局状态目录。"""
+    cfg = ctx['cfg']
+    sids = sorted(set(ctx['sessions'].values()))
+    if cfg.get('backend') != 'llm-chat' or not sids:
+        return {}
+    explicit = ctx.get('chat_sessions')
+    if explicit:
+        root = chat.sessions_root(explicit)
+        return {sid: root for sid in sids}
+    src = chat.sessions_root(None)
+    dst = pathlib.Path(runner.sessions_dir(ctx['dir'], runner.SESSIONS_SUBDIR))
+    return {sid: (dst if (dst / ('%s.json' % sid)).is_file() else src) for sid in sids}
+
+
 def migrate_sessions(ctx):
     """旧盘的 llm-chat 会话记录在状态目录（~/.local/state/llm-chat/sessions）；续跑时若本盘当前会话的记录都在，
     复制进对局目录并记一条 llm_chat_sessions，之后以对局目录为准。只复制会话记录 JSON：CLI 运行目录不动，
-    Claude 会话记录路径、agy / codex 后端会话都不受影响。原文件保留不删；缺任何一份就不迁移（preflight 照旧报缺）。"""
+    Claude 会话记录路径、agy / codex 后端会话都不受影响。原文件保留不删；目标文件已存在时不倒退覆盖；缺任何一份就不迁移（preflight 照旧报缺）。"""
     cfg = ctx['cfg']
     if cfg.get('backend') != 'llm-chat' or ctx.get('chat_sessions') or not ctx['sessions']:
         return
-    src = chat.sessions_root(None)
-    sids = sorted(set(ctx['sessions'].values()))
-    if not all((src / ('%s.json' % sid)).is_file() for sid in sids):
+    sources = resolve_session_sources(ctx)
+    sids = sorted(sources)
+    if not all((sources[sid] / ('%s.json' % sid)).is_file() for sid in sids):
         return
     dst = pathlib.Path(runner.sessions_dir(ctx['dir'], runner.SESSIONS_SUBDIR))
     dst.mkdir(parents=True, exist_ok=True, mode=0o700)
+    copied = 0
     for sid in sids:
-        tmp = dst / ('.%s.json.tmp' % sid)
-        shutil.copy2(src / ('%s.json' % sid), tmp)
-        os.replace(tmp, dst / ('%s.json' % sid))
+        target = dst / ('%s.json' % sid)
+        if sources[sid] == dst or target.is_file():
+            continue
+        tmp = dst / ('.%s.%d.%s.json.tmp' % (sid, os.getpid(), uuid.uuid4().hex[:8]))
+        try:
+            shutil.copy2(sources[sid] / ('%s.json' % sid), tmp)
+            os.replace(tmp, target)
+            copied += 1
+        except BaseException:
+            tmp.unlink(missing_ok=True)
+            raise
     runner.log(ctx, {'type': 'llm_chat_sessions', 'dir': runner.SESSIONS_SUBDIR, 'migrated': sids})
     ctx['chat_sessions'] = str(dst)
-    print('已把 %d 份 llm-chat 会话记录复制进 %s（之后以这里为准）' % (len(sids), dst))
+    if copied:
+        print('已把 %d 份 llm-chat 会话记录复制进 %s（之后以这里为准）' % (copied, dst))
 
 
 def cmd_resume(a):
@@ -380,7 +406,7 @@ def cmd_resume(a):
         kind, _, name = spec.partition(':')
         chat.check_effort(kind, cfg.get('models', {}).get(side, name), cfg['sides'][side]['effort'], side)
     chat.preflight(cfg['players'], cfg.get('models'), ctx['sessions'], cfg.get('backend') == 'llm-chat',
-                   sessions_dir=ctx.get('chat_sessions'))
+                   sessions_dir=ctx.get('chat_sessions') or resolve_session_sources(ctx))
     rec = {'type': 'resume', 'ply': len(ctx['st']['moves']), 'commit': commit()}
     if a.agy_retries is not None:                # 只管这次续跑
         rec['agy_retries'] = a.agy_retries
