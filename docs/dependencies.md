@@ -34,7 +34,7 @@
 ## 研究数据
 
 - [第一批国际象棋题库](../data/batch1/chess.jsonl)选自 [Lichess 公开谜题库](https://database.lichess.org/#puzzles)，上游按 CC0 提供。选取日期为 2026-09-25，筛选与抽样规则见[第一批选题脚本](../data/batch1/select_positions.py)；数据库会更新，已入库 JSONL 才是本批固定题目。第二批继承的 Lichess 谜题也保留该来源，筛选依据见[第二批选题脚本](../data/batch2/select_positions.py)。
-- 两批中国象棋题及第二批新增的国际象棋整盘局面来自本研究及其前序研究的历史对局，来源与选取条件记在对应 JSONL 和选题脚本中。`runs/` 已随仓入库全部 69 个正式模型对局目录（175 盘 `game.pgn` 与 174 份引擎分析 `analysis.jsonl`）及 9 批局面题判卷结果（50 份 `judged.jsonl` 与 9 份 `report.txt`）；仅底层过程事件流 `game.jsonl`、纯引擎互弈标定原始对局及录屏 `.mp4` 未入库。这里说明来源，不把 Lichess 之外的材料一并宣称为 CC0；本仓自有研究数据采用根目录 MIT 许可，证据边界见[研究索引](research.md)。
+- 两批中国象棋题及第二批新增的国际象棋整盘局面来自本研究及其前序研究的历史对局，来源与选取条件记在对应 JSONL 和选题脚本中。`runs/` 已随仓入库全部 73 个正式模型对局目录（179 盘 `game.pgn` 与 178 份引擎分析 `analysis.jsonl`）及 9 批局面题判卷结果（50 份 `judged.jsonl` 与 9 份 `report.txt`）；仅底层过程事件流 `game.jsonl`、纯引擎互弈标定原始对局及录屏 `.mp4` 未入库。这里说明来源，不把 Lichess 之外的材料一并宣称为 CC0；本仓自有研究数据采用根目录 MIT 许可，证据边界见[研究索引](research.md)。
 - [人类评级刻度数据](../analysis/rating/human-scale.json)含带出处的第三方统计数据；引用来源不等于获得任意再许可权，研究引用与重新打包数据分别判断。
 
 本清单不是完整二进制 SBOM，不覆盖未来容器基础镜像及传递依赖。

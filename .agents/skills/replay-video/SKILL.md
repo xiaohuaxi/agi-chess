@@ -10,7 +10,7 @@ description: 用本仓库棋谱阅读器（viewer/）把对局录成 MP4 视频�
 ## 准备棋谱与依赖
 
 - 已入库对局与本机新跑对局区分处理：
-  - 已入库的 175 盘正式对局（含在 git worktree 中，无 `game.jsonl`）：共 69 个正式对局目录，其中 62 个单盘目录（47 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*` / `b1-xq-*`）直接位于 `runs/<tag>/game.pgn`；7 个多盘批次目录（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）顶层只有 `summary.*`，每盘棋位于二级子目录 `runs/<batch>/<game>/game.pgn`（如 `runs/zc/maia-1900-s1-w/game.pgn`）。它们均自带最新导出的完整 `game.pgn`（174 盘另带 `analysis.jsonl`），可直接浏览或录屏，不要检查 `game.jsonl`，也不要运行 `python3 -m agi_chess export`。
+  - 已入库的 179 盘正式对局（含在 git worktree 中，无 `game.jsonl`）：共 73 个正式对局目录，其中 66 个单盘目录（51 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*` / `b1-xq-*`）直接位于 `runs/<tag>/game.pgn`；7 个多盘批次目录（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）顶层只有 `summary.*`，每盘棋位于二级子目录 `runs/<batch>/<game>/game.pgn`（如 `runs/zc/maia-1900-s1-w/game.pgn`）。它们均自带最新导出的完整 `game.pgn`（178 盘另带 `analysis.jsonl`），可直接浏览或录屏，不要检查 `game.jsonl`，也不要运行 `python3 -m agi_chess export`。
   - 本机新跑、含 `game.jsonl` 的对局：只录已下完的棋；先确认 `runs/<tag>/game.jsonl` 最后一行是 `{"type": "end", …}`（没有这一行的可能仍在运行，不要触碰其目录），再按需运行 `python3 -m agi_chess export runs/<tag>` 重写导出文件（`game.pgn`、`record.txt`），不改动 `game.jsonl`。
 - 路径支持：录制脚本支持相对仓库根目录的路径或本机任意绝对路径。
 - 开发依赖：先在仓库根目录执行 `npm --prefix viewer ci`（安装锁定的 `playwright-core==1.58.2`）。脚本会自动从 `PATH` 与常见路径查找 `ffmpeg` 和 Chromium / Chrome；若本机尚无兼容浏览器，可在仓库根目录执行 `node viewer/node_modules/playwright-core/cli.js install --with-deps chromium` 安装与锁定版本配套的浏览器。

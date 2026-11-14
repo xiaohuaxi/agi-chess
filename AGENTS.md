@@ -42,7 +42,7 @@
 - Python 测试与题库校验（首次需 `pip install -r requirements.txt`）：
   - 单元测试：`python3 -m unittest discover -s tests -t . -v`（离线，不调模型；共 367 项，其中 21 项真引擎测试需本机 `stockfish` 与 `fairy-stockfish`，未装自动 skip）。
   - 题库离线校验：`python3 data/batch1/select_positions.py check` 与 `python3 data/batch2/select_positions.py check`。
-- 阅读器测试：`node --test 'viewer/test/*.test.js'`（引号通配需 Node 22+；Node 18/20 去掉单引号）。`runs/` 下已入库 78 个正式对局/局面题目录（含 175 盘 `game.pgn`），58 项纯 JS 与棋谱回归直接可跑；29 项浏览器播放测试需执行 `npm --prefix viewer ci` 安装开发依赖并具备 Chromium，3 项往返测试需 Python 规则库（共 32 项，未装自动跳过）。
+- 阅读器测试：`node --test 'viewer/test/*.test.js'`（引号通配需 Node 22+；Node 18/20 去掉单引号）。`runs/` 下已入库 82 个正式对局/局面题目录（含 179 盘 `game.pgn`），58 项纯 JS 与棋谱回归直接可跑；29 项浏览器播放测试需执行 `npm --prefix viewer ci` 安装开发依赖并具备 Chromium，3 项往返测试需 Python 规则库（共 32 项，未装自动跳过）。
 - 真模型冒烟：会消耗模型额度，只用 `medium`，半回合数压到个位数；免模型本地冒烟可用 `--white random --black random` 或 `engine:fsf:nodes=100`。
 
 ## 硬约束
@@ -53,5 +53,5 @@
 - 整盘协议是「模型就是真实棋手」：不报将军、吃子、威胁，不给合法着法，非法只说不合法。改提示先读 `docs/design.md` 第九节逐句去留；模型对模型双方思考延续方式须一致。
 - 防思维链泄露类拒答一出现就终止并回报用户：所有服务商、`real` / `legacy` / 旧记录均适用；不重问、不改措辞、不自动续跑，不当棋手输。仅被动监测正常对弈，禁止向真实模型主动诱发或探测拒答，检测验证只用本地假响应 / mock。可见理由不是加密思考；空回复或 503 无明确拒答证据时不算。
 - 规则判定沿用旧实现，不自行改棋规：中国象棋用 `pyffish`，国际象棋用 `python-chess`。两者属对通用规范「禁强 copyleft」的刻意例外：`pyffish` 是目前唯一提供中象重复局面与长将/长捉裁决的开源 Python 库（长捉属近似判定，边界见 `docs/design.md`），且两者仅由用户 `pip` 安装、不随仓分发，冗余的 `cchess` 已移除。上游来源见 `docs/design.md`，只读参考，不切上游归档分支。
-- 入库与忽略边界：`runs/` 已入库 78 个正式对局/局面题目录的 `game.pgn`、`analysis*.json*`（恶手字段口径：国际象棋看 `lichess: "Blunder"`，中国象棋看 `cls: "blunder"`）、`summary.*`、`judged.jsonl`、`report.txt`；原始大文件 `game.jsonl`、`record.txt`、`.mp4` 及新跑目录由 `.gitignore` 忽略（`python3 -m agi_chess export` 与 `agi_chess.analyze` 仅用于含 `game.jsonl` 的本地对局目录）。
+- 入库与忽略边界：`runs/` 已入库 82 个正式对局/局面题目录的 `game.pgn`、`analysis*.json*`（恶手字段口径：国际象棋看 `lichess: "Blunder"`，中国象棋看 `cls: "blunder"`）、`summary.*`、`judged.jsonl`、`report.txt`；原始大文件 `game.jsonl`、`record.txt`、`.mp4` 及新跑目录由 `.gitignore` 忽略（`python3 -m agi_chess export` 与 `agi_chess.analyze` 仅用于含 `game.jsonl` 的本地对局目录）。
 - 结论与汇报口径：研究结论写入 `docs/`，写明盘数与条件，小样本只看方向。每批对局汇报附累计总览表，按对阵组合、棋种及可比条件列有效盘数、先后手比分和关键指标；有当次目标时列剩余盘数，不混算旧协议或不同条件。

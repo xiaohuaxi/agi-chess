@@ -2,7 +2,7 @@
 
 # Setup & Running
 
-Start by recomputing published rating numbers or browsing the 175 checked-in official games and test samples in the viewer, then set up rule libraries, chess engines, and model CLIs only as needed. The first two activities make no model calls and consume no subscription or API quota.
+Start by recomputing published rating numbers or browsing the 179 checked-in official games and test samples in the viewer, then set up rule libraries, chess engines, and model CLIs only as needed. The first two activities make no model calls and consume no subscription or API quota.
 
 All commands in this guide run from the repository root. For experimental conclusions see the [Research Index](research.en.md), for third-party provenance and licensing see [Dependencies & Provenance](dependencies.en.md), and for the project overview see [README](../README.md).
 
@@ -54,7 +54,7 @@ Keep this terminal running and open in your browser (passing a run directory or 
 - Chess Test Sample: <http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en>
 - Xiangqi Test Sample: <http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en>
 
-The repository's `runs/` directory includes `game.pgn` (includes the visible reasoning, elapsed time, and token metadata recorded for model moves) for all 69 official model match directories (175 games in total): **62 single-game directories** (47 model-vs-model + 15 single-game model-vs-engine `b1-ch-*`/`b1-xq-*`) can be opened directly via `/runs/<tag>` (or `/runs/<tag>/game.pgn`), and **7 multi-game batch directories** (`b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`, 113 games in total) place each game in a second-level subdirectory `/runs/<batch>/<game>` (e.g. `?files=/runs/zc/maia-1900-s1-w`). The viewer automatically requests `analysis.jsonl` in the same directory to overlay blunder badges (silently ignoring 404s). Press Space to play/pause and Left/Right arrow keys to step through moves; press Ctrl-C in the server terminal when done. The server binds only to `127.0.0.1`; if port 8765 is busy, pass `--port 8000` to `node viewer/serve.mjs` and update the URL. The viewer uses ES modules and cannot be opened directly via `file://`. For full controls and video recording, see the [Viewer & Video Guide](viewer-guide.en.md).
+The repository's `runs/` directory includes `game.pgn` (includes the visible reasoning, elapsed time, and token metadata recorded for model moves) for all 73 official model match directories (179 games in total): **66 single-game directories** (51 model-vs-model + 15 single-game model-vs-engine `b1-ch-*`/`b1-xq-*`) can be opened directly via `/runs/<tag>` (or `/runs/<tag>/game.pgn`), and **7 multi-game batch directories** (`b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`, 113 games in total) place each game in a second-level subdirectory `/runs/<batch>/<game>` (e.g. `?files=/runs/zc/maia-1900-s1-w`). The viewer automatically requests `analysis.jsonl` in the same directory to overlay blunder badges (silently ignoring 404s). Press Space to play/pause and Left/Right arrow keys to step through moves; press Ctrl-C in the server terminal when done. The server binds only to `127.0.0.1`; if port 8765 is busy, pass `--port 8000` to `node viewer/serve.mjs` and update the URL. The viewer uses ES modules and cannot be opened directly via `file://`. For full controls and video recording, see the [Viewer & Video Guide](viewer-guide.en.md).
 
 The viewer defaults to Chinese; append `&lang=en` to switch the UI to English, and use `names=` to override displayed player names. See the [Viewer & Video Guide](viewer-guide.en.md) for syntax details.
 
@@ -87,7 +87,7 @@ python -m agi_chess play --game xiangqi --tag demo-prompt --dry-run
 python -m agi_chess.analyze runs/demo-random
 ```
 
-> **Note:** `python3 -m agi_chess.analyze` reads the raw `game.jsonl` log in a run directory to replay moves (`--table` also requires local `game.jsonl`). All 69 official match directories checked into `runs/` already include precomputed `analysis.jsonl` and `analysis-summary.json` files (for blunder classifications, check `lichess: "Blunder"` in International Chess and `cls: "blunder"` in Xiangqi), so you can inspect them directly or verify their cached summaries via `python3 -m agi_chess.analyze runs/g7-c-opus-astra-*` without re-running the engine.
+> **Note:** `python3 -m agi_chess.analyze` reads the raw `game.jsonl` log in a run directory to replay moves (`--table` also requires local `game.jsonl`). All 73 official match directories checked into `runs/` already include precomputed `analysis.jsonl` and `analysis-summary.json` files (for blunder classifications, check `lichess: "Blunder"` in International Chess and `cls: "blunder"` in Xiangqi), so you can inspect them directly or verify their cached summaries via `python3 -m agi_chess.analyze runs/g7-c-opus-astra-*` without re-running the engine.
 
 Optionally validate the position banks or run the full test suite; these are not prerequisites for your first match:
 

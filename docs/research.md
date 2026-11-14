@@ -2,14 +2,14 @@
 
 # 研究索引
 
-这里导航 `docs/results/` 的全部 32 篇报告，覆盖 2026-09-25 至 11-14 的实验、复盘和历史数据复算。它们研究的是特定模型、提示和会话条件下的表现，不能合成一个跨棋种、跨档位的总排行榜。
+这里导航 `docs/results/` 的全部 33 篇报告，覆盖 2026-09-25 至 11-14 的实验、复盘和历史数据复算。它们研究的是特定模型、提示和会话条件下的表现，不能合成一个跨棋种、跨档位的总排行榜。
 
 想看哪类证据：
 
 - 思考深度与延续：[第一批深度](results/batch1-depth.md)、[延续对照](results/batch1-carryover.md)、[会话内思考量](results/thinking-in-session.md)、[Argon/Opus 思考量对照](results/thinking-tokens-argon-opus-20261025.md)。
 - 送子和漏吃为什么发生：[局面题诊断](results/batch2-capture.md)、[实战失败点重问](results/missed-captures.md)。两者选题和提示不同，错因比例不能直接拼接。
 - 局面如何呈现：[第四批](results/batch4-presentation.md) → [跨模型复测](results/batch5-cross-model-presentation.md) → [真实棋手协议复测](results/batch6-real-presentation.md)。
-- 棋力刻度：[Opus Max 对引擎定位](results/opus-max-rating.md)；Argon 的[历史比较](results/argon-high-chess-rating-20261019.md)、[四盘交手](results/argon-vs-agy-opus-high-20261020.md)及 Carbon 的[四盘交手与思考量对照](results/carbon-vs-agy-opus-high-20261114.md)只支持方向与暂定判断。
+- 棋力刻度：[Opus Max 对引擎定位](results/opus-max-rating.md)；Argon 的[历史比较](results/argon-high-chess-rating-20261019.md)、[四盘交手](results/argon-vs-agy-opus-high-20261020.md)及 Carbon 的[国象四盘交手](results/carbon-vs-agy-opus-high-20261114.md)、[中象四盘交手](results/carbon-vs-agy-opus-high-xq-20261114.md)只支持方向与暂定判断。
 - 历史阶段总结：[第一轮总结](results/summary-round1.md)以第一至三批为主体，补入第四批局面呈现结论，不是最新总论；其中旧 Maia 人类评级链已被后续报告更正。
 
 ## 怎么读条件与样本
@@ -96,17 +96,19 @@
 
 - [Carbon 对 agy Opus High 四盘与思考量对照](results/carbon-vs-agy-opus-high-20261114.md)（11-14，国际象棋）。`agy:gemini-4-carbon` 对 `agy:claude-opus-5-5`，双方 llm-chat→agy（`1.5.8 acp`）、Google订阅额度、high、独立连续 session、real、plain、标准开局；对称先后手 4 盘（首局单跑、后三局并发），Carbon **4:0** 全部将死，加权 ACPL 18.1 / 35.4，Lichess 大失误 2 / 7（剔除含 1 次 `agy` 内部过滤重试的补第 2 局仍为 3:0、ACPL 17.7 / 35.0）。另附同日 `agy:gemini-4-hydrogen` high 探索自弈（52 半回合）的思考量与通道行为对照：Carbon（221 步均值 2,724.4 / 中位 1,489）与 Hydrogen（正常单次步均值 1,327.1 / 中位 911）均落在旧 CLI Opus `xhigh` 会话量级区间；小样本不拟合 Elo 分差或传递旧 Opus Max 评级。
 
+- [Carbon 对 agy Opus High 中国象棋四盘与思考量对照](results/carbon-vs-agy-opus-high-xq-20261114.md)（11-14，中国象棋）。型号与通道同上，四局并发、独立连续 session、real、plain、子力清单、标准开局；对称先后手 4 盘，Carbon **3:1**（红 2/2、黑 1/2）全部将死，加权 ACPL 50.1 / 56.0，大失误 11 / 14（合并件数 8 / 9；剔除含 12 次 `agy` 过滤重试的第 2 局为 2:1、ACPL 51.7 / 55.1，零重试的第 1、3 局为 2:0、ACPL 51.2 / 67.7）。仅给子力清单下 Carbon 每步思考均值 7,326.5、中位 5,582，升至同日国象约 2.7–3.8 倍并落在旧 CLI Opus `xhigh` 与 `max` 之间，经历 4 次上下文自动压缩均平稳续下无死循环；另记录 `agy 1.5.8 acp` 将内部重试的 `⚠ … blocked by content safety filters` 提示拼入普通文本流并以 `end_turn` 返回的观测现象。
+
 ## 仓库里有什么证据
 
 | 入库材料 | 能做什么 | 缺什么 |
 |---|---|---|
-| [32篇结果报告](results/) | 阅读条件、汇总数字、关键案例及限制 | 正式批次的棋谱、引擎分析与判卷汇总已入库 `runs/`；早期临时目录或截断分叉实验的底层事件流不在库 |
-| [正式对局与局面题判卷产物](../runs/) | 直接浏览全部 69 个正式模型对局目录——47 个模型互弈单盘目录 + 22 个模型对引擎目录（15 个单盘目录 `runs/<tag>/game.pgn` + 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`，合计 175 盘）——的 `game.pgn`（含每步思考理由、耗时与 token 统计）、`analysis.jsonl` / `analysis-summary.json`（174 盘）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的判卷结果 `judged.jsonl` 与 `report.txt` | 不含体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `games-engines.csv`）及 `.mp4` 录屏 |
+| [33篇结果报告](results/) | 阅读条件、汇总数字、关键案例及限制 | 正式批次的棋谱、引擎分析与判卷汇总已入库 `runs/`；早期临时目录或截断分叉实验的底层事件流不在库 |
+| [正式对局与局面题判卷产物](../runs/) | 直接浏览全部 73 个正式模型对局目录——51 个模型互弈单盘目录 + 22 个模型对引擎目录（15 个单盘目录 `runs/<tag>/game.pgn` + 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`，合计 179 盘）——的 `game.pgn`（含每步思考理由、耗时与 token 统计）、`analysis.jsonl` / `analysis-summary.json`（178 盘）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的判卷结果 `judged.jsonl` 与 `report.txt` | 不含体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `games-engines.csv`）及 `.mp4` 录屏 |
 | [第一批题库](../data/batch1/)与[第二批题库](../data/batch2/) | 查看选定局面与选题脚本；配合 `runs/quiz-*/judged.jsonl` 核对 9 个正式局面题批次的逐题判卷记录 | 早期未归入 `quiz-*` 正式目录的临时作答不在库；后续报告按各批剔除条件使用题库 |
 | [评级战绩与脚本](../analysis/rating/) | 从 `games-engines.csv`、`games-opus.csv`、`human-scale.json` 离线复算评级刻度（`rate.py report`），或直接查看已入库的批次汇总 `runs/zc/summary.md`、`runs/zx/summary.md` | `rate.py export` 重导 CSV 所需的纯引擎标定原始目录不在库（导出后的 CSV 已入库）；`stats.py` 统计每盘花费与墙钟需读取未入库的本机 `game.jsonl` |
 | [阅读器 fixtures](../viewer/test/fixtures/) | 测试、演示解析和显示 | 仅供测试演示；查看真实实验对局请直接打开单盘目录 `runs/<tag>/game.pgn` 或多盘批次子目录 `runs/<batch>/<game>/game.pgn` |
 
-评级复算在仓库根运行 `python3 analysis/rating/rate.py report --boot 10`（1.5 秒快检；去掉 `--boot 10` 跑完整 1,000 次自助法抽样约 1.5 分钟），不调用模型或引擎；9 批局面题判卷汇总表可运行 `python3 -m agi_chess.quiz report --batch batch2`（可换 `batch1`、`batch2`、`batch3`、`4p`、`4p2`、`5-ds`、`5-sol`、`6r`、`6r-sol`，0.1 秒出表）。`runs/` 现已随仓入库全部 175 盘正式模型对局的 `game.pgn`、引擎逐着复盘 `analysis.jsonl` 以及 9 批正式局面题判卷结果 `judged.jsonl`；仅体积庞大的底层事件流 `game.jsonl`、纯引擎互弈标定原始目录及录屏 `.mp4` 视频保持被 Git 忽略。
+评级复算在仓库根运行 `python3 analysis/rating/rate.py report --boot 10`（1.5 秒快检；去掉 `--boot 10` 跑完整 1,000 次自助法抽样约 1.5 分钟），不调用模型或引擎；9 批局面题判卷汇总表可运行 `python3 -m agi_chess.quiz report --batch batch2`（可换 `batch1`、`batch2`、`batch3`、`4p`、`4p2`、`5-ds`、`5-sol`、`6r`、`6r-sol`，0.1 秒出表）。`runs/` 现已随仓入库全部 179 盘正式模型对局的 `game.pgn`、引擎逐着复盘 `analysis.jsonl` 以及 9 批正式局面题判卷结果 `judged.jsonl`；仅体积庞大的底层事件流 `game.jsonl`、纯引擎互弈标定原始目录及录屏 `.mp4` 视频保持被 Git 忽略。
 
 ### `runs/` 目录前缀与实验批次速查表
 
@@ -120,7 +122,7 @@
 | `g6-c-*`、`g6-x-*` | 单盘目录 × 8（8 盘） | 国象 / 中象：Opus `xhigh`（`drop_thinking=on`）vs Astra `xhigh`（国象 3:1、中象 4:0） | [Opus 去掉此前思考对 Astra](results/game-opus-drop-vs-astra-1.md) |
 | `g7-c-*`、`g7-x-*` | 单盘目录 × 8（8 盘） | **巅峰对决**：国象 / 中象 Opus `max` vs Astra `max`（国象 3:1、中象 4:0） | [双方 Max 巅峰对决](results/game-opus-max-vs-astra-max-1.md) |
 | `argon-high-*`、`argon-vs-agy-opus-high-*`、`gemini38-*` | 单盘目录 × 7（7 盘） | Gemini Argon High 自弈（中象/国象各 1 盘）、Argon High vs agy Opus High 国象 4 盘（3:1）、Gemini 3.8 Flash High 中象自弈 | [Argon 中象自弈](results/argon-high-xiangqi-20261019.md)、[国象自弈](results/argon-high-chess-20261019.md)、[对 agy Opus 四盘](results/argon-vs-agy-opus-high-20261020.md) |
-| `carbon-vs-agy-opus-high-*` | 单盘目录 × 4（4 盘） | Gemini Carbon High vs agy Opus High 国象 4 盘（4:0） | [Carbon 对 agy Opus 四盘](results/carbon-vs-agy-opus-high-20261114.md) |
+| `carbon-vs-agy-opus-high-*` | 单盘目录 × 8（8 盘） | Gemini Carbon High vs agy Opus High 国象 4 盘（4:0）、中象 4 盘（3:1） | [国象四盘](results/carbon-vs-agy-opus-high-20261114.md)、[中象四盘](results/carbon-vs-agy-opus-high-xq-20261114.md) |
 | `b1-ch-*`、`b1-xq-*` | 单盘目录 × 15（15 盘） | 第一批 B：Opus `high`（`stateless`/`notes`/`session`）对 Maia-1100（9 盘）与 FSF `nodes=100`（6 盘） | [第一批 B：思考延续](results/batch1-carryover.md) |
 | `b1`、`b1-session`、`b2` | 多盘批次目录 × 3（40 盘） | 第二批 B1/C 国象（24 盘，对 random / Maia-1500 / Maia-1900）与 B2 中象（16 盘，对 FSF `nodes=30,100`） | [第二批 B1/C 国象](results/batch2-chess-strength.md)、[第二批 B2 中象](results/batch2-xiangqi-strength.md) |
 | `b3max-ch`、`b3max-xq` | 多盘批次目录 × 2（6 盘） | 第三批 B：Opus `max`（`stateless`）对引擎（国象 4 盘、中象 2 盘全胜） | [第三批 B：Max 整盘](results/batch3-maxdepth.md) |

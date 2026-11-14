@@ -4,9 +4,9 @@
 
 **If an AI cannot even play a decent game of chess on its own, it cannot be called AGI.** Chess and Xiangqi (Chinese Chess) are games of simple rules and complete information that ordinary people play well without specialized training; reasoning step by step from the position on the board to the moves that follow runs on the same principle as reasoning from the known to the unknown. A model that excels at coding or hard exam problems yet blunders pieces away the moment it sits at a board without an engine is still "jagged intelligence"—far from truly general.
 
-This project puts untuned general-purpose models at the board like human players—with no engines, legal-move lists, or tactical hints—to measure their real strength in International Chess and Xiangqi, diagnose why they blunder, and test how reasoning effort, board representation, and thought carryover affect their play. The repository includes the match and quiz runner, 175 official model games, 9 judged quiz batches, rating calibration scripts, research reports, and an interactive game viewer.
+This project puts untuned general-purpose models at the board like human players—with no engines, legal-move lists, or tactical hints—to measure their real strength in International Chess and Xiangqi, diagnose why they blunder, and test how reasoning effort, board representation, and thought carryover affect their play. The repository includes the match and quiz runner, 179 official model games, 9 judged quiz batches, rating calibration scripts, research reports, and an interactive game viewer.
 
-> **Interactive Game Viewer ([`viewer/`](viewer/)) — Browse All 175 Games Zero-Config**
+> **Interactive Game Viewer ([`viewer/`](viewer/)) — Browse All 179 Games Zero-Config**
 >
 > Without installing any chess engine or configuring API keys, run `node viewer/serve.mjs` in the repository root (listening on `127.0.0.1:8765` by default; or `python3 -m http.server 8765 --bind 127.0.0.1` if Node.js is unavailable), then open [`http://127.0.0.1:8765/viewer/?lang=en`](http://127.0.0.1:8765/viewer/?lang=en) to click a built-in featured game or go straight to [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1&lang=en`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1&lang=en) (passing a run directory or `game.pgn` automatically loads the companion `analysis.jsonl` blunder annotations) to see the board, per-move model rationales, engine blunder/mistake badges, elapsed time, and token stats. You can also drag any `runs/<tag>/game.pgn` or `runs/<batch>/<game>/game.pgn` (optionally alongside its `analysis.jsonl`) onto the page; exporting MP4 replay videos requires running `npm --prefix viewer ci` with Chromium and `ffmpeg` available (see [Viewer & Video Guide](docs/viewer-guide.en.md)).
 
@@ -27,7 +27,7 @@ All commands below run from the repository root and require neither model creden
 
 ### Part 1: Zero-Dependency 30-Second Experience (Only Python 3 Stdlib or Node.js)
 
-1. **Browse 175 Official Games & Engine Blunder Reviews**:
+1. **Browse 179 Official Games & Engine Blunder Reviews**:
 
    ```sh
    node viewer/serve.mjs
@@ -42,7 +42,7 @@ All commands below run from the repository root and require neither model creden
    - [Chess Rating Calibration Match (Opus Max vs Maia-1900)](http://127.0.0.1:8765/viewer/?files=/runs/zc/maia-1900-s1-w&lang=en)
    - [Chess Test Sample](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en) · [Xiangqi Test Sample](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en)
 
-   Use Left/Right arrow keys to step through moves and Space to play or pause; replace `files=` with any single-game directory `/runs/<tag>` (62 single-game directories) or multi-game batch subdirectory `/runs/<batch>/<game>` (7 multi-game batch directories `b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`). The viewer defaults to Chinese (`lang=zh`); append `&lang=en` for English, and use `names=` to override displayed player names (see [Viewer & Video Guide](docs/viewer-guide.en.md)).
+   Use Left/Right arrow keys to step through moves and Space to play or pause; replace `files=` with any single-game directory `/runs/<tag>` (66 single-game directories) or multi-game batch subdirectory `/runs/<batch>/<game>` (7 multi-game batch directories `b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`). The viewer defaults to Chinese (`lang=zh`); append `&lang=en` for English, and use `names=` to override displayed player names (see [Viewer & Video Guide](docs/viewer-guide.en.md)).
 
 2. **Recompute Rating Scales in Seconds** (requires only the Python 3 standard library):
 
@@ -116,7 +116,7 @@ If a model invokes or attempts a tool call, the match pauses immediately; if a s
 
 ## Runtime & Data Boundaries
 
-- **Official Games & Judged Quizzes Included:** `runs/` now ships with all 69 official model match directories—47 model-vs-model single-game directories + 22 model-vs-engine directories (15 single-game directories + 7 multi-game batch directories, 175 games in total)—including `game.pgn` (includes the visible reasoning, elapsed time, and token metadata recorded for model moves), `analysis.jsonl` / `analysis-summary.json` (per-move engine evaluations and blunder flags for 174 games), `summary.json` / `summary.md`, and 9 official position-quiz batches (`quiz-*`, 50 `judged.jsonl` files) with `judged.jsonl` and `report.txt`. Only bulky low-level event logs (`game.jsonl`), duplicate `record.txt` files, raw engine-vs-engine calibration games (whose outcomes are in `analysis/rating/games-engines.csv`), and `.mp4` video recordings are excluded.
+- **Official Games & Judged Quizzes Included:** `runs/` now ships with all 73 official model match directories—51 model-vs-model single-game directories + 22 model-vs-engine directories (15 single-game directories + 7 multi-game batch directories, 179 games in total)—including `game.pgn` (includes the visible reasoning, elapsed time, and token metadata recorded for model moves), `analysis.jsonl` / `analysis-summary.json` (per-move engine evaluations and blunder flags for 178 games), `summary.json` / `summary.md`, and 9 official position-quiz batches (`quiz-*`, 50 `judged.jsonl` files) with `judged.jsonl` and `report.txt`. Only bulky low-level event logs (`game.jsonl`), duplicate `record.txt` files, raw engine-vs-engine calibration games (whose outcomes are in `analysis/rating/games-engines.csv`), and `.mp4` video recordings are excluded.
 - **Built-in `llm-chat` Dual-Channel Driver:** The repository bundles `llm-chat` (`llm_chat.py` and `agy_core.py`) under `.agents/skills/llm-chat/`, and `agi_chess/chat.py` invokes this in-repo script by default—no external `llm-chat` skill installation is required. Full-game matches drive two categories of model channels (see [Setup & Running](docs/setup.en.md)):
   - **Local Agent CLI Subscription Channel** (primary experimental channel): Claude (via `claude` CLI), GPT (via `codex` CLI), and Gemini (via `agy` CLI), using the subscription quota of the locally installed and authenticated CLI; before a live game, both players are checked. Missing CLIs exit with code 2 and an OpenRouter command template preserving other arguments; replace its model placeholders with confirmed IDs. `--dry-run` needs neither model CLIs nor API keys.
   - **HTTP API Channel** (DeepSeek & OpenRouter): Explicit `openrouter:<vendor>/<model-id>` selects the separately billed API channel, including Claude/GPT; `claude:` / `codex:` keep the local CLI defaults. Configured via environment variables `API_KEY_OPENROUTER` (or `OPENROUTER_API_KEY`) and `API_KEY_DEEPSEEK` (or `DEEPSEEK_API_KEY`). When running `deepseek:flash` (`deepseek-flash`) or `deepseek:v4-pro` (`deepseek-v4-pro`), if `API_KEY_OPENROUTER` is set without `API_KEY_DEEPSEEK`, `llm-chat` automatically routes DeepSeek requests through OpenRouter (`deepseek-flash` → `deepseek/deepseek-v4.1-flash`, `deepseek-v4-pro` → `deepseek/deepseek-v4-pro`), so a separate official DeepSeek API key is not required.
@@ -135,7 +135,7 @@ If a model invokes or attempts a tool call, the match pauses immediately; if a s
 | `analysis/rating/` | Rating fitting scripts, match stats scripts, and input datasets |
 | `viewer/` | Web PGN viewer, MP4 recorder, test fixtures, and vendored third-party assets |
 | `docs/results/` | Batch-by-batch research reports |
-| `runs/` | Checked-in outputs for 69 official model match directories (175 `game.pgn` files + engine analyses) and 9 judged quiz batches; raw `game.jsonl` streams and `.mp4` videos are git-ignored |
+| `runs/` | Checked-in outputs for 73 official model match directories (179 `game.pgn` files + engine analyses) and 9 judged quiz batches; raw `game.jsonl` streams and `.mp4` videos are git-ignored |
 
 ## Licensing
 

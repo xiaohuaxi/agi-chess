@@ -1,6 +1,6 @@
 // 截图 / 录制脚本用的本机静态服务：只绑 127.0.0.1，端口由系统挑。
 // root 是站点根（仓库根目录）；mounts 把网址前缀映射到别的目录（例如把 /runs/ 指向外部未入库的本地对局目录；
-// 已入库的 175 盘正式对局 game.pgn 直接在仓内 runs/ 下，worktree 里也有）。
+// 已入库的 179 盘正式对局 game.pgn 直接在仓内 runs/ 下，worktree 里也有）。
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';

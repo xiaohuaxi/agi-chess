@@ -2,7 +2,7 @@
 
 # 安装与运行
 
-先复算已有结果或浏览仓内已入库的 175 盘正式对局与样例，再按需要准备规则库、引擎和模型调用环境。前两项不调用模型、不消耗订阅或 API 额度。
+先复算已有结果或浏览仓内已入库的 179 盘正式对局与样例，再按需要准备规则库、引擎和模型调用环境。前两项不调用模型、不消耗订阅或 API 额度。
 
 本文命令都从仓库根目录运行。研究结论见[研究索引](research.md)，依赖来源与许可见[依赖说明](dependencies.md)，项目入口见 [README](../README.zh-CN.md)。
 
@@ -54,7 +54,7 @@ node viewer/serve.mjs
 - 国际象棋测试样例：<http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn>
 - 中国象棋测试样例：<http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn>
 
-仓库 `runs/` 已随仓包含全部 69 个正式模型对局目录（共 175 盘）的 `game.pgn`（包含原记录中各模型步的可见思考理由、耗时与 token 元数据）：其中 **62 个单盘目录**（47 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）可直接传 `/runs/<tag>`（或 `/runs/<tag>/game.pgn`），**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `/runs/<batch>/<game>`（如 `?files=/runs/zc/maia-1900-s1-w`）；阅读器会自动请求同目录的 `analysis.jsonl` 叠加恶手徽章（若无则静默忽略）。按空格播放，左右键逐步看；用完在服务终端按 Ctrl-C。服务只绑定本机；若 8765 端口已占用，可用 `node viewer/serve.mjs --port 8000` 换端口并同步修改网址。页面不能直接用 `file://` 打开。更多操作见[棋谱浏览与视频录制](viewer-guide.md)。
+仓库 `runs/` 已随仓包含全部 73 个正式模型对局目录（共 179 盘）的 `game.pgn`（包含原记录中各模型步的可见思考理由、耗时与 token 元数据）：其中 **66 个单盘目录**（51 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）可直接传 `/runs/<tag>`（或 `/runs/<tag>/game.pgn`），**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `/runs/<batch>/<game>`（如 `?files=/runs/zc/maia-1900-s1-w`）；阅读器会自动请求同目录的 `analysis.jsonl` 叠加恶手徽章（若无则静默忽略）。按空格播放，左右键逐步看；用完在服务终端按 Ctrl-C。服务只绑定本机；若 8765 端口已占用，可用 `node viewer/serve.mjs --port 8000` 换端口并同步修改网址。页面不能直接用 `file://` 打开。更多操作见[棋谱浏览与视频录制](viewer-guide.md)。
 
 阅读器默认中文；在网址后加 `&lang=en` 切换英文，`names=` 可覆盖棋手显示名。具体写法见[阅读器指南](viewer-guide.md)。
 
@@ -87,7 +87,7 @@ python -m agi_chess play --game xiangqi --tag demo-prompt --dry-run
 python -m agi_chess.analyze runs/demo-random
 ```
 
-> **提示**：`python3 -m agi_chess.analyze` 需读取对局目录下的原始 `game.jsonl` 重放落定着法（`--table` 多盘汇总表同样需读取本地 `game.jsonl`）；仓内已入库的 69 个正式对局目录均已预先算好并随仓提交了 `analysis.jsonl` 与 `analysis-summary.json`（其中恶手字段国际象棋看 `lichess: "Blunder"`，中国象棋看 `cls: "blunder"`），无需重跑引擎即可直接分析或用 `python3 -m agi_chess.analyze runs/g7-c-opus-astra-*` 核对已入库分析摘要。
+> **提示**：`python3 -m agi_chess.analyze` 需读取对局目录下的原始 `game.jsonl` 重放落定着法（`--table` 多盘汇总表同样需读取本地 `game.jsonl`）；仓内已入库的 73 个正式对局目录均已预先算好并随仓提交了 `analysis.jsonl` 与 `analysis-summary.json`（其中恶手字段国际象棋看 `lichess: "Blunder"`，中国象棋看 `cls: "blunder"`），无需重跑引擎即可直接分析或用 `python3 -m agi_chess.analyze runs/g7-c-opus-astra-*` 核对已入库分析摘要。
 
 按需校验题库或运行完整测试（不是试跑首盘的前置步骤）：
 
