@@ -2,7 +2,7 @@
 
 # 棋谱浏览与视频录制
 
-阅读器直接读取 PGN：国际象棋用标准 PGN，中国象棋用 xqbase PGN。可以直接浏览随仓入库的 171 盘正式模型对局（58 个单盘目录 `runs/<tag>/game.pgn` 与 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`）、测试样例和自己的棋谱，不需要模型账号或棋类引擎。
+阅读器直接读取 PGN：国际象棋用标准 PGN，中国象棋用 xqbase PGN。可以直接浏览随仓入库的 175 盘正式模型对局（62 个单盘目录 `runs/<tag>/game.pgn` 与 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`）、测试样例和自己的棋谱，不需要模型账号或棋类引擎。
 
 阅读器默认中文，网址加 `lang=en` 可切换英文。安装总览见[安装与运行](setup.md)，实现与完整参数说明见[阅读器设计](viewer.md)，素材与工具许可见[依赖说明](dependencies.md)。
 
@@ -26,7 +26,7 @@ node viewer/serve.mjs
 - [中国象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
 - [两种棋样例连播](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1)
 
-仓库 `runs/` 目录已包含全部 65 个正式模型对局目录（共 171 盘）的 `game.pgn`：其中 **58 个单盘目录**（43 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）可直接写成 `/runs/<tag>`（或 `/runs/<tag>/game.pgn`），**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `/runs/<batch>/<game>`（如 `/runs/zc/maia-1900-s1-w`）。只需将网址中的 `files=` 改为对应目录或 `.pgn` 路径即可查看对局与每步思考理由；当路径指向 `game.pgn`（或目录简写）时，阅读器会自动尝试请求同目录的 `analysis.jsonl` 并严格校验叠加引擎恶手/失误/不精确徽章（若无则静默忽略，也支持用逗号显式传入多个文件）。服务必须从仓库根目录启动，URL 中的路径相对站点根目录。只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8765 被占用时可用 `node viewer/serve.mjs --port 8000` 换一个端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
+仓库 `runs/` 目录已包含全部 69 个正式模型对局目录（共 175 盘）的 `game.pgn`：其中 **62 个单盘目录**（47 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）可直接写成 `/runs/<tag>`（或 `/runs/<tag>/game.pgn`），**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `/runs/<batch>/<game>`（如 `/runs/zc/maia-1900-s1-w`）。只需将网址中的 `files=` 改为对应目录或 `.pgn` 路径即可查看对局与每步思考理由；当路径指向 `game.pgn`（或目录简写）时，阅读器会自动尝试请求同目录的 `analysis.jsonl` 并严格校验叠加引擎恶手/失误/不精确徽章（若无则静默忽略，也支持用逗号显式传入多个文件）。服务必须从仓库根目录启动，URL 中的路径相对站点根目录。只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8765 被占用时可用 `node viewer/serve.mjs --port 8000` 换一个端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
 
 ## 浏览自己的棋谱
 
@@ -106,6 +106,6 @@ ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,profile,pix
 
 默认应为 H.264 High、yuv420p、1080×1440、30/1。再实际打开视频，检查开头、几步走子、中文和终局横幅；中国象棋使用系统字体，不同机器的中文字形可能不同。
 
-已入库的 58 个单盘目录 `runs/<tag>/game.pgn` 与 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn` 已是最新导出的完整棋谱，可直接浏览或录制（无需也不可对其运行 `export`，因为体积庞大的底层 `game.jsonl` 未入库）。若录制自己新跑的模型对局，先确认对局已结束（本机 `game.jsonl` 最后一条为 `type=end`），再用 `python -m agi_chess export runs/<tag>` 导出或更新棋谱。
+已入库的 62 个单盘目录 `runs/<tag>/game.pgn` 与 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn` 已是最新导出的完整棋谱，可直接浏览或录制（无需也不可对其运行 `export`，因为体积庞大的底层 `game.jsonl` 未入库）。若录制自己新跑的模型对局，先确认对局已结束（本机 `game.jsonl` 最后一条为 `type=end`），再用 `python -m agi_chess export runs/<tag>` 导出或更新棋谱。
 
 英文录制在原命令后加 `--set lang=en --set "names=opus=Claude Opus,astra=GPT astra"`，也可同时用 `--openhold 0.5`。象棋英文着法为 WXF 显示，输入棋谱仍用 xqbase 格式。

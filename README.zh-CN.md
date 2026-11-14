@@ -4,9 +4,9 @@
 
 **如果连象棋都下不明白，那就不能称为 AGI 了。** 中国象棋与国际象棋规则透明、信息完全公开，常人不经专门训练也能下得有来有回；从眼前局面一步步推出后着，与从已知一步步推出未知本是一脉相承的推理能力。哪怕模型在写代码、解难题上再拿手，只要离开外部引擎、自己坐到棋盘前就频频漏算送子，它就仍是偏科的“锯齿状智能”，离真正的“通用”还差一层。
 
-本项目让未经棋类专训的通用大模型在不借引擎、不给合法着法提示的条件下，像真人一样下国际象棋与中国象棋，实测它们的真实棋力、拆解它们为何犯错，并检验思考深度、局面表示与思考延续方式对下法的影响。仓库收录了完整的对弈与局面题程序、171 盘正式对局棋谱、9 批局面题数据、等级分标定脚本、研究报告及配套棋谱阅读器。
+本项目让未经棋类专训的通用大模型在不借引擎、不给合法着法提示的条件下，像真人一样下国际象棋与中国象棋，实测它们的真实棋力、拆解它们为何犯错，并检验思考深度、局面表示与思考延续方式对下法的影响。仓库收录了完整的对弈与局面题程序、175 盘正式对局棋谱、9 批局面题数据、等级分标定脚本、研究报告及配套棋谱阅读器。
 
-> **棋谱阅读器（[`viewer/`](viewer/)）——零配置直接回放 171 盘对局**
+> **棋谱阅读器（[`viewer/`](viewer/)）——零配置直接回放 175 盘对局**
 >
 > 无需安装引擎或配置 API Key，在仓库根目录运行 `node viewer/serve.mjs`（默认监听 `127.0.0.1:8765`；若无 Node.js 可用 `python3 -m http.server 8765 --bind 127.0.0.1`），直接打开 [`http://127.0.0.1:8765/viewer/`](http://127.0.0.1:8765/viewer/) 点击页面上的内置代表局，或直达 [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1)（传对局目录名或 `game.pgn` 会自动伴随加载同目录 `analysis.jsonl` 的恶手标注），即可看到棋盘、每步模型思考理由、引擎复盘恶手徽章、耗时与 token 统计。也可将任意 `runs/<tag>/game.pgn` 或 `runs/<batch>/<game>/game.pgn`（可连带同目录 `analysis.jsonl`）拖入页面查看；导出 MP4 复盘视频需先执行 `npm --prefix viewer ci` 并具备 Chromium 与 `ffmpeg`（详见[棋谱阅读器指南](docs/viewer-guide.md)）。
 
@@ -27,7 +27,7 @@
 
 ### 第一部分：零依赖 30 秒即刻体验（仅需 Python 3 标准库或 Node.js）
 
-1. **浏览 171 盘棋谱与引擎恶手复盘**：
+1. **浏览 175 盘棋谱与引擎恶手复盘**：
 
    ```sh
    node viewer/serve.mjs
@@ -42,7 +42,7 @@
    - [国际象棋等级分锚定局（Opus Max vs Maia-1900）](http://127.0.0.1:8765/viewer/?files=/runs/zc/maia-1900-s1-w)
    - [国际象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn) · [中国象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
 
-   用左右方向键逐步看棋，空格播放或暂停；也可将网址中的 `files=` 替换为任意单盘目录 `/runs/<tag>`（58 个单盘目录）或多盘批次子目录 `/runs/<batch>/<game>`（7 个多盘批次目录 `b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`）。默认中文界面，网址加 `&lang=en` 切英文，`names=` 可覆盖棋手显示名（详见[阅读器指南](docs/viewer-guide.md)）。
+   用左右方向键逐步看棋，空格播放或暂停；也可将网址中的 `files=` 替换为任意单盘目录 `/runs/<tag>`（62 个单盘目录）或多盘批次子目录 `/runs/<batch>/<game>`（7 个多盘批次目录 `b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`）。默认中文界面，网址加 `&lang=en` 切英文，`names=` 可覆盖棋手显示名（详见[阅读器指南](docs/viewer-guide.md)）。
 
 2. **秒级复算等级分刻度**（仅需 Python 3 标准库）：
 
@@ -116,7 +116,7 @@
 
 ## 运行与数据边界
 
-- **正式对局与判卷产物已入库：** `runs/` 目录已随仓入库全部 65 个正式模型对局目录——43 个模型互弈单盘目录 + 22 个模型对引擎目录（15 个单盘 + 7 个多盘批次，合计 171 盘）——的 `game.pgn`（包含原记录中各模型步的可见思考理由、耗时与 token 元数据）、`analysis.jsonl` / `analysis-summary.json`（170 盘的引擎逐着评分与恶手判定）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的汇总判卷结果 `judged.jsonl` 与 `report.txt`。仅排除了体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `analysis/rating/games-engines.csv`）及录屏 `.mp4` 视频。
+- **正式对局与判卷产物已入库：** `runs/` 目录已随仓入库全部 69 个正式模型对局目录——47 个模型互弈单盘目录 + 22 个模型对引擎目录（15 个单盘 + 7 个多盘批次，合计 175 盘）——的 `game.pgn`（包含原记录中各模型步的可见思考理由、耗时与 token 元数据）、`analysis.jsonl` / `analysis-summary.json`（174 盘的引擎逐着评分与恶手判定）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的汇总判卷结果 `judged.jsonl` 与 `report.txt`。仅排除了体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `analysis/rating/games-engines.csv`）及录屏 `.mp4` 视频。
 - **内置 `llm-chat` 双通道调用层：** 仓库已在 `.agents/skills/llm-chat/` 内置 `llm-chat`（含 `llm_chat.py` 与 `agy_core.py`），`agi_chess/chat.py` 默认直接调用仓内脚本，无需额外安装外部 `llm-chat` skill。整盘对弈统一驱动两类通道（详见[安装与运行](docs/setup.md)）：
   - **本地 Agent CLI 订阅通道**（主力实验通道）：Claude（通过 `claude` CLI）、GPT（通过 `codex` CLI）、Gemini（通过 `agy` CLI），直接使用本机已安装并登录的 CLI 订阅额度；正式开盘前检查双方，缺 CLI 时退出码为 2，并给出保留其他参数的 OpenRouter 命令模板（型号占位须换成已确认的 ID）。`--dry-run` 无需模型 CLI 或 API Key。
   - **HTTP API 通道**（DeepSeek 及 OpenRouter）：显式 `openrouter:<vendor>/<model-id>` 选择另行收费的 API 渠道，也支持 Claude/GPT；`claude:` / `codex:` 仍默认走本机 CLI。支持设置环境变量 `API_KEY_OPENROUTER`（或 `OPENROUTER_API_KEY`）和 `API_KEY_DEEPSEEK`（或 `DEEPSEEK_API_KEY`）。运行 `deepseek:flash`（`deepseek-flash`）或 `deepseek:v4-pro`（`deepseek-v4-pro`）时，若仅配置了 `API_KEY_OPENROUTER` 而未设置 `API_KEY_DEEPSEEK`，`llm-chat` 会自动通过 OpenRouter 访问 DeepSeek 模型（`deepseek-flash` → `deepseek/deepseek-v4.1-flash`、`deepseek-v4-pro` → `deepseek/deepseek-v4-pro`），无需单独申请 DeepSeek 官方 Key。
@@ -135,7 +135,7 @@
 | `analysis/rating/` | 评级脚本、对局统计脚本及其输入数据 |
 | `viewer/` | 阅读器、录制工具、测试样例与第三方素材 |
 | `docs/results/` | 分批研究报告 |
-| `runs/` | 已入库的 65 个正式模型对局目录（171 盘 `game.pgn` 与引擎分析）及 9 批局面题判卷结果；底层 `game.jsonl` 与 `.mp4` 视频被 Git 忽略 |
+| `runs/` | 已入库的 69 个正式模型对局目录（175 盘 `game.pgn` 与引擎分析）及 9 批局面题判卷结果；底层 `game.jsonl` 与 `.mp4` 视频被 Git 忽略 |
 
 ## 许可说明
 
