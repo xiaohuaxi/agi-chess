@@ -50,14 +50,51 @@ class ExtractMove(unittest.TestCase):
     def test_move_on_next_line_after_colon(self):
         self.assertEqual(M.extract_move('我的着法：\n\ne2e4'), 'e2e4')
 
+    def test_english_move_line_anchored_and_revised(self):
+        # 行首 Move:（含 markdown 包裹、空 Move: 后跟新行 Move:、以及 c2-02 真实复现的两处 Move:）
+        self.assertEqual(M.extract_move('**Move: e2e4**', loose=True), 'e2e4**')
+        self.assertEqual(M.extract_move('**Move:** h2e2', loose=True), 'h2e2')
+        self.assertEqual(M.extract_move('**Move**: Nf3', loose=True), 'Nf3')
+        self.assertIsNone(M.extract_move('**Move:**', loose=True))
+        self.assertEqual(X.parse(X.start(), M.extract_move('**Move:** h2e2', loose=True)), ('h2e2', None))
+        self.assertEqual(C.parse(C.start(), M.extract_move('**Move**: Nf3', loose=True)), ('g1f3', None))
+        self.assertEqual(M.extract_move('Move:\n\nMove: g5f6', loose=True), 'g5f6')
+        self.assertEqual(M.extract_move('Move: f6 is the target; Bg5xf6.\n\nMove: g5f6', loose=True), 'g5f6')
+        # 正文句中出现的 "move: xxx" 不在行首，不当作着法标记（防误拆评注或错取对手上一步）
+        prose_only = "After Black's last move: c7c5, White controls the d5 square and prepares central expansion."
+        self.assertIsNone(M.extract_move(prose_only, loose=True))
+
+    def test_extract_reason_note_first_and_move_first(self):
+        self.assertEqual(M.extract_reason('White controls the center.\n\nMove: e2e4'), 'White controls the center.')
+        self.assertEqual(M.extract_reason('White controls the center.\n\n**Move:** e2e4'), 'White controls the center.')
+        self.assertEqual(M.extract_reason('Move: e2e4\n\nWhite controls the center.'), 'White controls the center.')
+        self.assertIsNone(M.extract_reason('Move: e2e4'))
+        self.assertIsNone(M.extract_reason('**Move: e2e4**'))
+        self.assertIsNone(M.extract_reason('**Move:** e2e4'))
+
 
 class ExtractNote(unittest.TestCase):
     def test_note_stops_before_move_line(self):
         reply = '便条: 计划中心\n多行\n继续便条\n着法: e2e4'
         self.assertEqual(M.extract_note(reply), '计划中心\n多行\n继续便条')
 
+    def test_english_note_stops_before_move_line(self):
+        reply = 'Note: Contest the open e-file\nand prepare O-O.\nMove: g1f3'
+        self.assertEqual(M.extract_note(reply), 'Contest the open e-file\nand prepare O-O.')
+        reply_md = '**Note:** Watch the central pawn.\n**Move:** e2e4'
+        self.assertEqual(M.extract_note(reply_md), 'Watch the central pawn.')
+        reply_multiline = 'Note:\nWatch d5 square.\nMove: e2e4'
+        self.assertEqual(M.extract_note(reply_multiline), 'Watch d5 square.')
+
+    def test_empty_note_before_move_line_does_not_swallow_move(self):
+        self.assertIsNone(M.extract_note('Note:\nMove: e2e4'))
+        self.assertIsNone(M.extract_note('Note:   \nMove: e2e4'))
+        self.assertIsNone(M.extract_note('**Note:**\n**Move:** e2e4'))
+        self.assertIsNone(M.extract_note('便条:\n着法: e2e4'))
+
     def test_no_note(self):
         self.assertIsNone(M.extract_note('没有便条只有着法: e2e4'))
+        self.assertIsNone(M.extract_note('White develops the knight.\nMove: g1f3'))
 
     def test_none_reply(self):
         self.assertIsNone(M.extract_note(None))
@@ -95,6 +132,26 @@ class NotesText(unittest.TestCase):
         # keep=1 时应该拿到最后一条“非空”便条，而不是被 None/'' 占位挤掉
         text = M.notes_text(['n1', None, '', 'n2'], 1)
         self.assertTrue(text.endswith('n2'))
+
+    def test_english_notes_and_retry_prompt(self):
+        sc_en = {'protocol': 'real', 'lang': 'en', 'memory': 'session'}
+        self.assertEqual(M.notes_text(['plan A'], 1, sc_en), 'Your note from the previous turn:\nplan A')
+        self.assertIn('1. plan A\n2. plan B', M.notes_text(['plan A', 'plan B'], 2, sc_en))
+        retry = M.retry_prompt_real(sc_en, 'BASE', [('（没写）', M.feedback_text(sc_en, 'no_move'))], 1)
+        self.assertEqual(
+            retry,
+            'Your previous move "(none)": no move was found in your response. '
+            'Please make another move (1 retry remaining on this turn before forfeit.)',
+        )
+        sc_sl = {'protocol': 'real', 'lang': 'en', 'memory': 'stateless'}
+        retry_sl = M.retry_prompt_real(sc_sl, 'BASE', [('a0a9', M.feedback_text(sc_sl, 'illegal'))], 2)
+        self.assertIn('Moves you already tried on this turn:\n"a0a9": that move is illegal', retry_sl)
+        self.assertIn('2 retries remaining on this turn before forfeit.', retry_sl)
+        # notes + reason=off 英文下允许附带 Note: 行，不与单行无他文冲突；session + reason=off 仍严格单行
+        self.assertIn('only a single line "Move: "', M.answer_lead({'protocol': 'real', 'lang': 'en', 'memory': 'session', 'reason': 'off'}))
+        notes_off = M.answer_lead({'protocol': 'real', 'lang': 'en', 'memory': 'notes', 'reason': 'off'})
+        self.assertIn('optional "Note: " line', notes_off)
+        self.assertNotIn('only a single line', notes_off)
 
 
 if __name__ == '__main__':

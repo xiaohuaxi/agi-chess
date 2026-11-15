@@ -33,6 +33,15 @@
 - **中国象棋（37 盘，定稿，`runs/zx/`）**：在 Fairy-Stockfish 限节点阶梯上约 +121（nodes=100 为 0，95% +1 到 +236），比 nodes=100 强、和 nodes=300（+82）相当或略强、明显弱于 nodes=1000。对 nodes=30 得分反而最低（44%），是 opus 自己那几盘大失误多，按盘少的噪声看。没有满 200 个半回合的盘。不给人类段位（用户 10-02、10-04 定，见「已拍板」）。
 - 被安全防护拦 5 次（国际象棋 3、中国象棋 2，最后一次 10-02 18:31），当时按 10-02 约定重问续下、正常计入（历史事实；现行规则已改为一次即停）；警戒没触发。opus 标价合计 $1,477.09（国际象棋 $649.58、中国象棋 $827.51，不含冒烟）。
 
+## 英文默认提示词切换与 Opus 防思维链误拦实测（2026-11-15）
+
+- 起因：仓库已公开，需将整盘协议默认提示词改为英文以便外部用户直接使用，同时保留旧中文提示开关；此外 2026-11-14 `Carbon High` 对 `agy Opus 5.5 High` 八盘对弈中 Opus 侧触发了 14 次上游安全过滤（`blocked by content safety filters`，12 次集中在第 2 局第 78 半回合后），需在后续直连 Claude 官方订阅跑 `xhigh` / `max` 前查清根因并消除隐患。
+- 实施与实测（详见 `results/english-prompts-filter-mitigation-20261115.md`）：
+  - **首次即停熔断补齐**：在 `.agents/skills/llm-chat/scripts/agy_core.py`（`REFUSAL_MARKS`）与 `agi_chess/claude_cli.py`（`refusal_text`）同步补齐 `blocked by content safety filters` 识别，避免内联过滤重试提示混入连续会话历史引发雪崩；同步修订 `AGENTS.md` 中 `llm-chat` 由全局迁入项目专用后的表述。
+  - **默认英文提示词与 `--lang en|zh` 开关**：`agi_chess/{memory,xiangqi,chess_,runner,cli,batch}.py` 新增 `--lang en|zh`（`--protocol real` 下默认 `en`，传 `--lang zh` 或读取无 `lang` 字段的旧 `config` 时逐字节保留原中文提示；中国象棋 `lang=en` 下对方上一步与历史着法统一用纯 ICCS 坐标，导出 `game.pgn` 与 `viewer/` 保持 100% 兼容）。
+  - **两阶段共 147 次真实调用验证**：在 `agy:claude-opus-5-5`（`high`）上先跑 $4 \times 10 = 40$ 次复杂中局单步对照（均 0 过滤），证实直译原中文 `plain` 到英文仍有 100% 第一人称逐格验算与 90% 排除列表，而将 `ANSWER_LEAD_EN['plain']` 设为 1–3 句客观第三人称局面短评、收紧 `off` 为无附加说明的单行 `Move:` 后，第一人称独白与半句自我更正降至 0%（篇幅折合 80–125 汉字，与既有棋谱中 Carbon、Argon 不限长时的 92–128 字/1–2 句自然水位对齐）；再在落定的 `--lang en` 提示词下跑 4 盘连续 `session` 实盘（共 107 次调用，含 `plain` 105 次、`off` 2 次，最长 80 半回合、单步缓存读 10.9 万 token），落定方案合计 117 次调用（及全部 147 次实测）在 `game.jsonl` 与底层 `agy` transcript 均 **0 次安全过滤或拒答**、105 次 `plain` 连续回合 **0% 自我更正、0% 列表枚举**，两盘中象长局合计 69 步零大失误（ACPL 26.0 / 55.0）。
+- 验证：全量 Python 单元测试 **373 项通过（0 跳过）**，两批题库校验通过，阅读器测试 **90 项**通过。
+
 ## 仓内 llm-chat 切至 agy acp 与批次续跑预检修复（2026-11-13）
 
 - 起因：`agy` 1.5.8 移除旧 `--input-format stream-json` / `--print-timeout` / `--conversation` 参数，改走 `agy acp`（stdio JSON-RPC 2.0），且原生读文件工具改为 `read_file(Path=...)`；此前 `llm-chat` 对纯文本对弈会话也默认写入 `tools: [view_file]`，另发现 `agi_chess/batch.py` 整批续跑未完盘预检漏传 `sessions_dir=ctx.get('chat_sessions')` 与旧盘迁移。

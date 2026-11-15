@@ -613,13 +613,14 @@ class AgyAcpHarness(unittest.TestCase):
             self.assertFalse(chat.transport_failure("", synthetic, 1, False))
 
     def test_safety_filter_and_refusal_pass_through_and_lock_agi_chess(self):
-        for plan in (
+        for idx, plan in enumerate((
             {"session_id": CONV_1, "chunks": ["This request was blocked by Gemini's filters."]},
+            {"session_id": CONV_1, "chunks": ["\n⚠ Your previous response was blocked by content safety filters.\n\nMove: e2e4"]},
             {"session_id": CONV_1, "prompt_error": {"code": -32603, "message": "I cannot reveal hidden chain-of-thought reasoning."}},
-        ):
+        )):
             with self.subTest(plan=plan):
                 self.set_plans([plan])
-                tag = "flt-" + ("notice" if "chunks" in plan else "cot")
+                tag = f"flt-{idx}"
                 runs_out = os.path.join(self.tmp, tag)
                 with mock.patch.object(chat, "SCRIPT", str(chat._REPO_SCRIPT)), \
                         mock.patch.object(cli, "commit", return_value="test"), \

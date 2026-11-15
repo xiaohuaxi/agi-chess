@@ -10,6 +10,7 @@
 w / b 是「我方」（--player，默认 claude:opus）执先走的一方（红 / 白）还是黑方。--colors both 时同一开局两色各一盘。
 协议 --protocol 同 play（默认 real：连续会话、走 llm-chat，memory 默认 session）；改协议之前开的批次要续跑、追加，
   得带 --protocol legacy（和它当初的 --memory），batch.json 里没有 protocol 就是 legacy。
+提示词语言 --lang en|zh 同 play（只在 real 下，默认 en；改默认之前开的 real 模型批次 batch.json 里没有 lang，续跑得带 --lang zh）。
 我方的变量：--effort（默认 xhigh）、--memory（默认 real 下 session、legacy 下 stateless）、--set 变量=值（可重复，只加在我方，变量同 play 的 --w / --b）；
 其余照 play 的默认值。随机开局默认国际象棋 random:8、中国象棋 random:6，--opening none 关掉。
 对手写法同 play 的棋手，engine: 前缀可省：random、maia-1100 … maia-1900、stockfish:elo=1600、fsf:nodes=100。
@@ -94,17 +95,23 @@ def other(side):
 
 # ---------------------------------------------------------------- 批次设置与锁
 def batch_meta(a):
-    """呈现方式（show）单独记：--set 里的 show=… 不进 set，改记实际生效的给法（不给就是棋种默认给法），而且只在它不是
-    all 时才记——all 是改默认之前的给法，改之前开的批次 batch.json 里没有 show 这一项，照旧设置续跑、追加种子都还对得上；
-    中国象棋的旧批次不写 --set show=all 就会因为多出 show: pieces 报不一致，不会悄悄把两种给法混进一批。
-    给了自定义 view 或我方不是模型时不记。"""
+    """呈现方式（show）与全局语言（lang）单独记：--set 里的 show=… 不进 set，改记实际生效的给法；--set lang=… 留在 set 里
+    （只改我方单侧，和双方生效的 --lang 严格区分）。show=all 与 real 下全局 lang=zh 都是改默认之前的口径，旧批次 batch.json
+    里没有对应键，照旧设置续跑对得上；旧批次不带 --set show=all 或 --lang zh（或误改为单侧 --set lang=zh）就会报不一致，
+    不会悄悄把不同语言或给法混进同一批。纯引擎/随机标定批次（双方均非模型且未显式传 --lang）不记 lang。"""
     sets = [kv for kv in a.set or [] if not kv.startswith('show=')]
     kv = dict(x.split('=', 1) for x in a.set or [] if '=' in x)
     show = kv.get('show') or (None if 'view' in kv else cli.game_module(a.game).DEFAULT_SHOW)
     meta = {'game': a.game, 'player': a.player, 'effort': a.effort, 'memory': a.memory, 'set': sorted(sets),
             'opening': a.opening, 'max_plies': a.max_plies, 'retries': a.retries}
+    opps = [full_spec(o) for o in (getattr(a, 'opp', None) or [])]
+    has_model = any(runner.player_kind(p) in runner.MODEL_KINDS for p in [a.player, *opps])
     if a.protocol != 'legacy':                   # 旧批次的 batch.json 没有这一项，legacy 照旧对得上
         meta['protocol'] = a.protocol
+        g_lang = getattr(a, 'lang', None)
+        eff_global = g_lang or 'en'
+        if (has_model or g_lang is not None) and eff_global != 'zh':
+            meta['lang'] = eff_global
     if show not in (None, 'all') and a.player.startswith('claude:'):
         meta['show'] = show
     return meta
@@ -116,7 +123,7 @@ def check_meta(bdir, meta):
     if os.path.exists(path):
         with open(path, encoding='utf-8') as f:
             old = json.load(f)
-        diff = {k: (old.get(k), v) for k, v in meta.items() if old.get(k) != v}
+        diff = {k: (old.get(k), meta.get(k)) for k in dict.fromkeys([*old, *meta]) if old.get(k) != meta.get(k)}
         if diff:
             raise SystemExit('%s 的设置和这次不一致（旧值, 这次）：%s\n换个 --batch，或者照旧设置跑' % (
                 path, json.dumps(diff, ensure_ascii=False)))
@@ -179,6 +186,8 @@ def play_cmd(a, gdir, opp, seed, side):
            '--out', os.path.dirname(gdir), '--white', players['w'], '--black', players['b'],
            '--protocol', a.protocol, '--effort', a.effort, '--memory', a.memory, '--max-plies', str(a.max_plies), '--retries', str(a.retries),
            '--seed', str(seed), '--stop-file', os.path.join(os.path.dirname(gdir), STOP)]
+    if getattr(a, 'lang', None):
+        cmd += ['--lang', a.lang]
     for kv in a.set or []:
         cmd += ['--' + side, kv]
     n = opening.parse_mode(a.opening)
@@ -342,6 +351,15 @@ def cmd_run(a):
         k, sep, _ = kv.partition('=')
         if not sep or k not in cli.SIDE_KEYS:
             raise SystemExit('--set 写成 变量=值，变量是 %s 之一：%r' % ('/'.join(cli.SIDE_KEYS), kv))
+    set_kv = dict(x.split('=', 1) for x in a.set or [] if '=' in x)
+    g_lang, s_lang = getattr(a, 'lang', None), set_kv.get('lang')
+    if a.protocol == 'legacy' and (g_lang is not None or s_lang is not None):
+        raise SystemExit('lang 只在 real 协议下可用')
+    for lv in (g_lang, s_lang):
+        if lv is not None and lv not in cli.memory.LANGS:
+            raise SystemExit('lang 只能是 %s，收到 %r' % ('/'.join(cli.memory.LANGS), lv))
+    if a.protocol == 'real' and (s_lang or g_lang or 'en') == 'en' and set_kv.get('recite') == 'on':
+        raise SystemExit('recite=on 仅在中文提示（--lang zh）下可用')
     player_effort = a.effort
     for kv in a.set or []:
         if kv.startswith('effort='):
@@ -586,6 +604,8 @@ def main(argv=None):
     p.add_argument('--opening', help='random:N 或 none；默认国际象棋 random:8、中国象棋 random:6')
     p.add_argument('--effort', default='xhigh')
     p.add_argument('--protocol', choices=('real', 'legacy'), default='real', help='同 play 的 --protocol')
+    p.add_argument('--lang', choices=cli.memory.LANGS, default=None,
+                   help='同 play 的 --lang（只在 real 下，默认 en；zh 保留旧中文提示词）')
     p.add_argument('--memory', default=None, help='默认 real 下 session、legacy 下 stateless')
     p.add_argument('--set', action='append', metavar='变量=值', help='只加在我方的变量（同 play 的 --w / --b），可重复')
     p.add_argument('--max-plies', dest='max_plies', type=int, default=200)

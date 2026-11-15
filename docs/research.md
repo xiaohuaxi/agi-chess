@@ -2,7 +2,7 @@
 
 # 研究索引
 
-这里导航 `docs/results/` 的全部 33 篇报告，覆盖 2026-09-25 至 11-14 的实验、复盘和历史数据复算。它们研究的是特定模型、提示和会话条件下的表现，不能合成一个跨棋种、跨档位的总排行榜。
+这里导航 `docs/results/` 的全部 34 篇报告，覆盖 2026-09-25 至 11-15 的实验、复盘和历史数据复算。它们研究的是特定模型、提示和会话条件下的表现，不能合成一个跨棋种、跨档位的总排行榜。
 
 想看哪类证据：
 
@@ -80,7 +80,7 @@
 
 - [Opus Max 棋力定位](results/opus-max-rating.md)（10-01—03对局，10-04补新规回看；两种棋）。`claude-opus-5-5`、max、llm-chat、连续会话带思考、plain 理由、real；随机代走国际象棋 8 / 中国象棋 6 半回合。国际象棋对 Maia-1900 和 Stockfish 19 限强三档，共 30 盘；中国象棋对 Fairy-Stockfish 14.0.1 节点阶梯，共 37 盘，另有引擎互下标定。国际象棋旧到上限计和版约 lichess Blitz 1910 / Rapid 2020，新规事后回看约 1800 / 1920；这是两种口径的点估计，不是一个置信区间，且原盘没有按新提示重下。中国象棋只给引擎相对位置，不给人类段位。评级刻度可用入库CSV离线复算；全部对局的 `game.pgn`（含每步思考理由、耗时与 token 统计）及引擎复盘 `analysis.jsonl` 已随 `runs/` 入库。
 
-## Argon、Carbon 与后续比较（2026-10-19—11-14）
+## Argon、Carbon 与后续比较（2026-10-19—11-15）
 
 - [Argon High 中国象棋自弈](results/argon-high-xiangqi-20261019.md)（10-19）。双方 `gemini:gemini-4-argon-high`、high、agy、独立连续会话、real、plain、子力清单；1 盘，158 半回合、黑胜。复现送车与漏吃，所有着法合法不代表攻防可靠；自弈一盘不能评级或排模型强弱。
 
@@ -98,11 +98,13 @@
 
 - [Carbon 对 agy Opus High 中国象棋四盘与思考量对照](results/carbon-vs-agy-opus-high-xq-20261114.md)（11-14，中国象棋）。型号与通道同上，四局并发、独立连续 session、real、plain、子力清单、标准开局；对称先后手 4 盘，Carbon **3:1**（红 2/2、黑 1/2）全部将死，加权 ACPL 50.1 / 56.0，大失误 11 / 14（合并件数 8 / 9；剔除含 12 次 `agy` 过滤重试的第 2 局为 2:1、ACPL 51.7 / 55.1，零重试的第 1、3 局为 2:0、ACPL 51.2 / 67.7）。仅给子力清单下 Carbon 每步思考均值 7,326.5、中位 5,582，升至同日国象约 2.7–3.8 倍并落在旧 CLI Opus `xhigh` 与 `max` 之间，经历 4 次上下文自动压缩均平稳续下无死循环；另记录 `agy 1.5.8 acp` 将内部重试的 `⚠ … blocked by content safety filters` 提示拼入普通文本流并以 `end_turn` 返回的观测现象。
 
+- [英文默认提示词切换与 Opus 防思维链误拦实测](results/english-prompts-filter-mitigation-20261115.md)（11-15，两种棋，提示与安全通道验证）。`agy:claude-opus-5-5`、`high`、llm-chat→agy（`1.5.8 acp`）；分两阶段共 **147 次真实调用**（第一阶段 4 组英文格式 × 10 复杂中局 = 40 次单步语体对照，含落定方案 10 次与对照方案 30 次，均 0 过滤；第二阶段落定的 `--lang en` 连续 `session` 实盘 4 盘共 107 次调用，含 `plain` 105 次与 `off` 2 次，对 `fsf:nodes=200` 与 `stockfish:elo=1800`）。证实单纯直译中文 `plain` 到英文仍有 100% 第一人称验算与 90% 排除列表；改为首句锚定 1–3 句客观第三人称短评（`en_note_first`，正式定为 `--lang en` 默认 `plain`）并收紧 `off` 为单行着法后，落定方案合计 117 次调用（及全部 147 次实测）在 `game.jsonl` 与底层 `agy` transcript 均 **0 次过滤/拒答**，105 次连续 `plain` 回合 **0% 自我更正独白、0% 列表枚举**，两盘中国象棋长局合计 69 步零大失误（ACPL 26.0 / 55.0）；同步补齐 `blocked by content safety filters` 首次即停熔断与 `--lang zh` 历史中文兼容开关。
+
 ## 仓库里有什么证据
 
 | 入库材料 | 能做什么 | 缺什么 |
 |---|---|---|
-| [33篇结果报告](results/) | 阅读条件、汇总数字、关键案例及限制 | 正式批次的棋谱、引擎分析与判卷汇总已入库 `runs/`；早期临时目录或截断分叉实验的底层事件流不在库 |
+| [34篇结果报告](results/) | 阅读条件、汇总数字、关键案例及限制 | 正式批次的棋谱、引擎分析与判卷汇总已入库 `runs/`；早期临时目录或截断分叉实验的底层事件流不在库 |
 | [正式对局与局面题判卷产物](../runs/) | 直接浏览全部 73 个正式模型对局目录——51 个模型互弈单盘目录 + 22 个模型对引擎目录（15 个单盘目录 `runs/<tag>/game.pgn` + 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`，合计 179 盘）——的 `game.pgn`（含每步思考理由、耗时与 token 统计）、`analysis.jsonl` / `analysis-summary.json`（178 盘）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的判卷结果 `judged.jsonl` 与 `report.txt` | 不含体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `games-engines.csv`）及 `.mp4` 录屏 |
 | [第一批题库](../data/batch1/)与[第二批题库](../data/batch2/) | 查看选定局面与选题脚本；配合 `runs/quiz-*/judged.jsonl` 核对 9 个正式局面题批次的逐题判卷记录 | 早期未归入 `quiz-*` 正式目录的临时作答不在库；后续报告按各批剔除条件使用题库 |
 | [评级战绩与脚本](../analysis/rating/) | 从 `games-engines.csv`、`games-opus.csv`、`human-scale.json` 离线复算评级刻度（`rate.py report`），或直接查看已入库的批次汇总 `runs/zc/summary.md`、`runs/zx/summary.md` | `rate.py export` 重导 CSV 所需的纯引擎标定原始目录不在库（导出后的 CSV 已入库）；`stats.py` 统计每盘花费与墙钟需读取未入库的本机 `game.jsonl` |

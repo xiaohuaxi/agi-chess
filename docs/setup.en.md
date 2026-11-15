@@ -80,7 +80,7 @@ Without any API key or local engine, you can play a complete 20-ply match betwee
 # Play 20 plies between two random movers (writes runs/demo-random/{game.jsonl,record.txt,game.pgn}, viewable at ?files=/runs/demo-random)
 python -m agi_chess play --game chess --tag demo-random --white random --black random --max-plies 20 --seed 42
 
-# Print the system prompt and first-move user prompt without calling any model or writing files
+# Print the system prompt and first-move user prompt without calling any model or writing files (defaults to --lang en; pass --lang zh for historical Chinese prompts)
 python -m agi_chess play --game xiangqi --tag demo-prompt --dry-run
 
 # If stockfish or fairy-stockfish is installed, run post-game engine analysis on your local game (writes analysis.jsonl & analysis-summary.json)
@@ -99,7 +99,7 @@ python -m unittest discover -s tests -t . -v
 
 `python3 data/batch1/select_positions.py check` and `python3 data/batch2/select_positions.py check` rely only on the two rule libraries above to validate the checked-in Batch 1 and Batch 2 position banks (`data/batch1/{xiangqi,chess}.jsonl` and `data/batch2/{xiangqi,chess}.jsonl` FENs, side to move, and move legality) offline, without launching engines or reading `runs/`.
 
-The full Python test suite (367 tests) includes 21 live-engine handshake and move-generation tests that require `stockfish` and `fairy-stockfish`. **When local engines are not installed, `unittest -v` automatically skips those 21 engine tests while passing all 346 offline tests**; with both engines installed, all 367 tests pass (0 fail / 0 skip). Engines are standalone executables not installed by `pip`; their licenses are documented separately in [Dependencies & Provenance](dependencies.en.md).
+The full Python test suite (373 tests) includes 21 live-engine handshake and move-generation tests that require `stockfish` and `fairy-stockfish`. **When local engines are not installed, `unittest -v` automatically skips those 21 engine tests while passing all 352 offline tests**; with both engines installed, all 373 tests pass (0 fail / 0 skip). Engines are standalone executables not installed by `pip`; their licenses are documented separately in [Dependencies & Provenance](dependencies.en.md).
 
 ## Model Matches: Built-in `llm-chat`, Local CLI Subscriptions & HTTP API Keys
 
@@ -121,6 +121,8 @@ Full-game matches run through `agi_chess/chat.py`, which invokes `llm-chat`. **T
 `--dry-run` generates prompts offline without a model CLI or API key. A custom `AGI_CHESS_LLM_CHAT` is checked only for script existence; its backend requirements belong to that script. Resume keeps the recorded backend, including DeepSeek direct vs. OpenRouter; restore the original route configuration instead of switching channels.
 
 New games use `agy:`; `gemini:` is retained only for old-record resume. Prefer `--white agy:gemini-3.8-flash --effort medium`. Full slugs such as `gemini-3.8-flash-medium` remain supported, but their suffix must match the final effort for that side or the game is rejected before starting. `--effort` supplies the default for both sides; `--w effort=...` / `--b effort=...` overrides one side. Identically named levels across providers do not imply equal compute.
+
+Under `--protocol real` (the default for `play` and `batch run`), prompts default to **English (`--lang en`)**, with `--reason plain` asking for a 1–3 sentence objective third-person position note before `Move: <coord>`. Pass `--lang zh` to use the historical Chinese prompts, `--reason off` for single-line move-only output (`Move: <coord>`), or `--w` / `--b` (`lang=...`, `reason=...`) to configure one side; `resume` automatically preserves the language recorded in the game's `config`.
 
 Configuration and command examples:
 

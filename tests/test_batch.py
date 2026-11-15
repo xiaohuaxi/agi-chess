@@ -51,8 +51,51 @@ class Helpers(unittest.TestCase):
         self.assertEqual(meta('xiangqi', None, 'engine:fsf:nodes=10'), dict(old, player='engine:fsf:nodes=10'))
         self.assertEqual(meta('chess', None), dict(old, game='chess'))
         self.assertEqual(meta('chess', ['show=board', 'legal=list']), dict(old, game='chess', set=['legal=list'], show='board'))
-        # 新协议的批次记 protocol；旧批次的 batch.json 没有这一项，只有 legacy 对得上
-        self.assertEqual(meta('chess', None, protocol='real'), dict(old, game='chess', protocol='real'))
+        # 新协议的模型批次默认记 lang=en；旧中文 real 模型批次（无 lang）须带 --lang zh 才对得上；引擎标定批次不记 lang
+        self.assertEqual(meta('chess', None, protocol='real'), dict(old, game='chess', protocol='real', lang='en'))
+        self.assertEqual(meta('chess', None, player='engine:maia-1900', protocol='real'),
+                         dict(old, game='chess', player='engine:maia-1900', protocol='real'))
+        # 我方非模型、对手是模型时同样跟踪全局 lang，防止模型对手混入不同语言条件
+        a_opp_model = argparse.Namespace(game='chess', player='random', opp=['claude:opus'], effort='xhigh',
+                                         memory='session', set=None, opening='', max_plies=200, retries=2,
+                                         protocol='real', lang=None)
+        self.assertEqual(B.batch_meta(a_opp_model)['lang'], 'en')
+        a_opp_model_zh = argparse.Namespace(game='chess', player='random', opp=['claude:opus'], effort='xhigh',
+                                            memory='session', set=None, opening='', max_plies=200, retries=2,
+                                            protocol='real', lang='zh')
+        self.assertNotIn('lang', B.batch_meta(a_opp_model_zh))
+        a_zh = argparse.Namespace(game='chess', player='claude:opus', effort='xhigh', memory='session', set=None,
+                                  opening='', max_plies=200, retries=2, protocol='real', lang='zh')
+        self.assertNotIn('lang', B.batch_meta(a_zh))
+        # --lang zh（双方中文）与 --set lang=zh（仅我方中文、对手默认英文）不等价，不能混进同一模型互弈批次
+        a_set_zh = argparse.Namespace(game='chess', player='claude:opus', opp=['codex:sol'], effort='xhigh',
+                                      memory='session', set=['lang=zh'], opening='', max_plies=200, retries=2,
+                                      protocol='real', lang=None)
+        self.assertEqual(B.batch_meta(a_set_zh)['lang'], 'en')
+        self.assertEqual(B.batch_meta(a_set_zh)['set'], ['lang=zh'])
+        self.assertNotEqual(B.batch_meta(a_set_zh), B.batch_meta(a_zh))
+        with tempfile.TemporaryDirectory() as tmp:
+            # 旧中文 real 批次（无 lang）续跑：不带 --lang zh 或误传单侧 --set lang=zh 均报不一致，带 --lang zh 通过
+            b_old = os.path.join(tmp, 'old_zh')
+            os.makedirs(b_old)
+            B.check_meta(b_old, B.batch_meta(a_zh))
+            with self.assertRaises(SystemExit):
+                B.check_meta(b_old, meta('chess', None, protocol='real'))
+            with self.assertRaises(SystemExit):
+                B.check_meta(b_old, B.batch_meta(a_set_zh))
+            B.check_meta(b_old, B.batch_meta(a_zh))
+            # 我方 random + 对手模型：中英文批次同样双向防混跑
+            b_opp = os.path.join(tmp, 'opp_en')
+            os.makedirs(b_opp)
+            B.check_meta(b_opp, B.batch_meta(a_opp_model))
+            with self.assertRaises(SystemExit):
+                B.check_meta(b_opp, B.batch_meta(a_opp_model_zh))
+            # 新英文 real 批次（lang=en）续跑：误带 --lang zh 同样报不一致
+            b_new = os.path.join(tmp, 'new_en')
+            os.makedirs(b_new)
+            B.check_meta(b_new, meta('chess', None, protocol='real'))
+            with self.assertRaises(SystemExit):
+                B.check_meta(b_new, B.batch_meta(a_zh))
 
     def test_wilson(self):
         lo, hi = B.wilson(5, 10)
@@ -245,6 +288,11 @@ class PassThrough(unittest.TestCase):
             self.assertEqual(cli.main(B.play_cmd(a, 'runs/b/agymodel-s1-b', opp, 1, 'b')[3:]), 0)
         self.assertEqual(seen['models'], {'w': 'agy/gemini-4-argon-high', 'b': 'agy/claude-opus-5-5-high'})
         self.assertEqual(seen['backend'], 'llm-chat')
+        self.assertEqual((seen['sides']['w']['lang'], seen['sides']['b']['lang']), ('en', 'en'))
+        a_zh = ns(player=player, protocol='real', memory='session', effort='high', lang='zh')
+        with mock.patch.object(cli, 'cmd_play', capture):
+            self.assertEqual(cli.main(B.play_cmd(a_zh, 'runs/b/agymodel-s1-b', opp, 1, 'b')[3:]), 0)
+        self.assertEqual((seen['sides']['w']['lang'], seen['sides']['b']['lang']), ('zh', 'zh'))
 
     def test_commands_parse(self):
         """拼出来的 play / resume 命令，play / resume 自己的命令行都认。"""

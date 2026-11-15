@@ -80,7 +80,7 @@ python -m agi_chess --help
 # 双方随机走子试跑 20 个半回合（生成 runs/demo-random/{game.jsonl,record.txt,game.pgn}，可在阅读器打开 ?files=/runs/demo-random）
 python -m agi_chess play --game chess --tag demo-random --white random --black random --max-plies 20 --seed 42
 
-# 仅打印系统提示词与第一步用户提示词，不调模型、不写盘
+# 仅打印系统提示词与第一步用户提示词，不调模型、不写盘（默认英文提示 --lang en；加 --lang zh 查看历史中文提示）
 python -m agi_chess play --game xiangqi --tag demo-prompt --dry-run
 
 # 若本机已安装 stockfish 或 fairy-stockfish，可对刚跑出的本地对局运行事后引擎逐手复盘（生成 analysis.jsonl 与 analysis-summary.json）
@@ -99,7 +99,7 @@ python -m unittest discover -s tests -t . -v
 
 `python3 data/batch1/select_positions.py check` 与 `python3 data/batch2/select_positions.py check` 仅依赖上述规则库，离线校验已入库的第一批与第二批局面题（`data/batch1/{xiangqi,chess}.jsonl` 与 `data/batch2/{xiangqi,chess}.jsonl` 的 FEN、行棋方与着法合法性），不启动引擎、不读取 `runs/`。
 
-完整单元测试（共 367 项）包含 21 项真引擎握手与走子测试，需要能找到 `stockfish` 和 `fairy-stockfish`。**当本机未安装这两个引擎时，`unittest -v` 会自动跳过这 21 项真引擎测试（其余 346 项全部通过属正常预期）**；安装两个引擎后 367 项全部通过（0 fail / 0 skip）。引擎是单独安装的程序，不会由 `pip` 提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
+完整单元测试（共 373 项）包含 21 项真引擎握手与走子测试，需要能找到 `stockfish` 和 `fairy-stockfish`。**当本机未安装这两个引擎时，`unittest -v` 会自动跳过这 21 项真引擎测试（其余 352 项全部通过属正常预期）**；安装两个引擎后 373 项全部通过（0 fail / 0 skip）。引擎是单独安装的程序，不会由 `pip` 提供；它们的许可与规则库分开列在[依赖说明](dependencies.md)。
 
 ## 模型对弈：内置 `llm-chat`、本地 CLI 订阅与 HTTP API 配置
 
@@ -122,6 +122,8 @@ python -m unittest discover -s tests -t . -v
 `--dry-run` 离线生成提示，不需要模型 CLI 或 API Key。自定义 `AGI_CHESS_LLM_CHAT` 只检查脚本存在，后端要求由该脚本负责。续跑固定记录中的后端，包括 DeepSeek 直连与 OpenRouter 的区别；应恢复原渠道配置，不能切换渠道续跑。
 
 新对局统一用 `agy:`，`gemini:` 仅保留旧记录续跑。推荐 `--white agy:gemini-3.8-flash --effort medium`。仍接受 `gemini-3.8-flash-medium` 等完整 slug，但尾缀必须与该方最终 effort 一致，否则开盘前拒绝。`--effort` 给双方默认值，`--w effort=...` / `--b effort=...` 覆盖单方；不同厂商的同名档位不代表相同算力。
+
+默认整盘协议（`--protocol real`，含 `play` 与 `batch run`）默认采用**英文提示词（`--lang en`）**，其中 `--reason plain` 请模型在 `Move: <坐标>` 前写出 1–3 句客观第三人称局面短评；传 `--lang zh` 可切回历史中文提示词，传 `--reason off` 则只输出单行着法（`Move: <坐标>`），也可用 `--w` / `--b`（`lang=...`、`reason=...`）按方单设；`resume` 会自动沿用对局 `config` 里记录的语言。
 
 配置与运行示例：
 

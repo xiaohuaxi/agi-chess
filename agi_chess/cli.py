@@ -25,8 +25,9 @@
 模型相关变量（公共值用 --变量，一方单设用 --w / --b 变量=值，w 是先走的红方 / 白方）：
   effort medium|high|xhigh|max、memory stateless|notes|session、show、view（逗号分隔）、history（-1 全部 / 0 / N）、
   legal none|list、selfcheck on|off、recite on|off（只有中国象棋）、notes_keep N、session_view full|move、
-  reason plain|brief|detailed|off（只在 real 下：着法之前用自己的话写出这步的理由，brief / detailed 在「写出」前加「简短」/「详细」，
-  导出棋谱时进该步评注；off 只需给出着法）、
+  lang en|zh（只在 real 下：默认 en 英文提示，zh 保留旧中文提示）、
+  reason plain|brief|detailed|off（只在 real 下：着法之前写出说明，en 下默认客观第三人称局面短评以避开安全误拦，
+  zh 下保留原中文「用你自己的话写出理由」，导出棋谱时进该步评注；off 只需给出着法）、
   drop_thinking on|off（只在 real、memory=session 下，只有 Claude 棋手能开，默认 off：续接时不带此前几轮的思考，
   llm-chat --drop-thinking）。reason 不给时一律 plain（不修饰，2026-09-30 定；之前的默认 brief 可选，和 plain 差别很小、
   数据合并）；detailed 已弃用（2026-09-30：opus 去掉思考 + 详细理由频繁被安全防护拦下），只为复现保留。
@@ -56,7 +57,7 @@ RUNS = ROOT / 'runs'
 GAMES = {'xiangqi': 'agi_chess.xiangqi', 'chess': 'agi_chess.chess_'}
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
 SIDE_KEYS = {'effort': str, 'memory': str, 'show': str, 'view': str, 'history': int, 'legal': str, 'selfcheck': str,
-             'recite': str, 'notes_keep': int, 'session_view': str, 'reason': str, 'drop_thinking': str}
+             'recite': str, 'notes_keep': int, 'session_view': str, 'reason': str, 'drop_thinking': str, 'lang': str}
 
 
 def game_module(name):
@@ -118,8 +119,13 @@ def side_cfg(a, G, overrides, max_plies):
             raise SystemExit('reason 现在分 plain（不修饰）/ brief（简短）/ detailed（详细，已弃用）/ off，不再收 on；不给时 plain')
         if sc['reason'] not in memory.REASONS:
             raise SystemExit('reason 只能是 %s，收到 %r' % ('/'.join(memory.REASONS), sc['reason']))
+        sc['lang'] = sc['lang'] or 'en'
+        if sc['lang'] not in memory.LANGS:
+            raise SystemExit('lang 只能是 %s，收到 %r' % ('/'.join(memory.LANGS), sc['lang']))
+        if sc['recite'] == 'on' and sc['lang'] == 'en':
+            raise SystemExit('recite=on 仅在中文提示（--lang zh）下可用')
     else:
-        for k in ('reason', 'drop_thinking'):     # 旧协议的 config 里没有这两项，保持逐字不变
+        for k in ('reason', 'drop_thinking', 'lang'):     # 旧协议的 config 里没有这三项，保持逐字不变
             if sc.pop(k) is not None:
                 raise SystemExit('%s 只在 real 协议下可用' % k)
     return sc
@@ -461,8 +467,9 @@ def main(argv=None):
     p.add_argument('--recite', default='off')
     p.add_argument('--notes-keep', dest='notes_keep', type=int, default=1)
     p.add_argument('--session-view', dest='session_view', default='full')
-    p.add_argument('--reason', default=None, help='plain（默认）：着法之前用自己的话写出这步的理由；brief：同上但请它「简短」写；'
-                   'off：只需给出着法；detailed：写详细理由，已弃用（易被安全防护拦下），只为复现保留')
+    p.add_argument('--lang', default=None, help='提示词语言（只在 real 下）：en（默认，英文提示）或 zh（保留旧中文提示）')
+    p.add_argument('--reason', default=None, help='plain（默认）：着法之前写出说明（en 为客观第三人称局面短评，zh 为原中文写理由）；'
+                   'brief：同上但更简短；off：只需给出着法；detailed：写详细说明，已弃用（易被安全防护拦下），只为复现保留')
     p.add_argument('--drop-thinking', dest='drop_thinking', default=None,
                    help='on：续接时不带此前几轮的思考（llm-chat --drop-thinking，只有 Claude 棋手）；默认 off')
     p.add_argument('--w', action='append', metavar='变量=值', help='只改先走一方（红 / 白），可重复')

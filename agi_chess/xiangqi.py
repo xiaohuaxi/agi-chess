@@ -18,6 +18,7 @@ from . import memory, records
 XQ = 'xiangqi'
 START = sf.start_fen(XQ)
 SIDES = {'w': '红方', 'b': '黑方'}
+SIDES_EN = {'w': 'Red', 'b': 'Black'}
 ALL_VIEW = 'grid,pieces,fen'       # show=all：棋盘 + 清单 + FEN，第 4P2 批之前的默认给法，旧记录都是它
 # 呈现方式（show 档）→ view。整盘对局（cli）和局面题（quiz）共用。boardpieces = all 去掉 FEN 那段（逐字相同）。
 SHOWS = {'all': ALL_VIEW, 'board': 'grid', 'pieces': 'pieces', 'fen': 'fen', 'boardpieces': 'grid,pieces'}
@@ -506,6 +507,55 @@ VIEWS = {'grid': lambda fen, bd: view_grid(bd), 'pieces': lambda fen, bd: view_p
          'fen': lambda fen, bd: 'FEN：' + fen, 'cells': lambda fen, bd: view_cells(bd),
          'board': lambda fen, bd: view_board(bd)}
 
+PIECE_EN = {'K': 'King (K)', 'A': 'Advisor (A)', 'B': 'Elephant (B)', 'N': 'Horse (N)',
+            'R': 'Chariot (R)', 'C': 'Cannon (C)', 'P': 'Soldier (P)',
+            'k': 'King (k)', 'a': 'Advisor (a)', 'b': 'Elephant (b)', 'n': 'Horse (n)',
+            'r': 'Chariot (r)', 'c': 'Cannon (c)', 'p': 'Soldier (p)'}
+LEGEND_EN = ('uppercase = Red, lowercase = Black; K King, A Advisor, B Elephant, N Horse, '
+             'R Chariot, C Cannon, P Soldier; . = empty')
+
+
+def view_grid_en(board):
+    lines = ['Board (Black at top, Red at bottom; ranks 0-9 on left, files a-i at top/bottom):',
+             '   ' + ' '.join('abcdefghi')]
+    for y in range(9, -1, -1):
+        lines.append('%d  %s' % (y, ' '.join(board.get(sq_of(x, y), '.') for x in range(9))))
+        if y == 5:
+            lines.append('   ~~~~~~ River ~~~~~~')
+    lines.append('   ' + ' '.join('abcdefghi'))
+    lines.append('Legend: %s.' % LEGEND_EN)
+    return '\n'.join(lines)
+
+
+def view_pieces_en(board):
+    out = ['Piece list (ICCS coordinates):']
+    for side, red in (('Red', True), ('Black', False)):
+        parts = []
+        for letter in 'KABRNCP':
+            p = letter if red else letter.lower()
+            sqs = sorted((s for s, q in board.items() if q == p), key=lambda s: (s[0], s[1]))
+            if sqs:
+                parts.append('%s %s' % (PIECE_EN[p], ' '.join(sqs)))
+        out.append('%s: %s' % (side, '; '.join(parts)))
+    return '\n'.join(out)
+
+
+def view_cells_en(board):
+    order = [sq_of(x, y) for y in range(9, -1, -1) for x in range(9)]
+    return 'Occupied squares: ' + json.dumps(
+        {s: ('Red ' if is_red(board[s]) else 'Black ') + PIECE_EN[board[s]].split()[0] for s in order if s in board})
+
+
+def view_board_en(board):
+    rows = ['%d %s' % (y, ' '.join(board.get(sq_of(x, y), '.') for x in range(9))) for y in range(9, -1, -1)]
+    rows.append('  ' + ' '.join('abcdefghi'))
+    return 'Board (%s):\n%s' % (LEGEND_EN, '\n'.join(rows))
+
+
+VIEWS_EN = {'grid': lambda fen, bd: view_grid_en(bd), 'pieces': lambda fen, bd: view_pieces_en(bd),
+            'fen': lambda fen, bd: 'FEN: ' + fen, 'cells': lambda fen, bd: view_cells_en(bd),
+            'board': lambda fen, bd: view_board_en(bd)}
+
 
 def history_text(st, n, title='着法记录'):
     rec = st['record']
@@ -560,6 +610,18 @@ def render_real(st, sc, fresh):
     fen = st['fens'][-1]
     board, stm = board_of(fen)
     ply = len(st['moves'])
+    if memory.en(sc):
+        head = ['Move %d (%d plies played). Your turn (%s).' % (ply // 2 + 1, ply, SIDES_EN[stm])]
+        if st['moves']:
+            head.append("Opponent's last move: %s" % st['moves'][-1])
+        parts = ['\n'.join(head)] + [VIEWS_EN[v](fen, board) for v in sc['view']]
+        if fresh and st['moves'] and sc['history'] != 0:
+            first = 0 if sc['history'] < 0 else max(0, ply - sc['history'])
+            first -= first % 2
+            rows = ['%d. %s' % (i // 2 + 1, ' '.join(st['moves'][i:i + 2])) for i in range(first, ply, 2)]
+            parts.append('Moves played so far (ICCS)' + ('' if first == 0 else ', last %d plies only' % (ply - first))
+                         + ':\n' + '\n'.join(rows))
+        return '\n\n'.join(parts)
     head = ['第 %d 回合（已走 %d 个半回合），轮到你（%s）走。' % (ply // 2 + 1, ply, SIDES[stm])]
     if st['moves']:
         head.append('对方刚走：%s（%s）' % (st['record'][-1], st['moves'][-1]))
@@ -667,12 +729,43 @@ def cap_rule(sc):
     return '满 %d 个半回合仍未分胜负判和。' % sc['max_plies']
 
 
+def cap_rule_en(sc):
+    if sc.get('cap_margin'):
+        return ('if the game is still undecided at %d plies, an arbiter evaluates the position: '
+                'a side ahead by at least %d centipawns wins, otherwise it is a draw. ') % (
+            sc['max_plies'], sc['cap_margin'])
+    return 'if the game is still undecided at %d plies, it is a draw. ' % sc['max_plies']
+
+
 ILLEGAL_RULE = '每步给出着法后，着法不合法或认不出会告诉你，由你重新选；一步里连续 %d 次都没给出合法着法判负。'
+ILLEGAL_RULE_EN = ('If you submit an illegal or unrecognized move, you will be notified and asked to choose again; '
+                   'failing to give a legal move %d times in a row on the same turn forfeits the game.')
+SELFCHECK_EN = (
+    "Before choosing each move, verify:\n"
+    "1. After your opponent's last move, which of your pieces are under attack, and is check or checkmate threatened?\n"
+    "2. After your intended move, does it leave a piece undefended, allow check or checkmate, or block your King's escape?\n"
+    "3. Is the move legal: horse-leg block, elephant-eye block, cannon screen, palace bounds, soldier river crossing, "
+    "and kings facing each other.\n"
+    "If any issue is found, choose another move and verify again."
+)
 
 
 def system_real(side, sc, memory_text):
-    """「模型就是真实棋手」的系统提示（design.md 第九节）：不要求中文；reason=plain / brief / detailed 时着法之前写出
-    （不修饰 / 简短 / 详细）这步的理由，off 时只需给出着法（memory.answer_lead）；赛制（禁着退回、非法重选上限）预先讲清。"""
+    """「模型就是真实棋手」的系统提示（design.md 第九节）：默认英文（lang=en），可选保留旧中文（lang=zh）。"""
+    if memory.en(sc):
+        s = ['You are playing a game of Xiangqi (Chinese Chess) as %s. Your opponent is another player. Your goal is to win.'
+             % SIDES_EN[side],
+             'Standard Xiangqi rules apply: checkmate or stalemate of the opponent wins; perpetual check and perpetual chase '
+             'are prohibited and rejected as illegal moves; threefold repetition not involving perpetual check or perpetual chase '
+             'is a draw; 100 consecutive plies (half-moves) without a capture is a draw; '
+             + cap_rule_en(sc) + ILLEGAL_RULE_EN % (sc.get('retries', 3) + 1),
+             "Coordinates use ICCS: files a to i run from Red's left to right, and ranks 0 to 9 run from Red's back rank "
+             "to Black's back rank; write a move as origin square followed by destination square, e.g. h2e2.",
+             memory_text]
+        if sc['selfcheck'] == 'on':
+            s.append(SELFCHECK_EN)
+        s.append('Response format: ' + memory.answer_lead(sc) + 'using ICCS coordinates (e.g. Move: h2e2).')
+        return '\n\n'.join(s)
     s = ['你在下一盘中国象棋，执%s。对手是另一位棋手。目标是赢棋。' % SIDES[side],
          '规则按标准中国象棋：将死或困毙对方为胜；不许长将、长捉，走出这类着法按不合法退回；同一局面出现三次且不属于长将、'
          '长捉判和；连续一百个半回合没有吃子判和；' + cap_rule(sc) +

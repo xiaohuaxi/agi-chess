@@ -57,9 +57,11 @@ class CapRuleInGames(unittest.TestCase):
         self.assertEqual(end['winner'], None if v is None else adj['stm'] if v == 'stm' else other)
         with open(os.path.join(run_dir, 'record.txt'), encoding='utf-8') as f:
             self.assertIn('到上限按引擎评分判', f.read())
-        # 系统提示里写的是新规则，且不提「引擎」（不透露对手是引擎）
+        # 系统提示里写的是新规则，且不提「引擎」/ 'engine'（不透露对手是引擎）
         for s in 'wb':
-            self.assertIn('仍未分胜负时由裁判评估局面：一方领先至少 300 厘兵判该方胜，否则判和。', cfg['system'][s])
+            self.assertIn('an arbiter evaluates the position: a side ahead by at least 300 centipawns wins, otherwise it is a draw.',
+                          cfg['system'][s])
+            self.assertNotIn('engine', cfg['system'][s].lower())
             self.assertNotIn('引擎', cfg['system'][s])
 
     @unittest.skipIf(STOCKFISH_MISSING, 'stockfish not installed')
@@ -94,7 +96,7 @@ class CapRuleInGames(unittest.TestCase):
                                 '--max-plies', '4')
         self.assertNotIn('adjudicate', cfg)
         self.assertEqual(end, {'winner': None, 'reason': old % 4})
-        self.assertIn('满 4 个半回合仍未分胜负判和。', cfg['system']['w'])
+        self.assertIn('if the game is still undecided at 4 plies, it is a draw.', cfg['system']['w'])
         cfg, end, _ = self.play('d2', '--game', 'chess', '--white', 'engine:stockfish:depth=4', '--black', 'random',
                                 '--seed', '3', '--max-plies', '12', '--cap-rule', 'draw')
         self.assertNotIn('adjudicate', cfg)
@@ -102,15 +104,22 @@ class CapRuleInGames(unittest.TestCase):
         self.assertNotIn('cap_margin', cfg['sides']['w'])
 
     def test_model_games_and_legacy_unchanged(self):
-        # 模型对模型：不按评分判，系统提示逐字照旧
+        # 模型对模型：不按评分判，默认英文与 --lang zh 系统提示都无裁判评估
         rc, out = run_quiet(['play', '--game', 'chess', '--dry-run'])
         self.assertEqual(rc, 0)
-        self.assertIn('满 200 个半回合仍未分胜负判和。', out)
-        self.assertNotIn('裁判评估', out)
-        # 模型对引擎：提示里是新规则
+        self.assertIn('if the game is still undecided at 200 plies, it is a draw.', out)
+        self.assertNotIn('arbiter evaluates', out)
+        rc, out_zh = run_quiet(['play', '--game', 'chess', '--lang', 'zh', '--dry-run'])
+        self.assertEqual(rc, 0)
+        self.assertIn('满 200 个半回合仍未分胜负判和。', out_zh)
+        self.assertNotIn('裁判评估', out_zh)
+        # 模型对引擎：提示里是新规则（英文默认 + 中文可选）
         rc, out = run_quiet(['play', '--game', 'xiangqi', '--black', 'engine:fsf:nodes=1', '--dry-run'])
         self.assertEqual(rc, 0)
-        self.assertIn('满 200 个半回合仍未分胜负时由裁判评估局面', out)
+        self.assertIn('an arbiter evaluates the position', out)
+        rc, out_zh = run_quiet(['play', '--game', 'xiangqi', '--lang', 'zh', '--black', 'engine:fsf:nodes=1', '--dry-run'])
+        self.assertEqual(rc, 0)
+        self.assertIn('满 200 个半回合仍未分胜负时由裁判评估局面', out_zh)
         # legacy 对引擎：旧提示、旧判法
         rc, out = run_quiet(['play', '--game', 'chess', '--protocol', 'legacy', '--black', 'engine:stockfish:depth=1', '--dry-run'])
         self.assertEqual(rc, 0)

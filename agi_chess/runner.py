@@ -295,7 +295,7 @@ def model_turn(ctx, side, moves, ban):
     else:
         body = G.render(st, sc)
     if mem == 'notes':
-        nt = memory.notes_text(ctx['notes'][side], sc['notes_keep'])
+        nt = memory.notes_text(ctx['notes'][side], sc['notes_keep'], sc)
         if nt:
             body += '\n\n' + nt
     base = body + '\n\n' + memory.ask(sc)
@@ -306,9 +306,9 @@ def model_turn(ctx, side, moves, ban):
         bad, flags, blocks, k, redo, stat = p['bad'], p['flags'], p.get('blocks', 0), p['k'], p['redo'], p['stat']
     while k < cfg['retries'] + 1:
         if redo and mem == 'session' and ctx['sessions'].get(side):   # 上一条回复为空，前文已在会话里
-            prompt = '请重新回答这一步。' + memory.ask(sc)
+            prompt = memory.redo_prompt(sc)
         elif bad and real:
-            prompt = memory.retry_prompt_real(sc, base, [(t, memory.FEEDBACK[fb]) for t, _, fb in bad],
+            prompt = memory.retry_prompt_real(sc, base, [(t, memory.feedback_text(sc, fb)) for t, _, fb in bad],
                                               cfg['retries'] + 1 - k)
         elif bad:
             prompt = memory.retry_prompt(sc, base, [(t, why) for t, why, _ in bad], cfg['retries'] + 1 - k)

@@ -329,6 +329,7 @@ class Flagged(unittest.TestCase):
     def test_metadata_refusal(self):
         self.assertTrue(CL.flagged({'result': '', 'meta': {'stop_reason': 'refusal'}}))
         self.assertTrue(CL.flagged({'result': '', 'finish_reason': 'SAFETY'}))
+        self.assertTrue(CL.flagged({'result': '\n⚠ Your previous response was blocked by content safety filters.\nMove: e2e4'}))
 
     def test_timeout_preserves_refusal_evidence(self):
         for output, stderr in ((b'[reasoning_extraction]', b''),

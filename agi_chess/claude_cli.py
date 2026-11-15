@@ -103,6 +103,7 @@ def refusal_text(text):
     t = raw.lower().replace('’', "'")
     if any(mark in t for mark in ('safeguards flagged', '[reasoning_extraction]',
                                   'safety filter blocked the answer',
+                                  'blocked by content safety filters',
                                   'flagged by our safeguards',
                                   "unexpected codex item 'refusal'")):
         return True

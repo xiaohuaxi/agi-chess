@@ -55,6 +55,7 @@ REFUSAL_MARKS = (
     "safeguards flagged",
     "[reasoning_extraction]",
     "safety filter blocked the answer",
+    "blocked by content safety filters",
     "flagged by our safeguards",
 )
 REFUSAL_META_RE = re.compile(

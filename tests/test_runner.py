@@ -391,14 +391,25 @@ class GameShow(unittest.TestCase):
             self.sides('xiangqi', '--show', 'grid')
 
     def test_prompt_matches_quiz_show(self):
-        # 整盘和局面题共用同一套 show → view，提示里的呈现段一样
-        user = self.dry_user('xiangqi')
+        # 默认英文（lang=en）与 --lang zh 共用同一套 show → view
+        user_en = self.dry_user('xiangqi')
+        self.assertIn('Piece list (ICCS coordinates):', user_en)
+        self.assertNotIn('FEN: ', user_en)
+        self.assertNotIn('Board (Black at top', user_en)
+        user_en_all = self.dry_user('xiangqi', '--show', 'all')
+        for mark in ('Piece list (ICCS coordinates):', 'FEN: ', 'Board (Black at top'):
+            self.assertIn(mark, user_en_all)
+        self.assertEqual(self.dry_user('chess'), self.dry_user('chess', '--show', 'all'))
+        self.assertIn('FEN: ', self.dry_user('chess'))
+        self.assertIn('Board (Black at top', self.dry_user('chess'))
+        # --lang zh 保留旧中文提示词呈现段
+        user = self.dry_user('xiangqi', '--lang', 'zh')
         self.assertIn('子力清单', user)
         self.assertNotIn('FEN：', user)
         self.assertNotIn('棋盘（上方是黑方', user)
-        user = self.dry_user('xiangqi', '--show', 'all')
+        user = self.dry_user('xiangqi', '--lang', 'zh', '--show', 'all')
         for mark in ('子力清单', 'FEN：', '棋盘（上方是黑方'):
             self.assertIn(mark, user)
-        self.assertEqual(self.dry_user('chess'), self.dry_user('chess', '--show', 'all'))
-        self.assertIn('FEN：', self.dry_user('chess'))
+        self.assertEqual(self.dry_user('chess', '--lang', 'zh'), self.dry_user('chess', '--lang', 'zh', '--show', 'all'))
+        self.assertIn('FEN：', self.dry_user('chess', '--lang', 'zh'))
 

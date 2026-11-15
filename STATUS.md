@@ -1,13 +1,13 @@
 # 当前状态
 
-更新：2026-11-14。这里维护当前快照与待办，不追加流水账；实验总览表、历次维护和决定沿革见 [历史记录](docs/history.md)，报告与 `runs/` 映射见 [研究索引](docs/research.md)。
+更新：2026-11-15。这里维护当前快照与待办，不追加流水账；实验总览表、历次维护和决定沿革见 [历史记录](docs/history.md)，报告与 `runs/` 映射见 [研究索引](docs/research.md)。
 
 ## 已完成与可用
 
 - 两种棋的单盘对弈、暂停续跑、批量对弈、局面题、事后引擎分析与离线评级复算均已实现；入口见 [安装与运行](docs/setup.md)。整盘调用层已收归仓内，支持 Claude / Codex / DeepSeek / agy 与显式 OpenRouter 路由；新 Gemini 对局统一 `agy:`，旧记录可续跑。开盘前检查双方 CLI / Key，缺 CLI 给出需替换型号占位的 API 命令模板；dry-run 离线，resume 固定原后端。 对弈入口指引已澄清：通常优先仓库 CLI，通道验证或故障排查可按需直接调用底层；暂不新增对弈 skill。 独立 clone 冷读上手验收已完成：自行建立依赖环境，零成本入口及订阅、OpenRouter 短对弈的暂停/续跑/导出均可用；测试数据仅留临时副本，不入库。`quiz report` 会回写 `report.txt`，入门文档未明确提醒此副作用（其中“只读”原句指评级脚本，并非 quiz report）；本机缺 `ensurepip` 可用已有 pip 向独立环境安装依赖。
 - 中英双语棋谱阅读器支持理由、用量、失误标记、连播、走子动画及有声视频；见 [阅读器指南](docs/viewer-guide.md)。随仓有 82 个正式对局/局面题目录、179 份棋谱；原始 `game.jsonl`、`record.txt`、视频和新跑目录不入库，缺原始记录时不能重导或重新分析。
 - 第一轮研究、Opus Max 棋力定位、Argon High 及 Carbon High 对 agy Opus High 的报告均已完成。统计脚本和人类刻度数据在 `analysis/rating/`；自有内容许可与规则依赖边界已定，见 [依赖](docs/dependencies.md)和[许可说明](docs/license-review.md)。
-- 离线与通道验证快照（2026-11-13）：仓内 `llm-chat` 的 `agy` 路由已升级适配 `agy 1.5.8 acp`（stdio JSON-RPC 2.0，默认 `tools: []` 零工具，`session/request_permission` 按明确非空拒绝 `kind` 同步拒绝或取消杀进程组事前阻断，超时/EOF 前排空未消费安全事件并保留流式拒答与 `stopReason=refusal` 零重试锁死，完整映射 `cachedWriteTokens`），并修复 `batch run` 锁前只读逐会话来源预检与获锁后再迁移会话；全量 Python 单测 **367 项通过（0 skip）**、阅读器 **90 项通过**、两批题库校验通过，并以 `agy/gemini-3.8-flash --effort medium` 完成 2 轮文本续接与极小 PNG `--attach` 极简真机冒烟（临时目录已清理）。此前 Python 3.13 干净归档副本与 Linux / WSL2（Python 3.10.12 + Node 22.21.1）完整回归均通过；本机 Python 3.15 曾遇 `pyffish` 编译工具链问题，安装建议沿用 3.13（系统 `/usr/bin/python3` 3.9 亦可运行）。
+- 离线与通道验证快照（2026-11-15）：`--protocol real` 新对局默认切换为英文提示词 `--lang en`（`--lang zh` 逐字节保留历史中文提示，旧记录无 `lang` 自动按中文续跑），并将英文默认 `reason=plain` 定为 1–3 句客观第三人称局面短评、`reason=off` 收紧为无附加说明的单行 `Move:`；仓内 `llm-chat`（`agy_core.REFUSAL_MARKS`）与 `agi_chess/claude_cli.refusal_text` 同步补齐 `blocked by content safety filters` 首次即停熔断。全量 Python 单测 **373 项通过（0 skip）**、阅读器测试 **90 项**、两批题库校验全部通过，并在 `agy:claude-opus-5-5`（`high`）上完成 147 次真实调用验证（[报告](docs/results/english-prompts-filter-mitigation-20261115.md)）。此前 `agy 1.5.8 acp` 零工具收口、Python 3.13 干净归档副本与 Linux / WSL2 完整回归均已通过；安装建议沿用 Python 3.13（系统 `/usr/bin/python3` 3.9 亦可运行）。
 
 ## 核心研究结论
 
@@ -16,6 +16,7 @@
 - Opus Max 对引擎定位已定稿：国际象棋 30 盘，新上限裁决事后回看约 lichess Blitz 1800 / Rapid 1920；中国象棋 37 盘，在 Fairy-Stockfish 阶梯约 +121（nodes=100 为 0），不换算人类段位。锚点、区间及旧规则差异见[定位报告](docs/results/opus-max-rating.md)；旧“Maia-1900 就是 lichess 1900”的推算已作废。
 - Argon High 对 agy Opus High 四盘 3:1，但开局重复、样本小，不能按比分上调评级。Blitz 1700 / Rapid 1800 只是主观中心，1600 类比不是下限；与 Opus Max 尚无直接对阵，约 100 分差也未验证。见[对阵报告](docs/results/argon-vs-agy-opus-high-20261020.md)、[暂定定位](docs/results/argon-high-chess-rating-20261019.md)和[token 对照](docs/results/thinking-tokens-argon-opus-20261025.md)。
 - Carbon High 对 agy Opus High 两种棋各四盘对称先后手全部规则将死：国际象棋 **4:0**（加权 ACPL 18.1 / 35.4，Lichess 大失误 2 / 7；剔除含 1 次 `agy` 内部过滤重试的补第 2 局仍为 3:0、ACPL 17.7 / 35.0），中国象棋 **3:1**（执红 2:0、执黑 1:1，加权 ACPL 50.1 / 56.0，大失误 11 / 14、合并件数 8 / 9；剔除含 12 次过滤重试的第 2 局为 2:1、ACPL 51.7 / 55.1，零重试的第 1、3 局为 2:0、ACPL 51.2 / 67.7）。国象失误密度明显低于十月 Argon 四盘，中象在仅给子力清单下差距收窄且双方仍出现送车入象口与连续 8 半回合互盲炮架抽车；小样本只看方向，不拟合 Elo 分差或外推旧 Opus Max 锚点。每步思考 token 上，国象 Carbon High（均值 2,724.4 / 中位 1,489）与同日探索自弈的 Hydrogen High（正常步均值 1,327.1 / 中位 911）落在旧 CLI Opus `xhigh` 量级，中象 Carbon High（均值 7,326.5 / 中位 5,582）升至国象约 2.7–3.8 倍、落在旧 CLI Opus `xhigh` 与 `max` 之间，且经历 4 次上下文自动压缩均平稳续下无死循环。见[国际象棋四盘报告](docs/results/carbon-vs-agy-opus-high-20261114.md)与[中国象棋四盘报告](docs/results/carbon-vs-agy-opus-high-xq-20261114.md)。
+- 英文默认提示词与 Opus 防思维链误拦实测已完成（共 147 次 `agy:claude-opus-5-5` `high` 调用，其中最终落定的 `--lang en` 提示词占 117 次）：日志溯源确认 11-14 的 14 次安全过滤中，`agy` 内联警告因旧熔断词未覆盖而留存会话引发雪崩（中象第 2 局第 78 半回合后连触 12 次），同时原中文 `plain` 下 Opus 有 35%–53% 回合输出第一人称逐格验算与半句自我更正独白（工作假设为类思维链语体更易触发输出侧反套取分类器）。第一阶段受控对照（4 组 × 10 题 = 40 次，均 0 过滤）证实直译原中文 `plain` 仍有 100% 第一人称独白与 90% 排除列表，而首句锚定 1–3 句客观第三人称短评将第一人称独白与自我更正降至 **0%**（10 题样本 CPL 127.1）；第二阶段在落定 `--lang en` 提示词下跑 4 盘连续 `session` 实盘（共 107 次调用，含 `plain` 105 次、`off` 2 次，最长 80 半回合），全程 **0 次过滤/拒答、0% 自我更正、0% 列表枚举**，两盘中象合计 69 步零大失误（ACPL 26.0 / 55.0）。后续直连 `claude -p` 跑 `xhigh` / `max` 仍须小步扩并发并保持首次即停熔断，见[防误拦实测报告](docs/results/english-prompts-filter-mitigation-20261115.md)。
 
 ## 当前工作与未决定方向
 
@@ -25,8 +26,8 @@
 
 ## 有效约定与研究限制
 
-- 现行硬约束见 [AGENTS.md](AGENTS.md)，协议、默认呈现与调用恢复见 [设计](docs/design.md)第三、九节：真实棋手协议、标准初始局面、连续会话、单盘默认 medium / 批次默认 xhigh 与理由 plain；模型互弈双方思考延续一致，`drop_thinking` 默认关。棋力定位的随机开局按专门方案，不外推为普通互弈默认。旧记录沿用存下的提示，安全停止规则始终用现行要求。
-- 工具调用或尝试即暂停，防思维链泄露类拒答一次即终止，不重问、不改措辞绕过、不判棋手输；历史重问仅为事实。仓内 `llm-chat` 的 `agy acp` 路径通过新会话 `tools: []`、权限请求事前拒绝（无拒绝项则 `cancelled` 并杀进程组）与流事件事后审计收紧工具面；agy 调用失败时仅在结果携带完整非空答复且非 `cancelled`/`refusal` 时取回，传输类失败新盘默认每方每半回合最多自动重发 2 次（`--agy-retries`），其余不确定结果停下，`resume --retry-uncertain` 显式授权（见设计第一节 2026-11-11 与 2026-11-13 段）。新盘 llm-chat 会话记录在对局目录 `.llm-chat/`（不入库），单盘与批次续跑均从该目录预检和续接（旧盘在获批次锁与配置校验后再迁移）。运行时无害内部工具（`manage_task` / `finish`）未逐条外报，以及 `agy 1.5.8 acp` 对空输出或上游内容安全过滤在单次 `session/prompt` 内自动重试时以 `stopReason="end_turn"` 正常结束并把 `⚠ Model produced invalid output.` / `⚠ Your previous response was blocked by content safety filters …` 直接拼入普通文本流（当前 `llm-chat` 与 `agi_chess` 拒答匹配词尚未覆盖该前缀，会随回复原样落入棋谱评注），均属外部观测与拦截边界（事后须结合底层 transcript 核查），“未发现工具/拒答流事件”不自动等同底层零事件证明。
+- 现行硬约束见 [AGENTS.md](AGENTS.md)，协议、默认呈现与调用恢复见 [设计](docs/design.md)第三、九节：真实棋手协议、默认英文提示 `--lang en`（`--lang zh` 保留历史中文提示）、标准初始局面、连续会话、单盘默认 medium / 批次默认 xhigh 与理由 plain（英文下为客观第三人称局面短评）；模型互弈双方思考延续一致，`drop_thinking` 默认关。棋力定位的随机开局按专门方案，不外推为普通互弈默认。旧记录沿用存下的提示，安全停止规则始终用现行要求。
+- 工具调用或尝试即暂停，防思维链泄露类拒答一次即终止，不重问、不改措辞绕过、不判棋手输；历史重问仅为事实。仓内 `llm-chat` 的 `agy acp` 路径通过新会话 `tools: []`、权限请求事前拒绝（无拒绝项则 `cancelled` 并杀进程组）与流事件事后审计收紧工具面；agy 调用失败时仅在结果携带完整非空答复且非 `cancelled`/`refusal` 时取回，传输类失败新盘默认每方每半回合最多自动重发 2 次（`--agy-retries`），其余不确定结果停下，`resume --retry-uncertain` 显式授权（见设计第一节 2026-11-11 与 2026-11-13 段）。新盘 llm-chat 会话记录在对局目录 `.llm-chat/`（不入库），单盘与批次续跑均从该目录预检和续接（旧盘在获批次锁与配置校验后再迁移）。`agy 1.5.8 acp` 对上游内容安全过滤内联重试注入的 `blocked by content safety filters` 现已纳入 `llm-chat` 与 `agi_chess` 首次即停熔断；而运行时无害内部工具（`manage_task` / `finish`）未逐条外报、空输出内联重试提示 `Model produced invalid output.` 仍属外部观测边界（事后须结合底层 transcript 核查），“未发现工具/拒答流事件”不自动等同底层零事件证明。
 - Codex 升级后需重新核实棋手隔离；旧局面题零工具请求与旧整盘请求挂 4 个 code mode 工具但执行层关闭，是不同路径的历史证据，不可混用。局面题直调还会带全局规范作为固定噪声；整盘走 llm-chat 无这段，见[隔离报告](docs/results/llm-chat-isolation.md)。
 - 中国象棋默认只给子力清单，国际象棋保留 FEN + 字母棋盘；只给棋盘会缺易位与吃过路兵信息。real 有引擎一方到上限按评分裁决，模型互弈仍判和；细节以设计为准。理由 brief / plain 不作变量、允许合并；大失误阈值在各棋种内部比较，跨棋种须先统一口径。
 - 看杀题仅判走后是否被将杀，会漏计引擎评分大跌，真实损失被低估；“变好 ≥6 且变坏 ≤1”的门槛按每题 2 遍制定，扩为 6 遍后偏严，待重定。见[理由实验](docs/results/batch3-reason.md)及[跨模型呈现实验](docs/results/batch5-cross-model-presentation.md)。

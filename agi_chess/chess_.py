@@ -13,6 +13,7 @@ import chess.pgn
 from . import memory, records
 
 SIDES = {'w': '白方', 'b': '黑方'}
+SIDES_EN = {'w': 'White', 'b': 'Black'}
 ALL_VIEW = 'fen,ascii'            # show=all：FEN + 字母棋盘（国际象棋默认 view 里本来没有子力清单）
 # 呈现方式（show 档）→ view。整盘对局（cli）和局面题（quiz）共用。
 SHOWS = {'all': ALL_VIEW, 'board': 'ascii', 'pieces': 'pieces', 'fen': 'fen'}
@@ -286,6 +287,36 @@ VIEWS = {'fen': lambda st: 'FEN：' + st['board'].fen(), 'ascii': lambda st: vie
          'pieces': lambda st: view_pieces(st['board']),
          'pgn': lambda st: 'PGN 着法：' + (_movetext(st) or '（开局，还没有着法）')}
 
+PIECE_EN = {'k': 'King', 'q': 'Queen', 'r': 'Rook', 'b': 'Bishop', 'n': 'Knight', 'p': 'Pawn'}
+LEGEND_EN = ('Black at top, White at bottom; uppercase = White, lowercase = Black; '
+             'K King, Q Queen, R Rook, B Bishop, N Knight, P Pawn; . = empty')
+
+
+def view_ascii_en(b):
+    rows = ['%d %s' % (y, ' '.join((b.piece_at(chess.square(x, y - 1)) or '.').__str__() for x in range(8)))
+            for y in range(8, 0, -1)]
+    rows.append('  ' + ' '.join('abcdefgh'))
+    return 'Board (%s):\n%s' % (LEGEND_EN, '\n'.join(rows))
+
+
+def view_pieces_en(b):
+    out = ['Piece list:']
+    board = _pieces(b)
+    for side, white in (('White', True), ('Black', False)):
+        parts = []
+        for letter in 'KQRBNP':
+            p = letter if white else letter.lower()
+            sqs = sorted(s for s, q in board.items() if q == p)
+            if sqs:
+                parts.append('%s (%s) %s' % (PIECE_EN[letter.lower()], p, ' '.join(sqs)))
+        out.append('%s: %s' % (side, '; '.join(parts)))
+    return '\n'.join(out)
+
+
+VIEWS_EN = {'fen': lambda st: 'FEN: ' + st['board'].fen(), 'ascii': lambda st: view_ascii_en(st['board']),
+            'pieces': lambda st: view_pieces_en(st['board']),
+            'pgn': lambda st: 'PGN moves: ' + (_movetext(st) or '(opening, no moves played yet)')}
+
 
 def history_text(st, n):
     rec = st['record']
@@ -331,6 +362,18 @@ def render_real(st, sc, fresh):
     对方上一步和着法记录只写 UCI 坐标：SAN 带「+」「#」，等于替它报将军。着法记录只在新会话的第一条给一次（fresh）。"""
     b = st['board']
     ply = len(st['moves'])
+    if memory.en(sc):
+        head = ['Move %d (%d plies played). Your turn (%s).' % (ply // 2 + 1, ply, SIDES_EN[turn(st)])]
+        if st['moves']:
+            head.append("Opponent's last move: %s" % st['moves'][-1])
+        parts = ['\n'.join(head)] + [VIEWS_EN[v](st) for v in sc['view']]
+        if fresh and st['moves'] and sc['history'] != 0:
+            first = 0 if sc['history'] < 0 else max(0, ply - sc['history'])
+            first -= first % 2
+            rows = ['%d. %s' % (i // 2 + 1, ' '.join(st['moves'][i:i + 2])) for i in range(first, ply, 2)]
+            parts.append('Moves played so far (UCI)' + ('' if first == 0 else ', last %d plies only' % (ply - first))
+                         + ':\n' + '\n'.join(rows))
+        return '\n\n'.join(parts)
     head = ['第 %d 回合（已走 %d 个半回合），轮到你（%s）走。' % (ply // 2 + 1, ply, SIDES[turn(st)])]
     if st['moves']:
         head.append('对方刚走：%s' % st['moves'][-1])
@@ -420,11 +463,42 @@ def cap_rule(sc):
     return '满 %d 个半回合仍未分胜负判和。' % sc['max_plies']
 
 
+def cap_rule_en(sc):
+    if sc.get('cap_margin'):
+        return ('if the game is still undecided at %d plies, an arbiter evaluates the position: '
+                'a side ahead by at least %d centipawns wins, otherwise it is a draw. ') % (
+            sc['max_plies'], sc['cap_margin'])
+    return 'if the game is still undecided at %d plies, it is a draw. ' % sc['max_plies']
+
+
 ILLEGAL_RULE = '每步给出着法后，着法不合法或认不出会告诉你，由你重新选；一步里连续 %d 次都没给出合法着法判负。'
+ILLEGAL_RULE_EN = ('If you submit an illegal or unrecognized move, you will be notified and asked to choose again; '
+                   'failing to give a legal move %d times in a row on the same turn forfeits the game.')
+SELFCHECK_EN = (
+    "Before choosing each move, verify:\n"
+    "1. After your opponent's last move, which of your pieces are under attack, and is check or checkmate threatened?\n"
+    "2. After your intended move, does it leave a piece undefended or allow check or checkmate?\n"
+    "3. Is the move legal: path obstruction, pawn movement and en passant, castling conditions, and leaving your own King in check.\n"
+    "If any issue is found, choose another move and verify again."
+)
 
 
 def system_real(side, sc, memory_text):
     """「模型就是真实棋手」的系统提示（design.md 第九节），和 xiangqi.system_real 同构。"""
+    if memory.en(sc):
+        s = ['You are playing a game of Chess as %s. Your opponent is another player. Your goal is to win.' % SIDES_EN[side],
+             'Standard Chess rules apply: checkmate wins; stalemate and insufficient material are draws; threefold repetition '
+             'and the fifty-move rule are automatically claimed as draws by the program; '
+             + cap_rule_en(sc) + ILLEGAL_RULE_EN % (sc.get('retries', 3) + 1),
+             "Coordinates: files a to h run from White's left to right, and ranks 1 to 8 run from White's back rank "
+             "to Black's back rank.",
+             memory_text]
+        if sc['selfcheck'] == 'on':
+            s.append(SELFCHECK_EN)
+        s.append('Response format: ' + memory.answer_lead(sc) +
+                 'using UCI coordinates from origin to destination (e.g. Move: e2e4; append promotion piece letter, e.g. e7e8q; '
+                 "write castling as the king's move, e.g. e1g1), or SAN (e.g. Move: Nf3, Move: O-O).")
+        return '\n\n'.join(s)
     s = ['你在下一盘国际象棋，执%s。对手是另一位棋手。目标是赢棋。' % SIDES[side],
          '规则按标准国际象棋：将死对方为胜；逼和、双方子力都不足以将死判和；同一局面出现三次、或五十回合没有吃子和兵的走动，'
          '程序自动替你们申诉判和；' + cap_rule(sc) + ILLEGAL_RULE % (sc.get('retries', 3) + 1),

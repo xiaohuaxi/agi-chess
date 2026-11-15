@@ -77,7 +77,7 @@ Python 3.13 is recommended. If you have several Python versions installed, use `
    ```sh
    # Play 20 plies between two random movers (no API key or engine needed; writes runs/demo-random/game.pgn in 0.1s, viewable at ?files=/runs/demo-random)
    python3 -m agi_chess play --game chess --tag demo-random --white random --black random --max-plies 20 --seed 42
-   # Print the system prompt and first-move user prompt under the real-player protocol without calling any model
+   # Print the system prompt and first-move user prompt under the real-player protocol without calling any model (defaults to --lang en; pass --lang zh for historical Chinese prompts)
    python3 -m agi_chess play --game xiangqi --tag demo-prompt --dry-run
    ```
 
@@ -110,7 +110,7 @@ The [Round 1 Summary](docs/results/summary-round1.md) summarizes only the initia
 
 ## Match Principles
 
-Full games default to the **"Model as Real Player" (`real`) protocol**: each side plays inside one continuous session, chooses moves from the board state, and writes a visible rationale before its move. The harness validates legality and logs the game without offering engine hints, check warnings, threat lists, or legal-move enumerations; engines act strictly as opponents or post-game arbiters. Three consecutive illegal attempts on the same turn forfeit the game—a custom tournament rule defined by this project.
+Full games default to the **"Model as Real Player" (`real`) protocol**: each side plays inside one continuous session, chooses moves from the board state, and writes a visible rationale before its move. New matches (`play` and `batch run`) default to **English prompts (`--lang en`)**, asking for a brief objective third-person position note (1–3 sentences) before `Move: <coord>` (pass `--reason off` for single-line move-only output, or `--lang zh` to reproduce the historical Chinese prompts; the 179 archived `runs/` games predating 2026-11-15 were played under those Chinese prompts, so their checked-in PGN comments remain in Chinese). The harness validates legality and logs the game without offering engine hints, check warnings, threat lists, or legal-move enumerations; engines act strictly as opponents or post-game arbiters. Three consecutive illegal attempts on the same turn forfeit the game—a custom tournament rule defined by this project.
 
 If a model invokes or attempts a tool call, the match pauses immediately; if a safety/anti-CoT-extraction refusal occurs, the match halts and preserves raw evidence without rephrasing or auto-resuming. Because upstream CLIs do not expose every internal tool event, "no observed tool event" is not a formal proof of zero tool attempts. See [System Design](docs/design.md) for protocol history and boundaries.
 
