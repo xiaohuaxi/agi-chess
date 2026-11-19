@@ -1,0 +1,122 @@
+{
+ "game": "chess",
+ "sides": {
+  "w": {
+   "player": "agy:gemini-4-carbon",
+   "plies": 55,
+   "undecided": 46,
+   "blunders": 6,
+   "mistakes": 2,
+   "events": 6,
+   "acpl": 56.8,
+   "acpl_undecided": 67.9,
+   "blunder_rate": 0.1304,
+   "mistake_rate": 0.0435,
+   "lichess": {
+    "Inaccuracy": 3,
+    "Mistake": 0,
+    "Blunder": 7,
+    "Inaccuracy_rate": 0.0545,
+    "Mistake_rate": 0.0,
+    "Blunder_rate": 0.1273,
+    "avg_wp_loss": 3.8
+   },
+   "phases": [
+    {
+     "range": "1-15",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 0,
+     "acpl": 4.7
+    },
+    {
+     "range": "16-30",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 2,
+     "acpl": 71.1
+    },
+    {
+     "range": "31-45",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 3,
+     "acpl": 108.0
+    },
+    {
+     "range": "46-",
+     "plies": 10,
+     "undecided": 1,
+     "blunders": 1,
+     "acpl": 36.6
+    }
+   ]
+  },
+  "b": {
+   "player": "codex:astra",
+   "plies": 55,
+   "undecided": 45,
+   "blunders": 2,
+   "mistakes": 3,
+   "events": 2,
+   "acpl": 38.8,
+   "acpl_undecided": 47.4,
+   "blunder_rate": 0.0444,
+   "mistake_rate": 0.0667,
+   "lichess": {
+    "Inaccuracy": 2,
+    "Mistake": 2,
+    "Blunder": 2,
+    "Inaccuracy_rate": 0.0364,
+    "Mistake_rate": 0.0364,
+    "Blunder_rate": 0.0364,
+    "avg_wp_loss": 3.0
+   },
+   "phases": [
+    {
+     "range": "1-15",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 0,
+     "acpl": 6.8
+    },
+    {
+     "range": "16-30",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 1,
+     "acpl": 52.5
+    },
+    {
+     "range": "31-45",
+     "plies": 15,
+     "undecided": 15,
+     "blunders": 1,
+     "acpl": 83.1
+    },
+    {
+     "range": "46-",
+     "plies": 10,
+     "undecided": 0,
+     "blunders": 0,
+     "acpl": 0.0
+    }
+   ]
+  }
+ },
+ "opening_plies": 0,
+ "events_global": 6,
+ "params": {
+  "version": 1,
+  "game": "chess",
+  "engine": "Stockfish 19",
+  "depth": 18,
+  "hash": 64,
+  "threads": 1,
+  "clip": 1000,
+  "big": 250,
+  "mistake": 100,
+  "opening": 0
+ },
+ "plies": 110
+}

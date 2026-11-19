@@ -17,7 +17,7 @@ venv/
 /scratchpad/
 /scratchpad_run_logs/
 
-# runs/：仅跟踪 82 个正式对局与正式局面题目录下的干净公开产出物
+# runs/：仅跟踪 95 个正式对局与正式局面题目录下的干净公开产出物
 /runs/*
 !/runs/g1-c-opus-sol/
 !/runs/g1-x-opus-sol/
@@ -63,6 +63,12 @@ venv/
 !/runs/carbon-vs-agy-opus-high-20261114/
 !/runs/carbon-vs-agy-opus-high-20261114-[123]/
 !/runs/carbon-vs-agy-opus-high-xq-20261114-[1234]/
+!/runs/neon-xhigh-vs-carbon-high-20261119/
+!/runs/neon-xhigh-vs-carbon-high-20261119-[234]/
+!/runs/neon-xhigh-vs-astra-max-20261119-[1234]/
+!/runs/carbon-high-vs-astra-max-20261119/
+!/runs/carbon-high-vs-astra-max-20261119-[234]/
+!/runs/carbon-high-vs-astra-xhigh-20261119/
 !/runs/b1-ch-notes-[123]/
 !/runs/b1-ch-session-[123]/
 !/runs/b1-ch-stateless-[123]/

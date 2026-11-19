@@ -135,7 +135,7 @@ engine_spec(描述) -> 引擎命令与参数       to_engine(着法) / from_engi
 
 ## 四、记录格式
 
-每盘一个目录 `runs/<tag>/`（其中已入库 74 个正式对局/局面题目录的 `game.pgn`、`analysis*.json*`、`summary.*`、`judged.jsonl`、`report.txt`；原始大文件 `game.jsonl`、`record.txt`、`.mp4` 及新跑目录由 `.gitignore` 忽略），`game.jsonl` 一行一条 JSON，和上一轮兼容并补字段：
+每盘一个目录 `runs/<tag>/`（其中已入库 95 个正式对局/局面题目录的 `game.pgn`、`analysis*.json*`、`summary.*`、`judged.jsonl`、`report.txt`；原始大文件 `game.jsonl`、`record.txt`、`.mp4` 及新跑目录由 `.gitignore` 忽略），`game.jsonl` 一行一条 JSON，和上一轮兼容并补字段：
 
 - `config`：全部变量、两边系统提示、完整命令行、本机 Claude Code 版本、引擎名与参数、代码 commit；随机开局另有 `opening`（种子、半回合数、开局引擎与参数、`moves` / `record`、每步的候选与评分 `detail`）。
 - `attempt`（每次调用一条）：半回合号、哪方、第几次尝试、提示原文、回复原文、解析出的着法、是否合法及原因、便条文本、复述得分；`usage` 展开成 `in`（无缓存输入）、`cache_read`、`cache_write`、`out`、`think`、`text_out = out − think`；`cost`、`duration_ms`、`ttft_ms`、`session_id`、服务端模型串、`stop_reason`、`api_error_status`；`claude` 字段存返回 JSON 原样。

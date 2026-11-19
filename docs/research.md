@@ -2,14 +2,14 @@
 
 # 研究索引
 
-这里导航 `docs/results/` 的全部 34 篇报告，覆盖 2026-09-25 至 11-15 的实验、复盘和历史数据复算。它们研究的是特定模型、提示和会话条件下的表现，不能合成一个跨棋种、跨档位的总排行榜。
+这里导航 `docs/results/` 的全部 35 篇报告，覆盖 2026-09-25 至 11-19 的实验、复盘和历史数据复算。它们研究的是特定模型、提示和会话条件下的表现，不能合成一个跨棋种、跨档位的总排行榜。
 
 想看哪类证据：
 
 - 思考深度与延续：[第一批深度](results/batch1-depth.md)、[延续对照](results/batch1-carryover.md)、[会话内思考量](results/thinking-in-session.md)、[Argon/Opus 思考量对照](results/thinking-tokens-argon-opus-20261025.md)。
 - 送子和漏吃为什么发生：[局面题诊断](results/batch2-capture.md)、[实战失败点重问](results/missed-captures.md)。两者选题和提示不同，错因比例不能直接拼接。
 - 局面如何呈现：[第四批](results/batch4-presentation.md) → [跨模型复测](results/batch5-cross-model-presentation.md) → [真实棋手协议复测](results/batch6-real-presentation.md)。
-- 棋力刻度：[Opus Max 对引擎定位](results/opus-max-rating.md)；Argon 的[历史比较](results/argon-high-chess-rating-20261019.md)、[四盘交手](results/argon-vs-agy-opus-high-20261020.md)及 Carbon 的[国象四盘交手](results/carbon-vs-agy-opus-high-20261114.md)、[中象四盘交手](results/carbon-vs-agy-opus-high-xq-20261114.md)只支持方向与暂定判断。
+- 棋力刻度：[Opus Max 对引擎定位](results/opus-max-rating.md)；Argon 的[历史比较](results/argon-high-chess-rating-20261019.md)、[四盘交手](results/argon-vs-agy-opus-high-20261020.md)、Carbon 的[国象四盘交手](results/carbon-vs-agy-opus-high-20261114.md)与[中象四盘交手](results/carbon-vs-agy-opus-high-xq-20261114.md)，以及 [Neon / Carbon / Astra 6.2 国象对称评测](results/neon-carbon-astra-chess-20261119.md)只支持方向与暂定判断。
 - 历史阶段总结：[第一轮总结](results/summary-round1.md)以第一至三批为主体，补入第四批局面呈现结论，不是最新总论；其中旧 Maia 人类评级链已被后续报告更正。
 
 ## 怎么读条件与样本
@@ -80,7 +80,7 @@
 
 - [Opus Max 棋力定位](results/opus-max-rating.md)（10-01—03对局，10-04补新规回看；两种棋）。`claude-opus-5-5`、max、llm-chat、连续会话带思考、plain 理由、real；随机代走国际象棋 8 / 中国象棋 6 半回合。国际象棋对 Maia-1900 和 Stockfish 19 限强三档，共 30 盘；中国象棋对 Fairy-Stockfish 14.0.1 节点阶梯，共 37 盘，另有引擎互下标定。国际象棋旧到上限计和版约 lichess Blitz 1910 / Rapid 2020，新规事后回看约 1800 / 1920；这是两种口径的点估计，不是一个置信区间，且原盘没有按新提示重下。中国象棋只给引擎相对位置，不给人类段位。评级刻度可用入库CSV离线复算；全部对局的 `game.pgn`（含每步思考理由、耗时与 token 统计）及引擎复盘 `analysis.jsonl` 已随 `runs/` 入库。
 
-## Argon、Carbon 与后续比较（2026-10-19—11-15）
+## Argon、Carbon、Neon 与后续比较（2026-10-19—11-19）
 
 - [Argon High 中国象棋自弈](results/argon-high-xiangqi-20261019.md)（10-19）。双方 `gemini:gemini-4-argon-high`、high、agy、独立连续会话、real、plain、子力清单；1 盘，158 半回合、黑胜。复现送车与漏吃，所有着法合法不代表攻防可靠；自弈一盘不能评级或排模型强弱。
 
@@ -100,17 +100,19 @@
 
 - [英文默认提示词切换与 Opus 防思维链误拦实测](results/english-prompts-filter-mitigation-20261115.md)（11-15，两种棋，提示与安全通道验证）。`agy:claude-opus-5-5`、`high`、llm-chat→agy（`1.5.8 acp`）；分两阶段共 **147 次真实调用**（第一阶段 4 组英文格式 × 10 复杂中局 = 40 次单步语体对照，含落定方案 10 次与对照方案 30 次，均 0 过滤；第二阶段落定的 `--lang en` 连续 `session` 实盘 4 盘共 107 次调用，含 `plain` 105 次与 `off` 2 次，对 `fsf:nodes=200` 与 `stockfish:elo=1800`）。证实单纯直译中文 `plain` 到英文仍有 100% 第一人称验算与 90% 排除列表；改为首句锚定 1–3 句客观第三人称短评（`en_note_first`，正式定为 `--lang en` 默认 `plain`）并收紧 `off` 为单行着法后，落定方案合计 117 次调用（及全部 147 次实测）在 `game.jsonl` 与底层 `agy` transcript 均 **0 次过滤/拒答**，105 次连续 `plain` 回合 **0% 自我更正独白、0% 列表枚举**，两盘中国象棋长局合计 69 步零大失误（ACPL 26.0 / 55.0）；同步补齐 `blocked by content safety filters` 首次即停熔断与 `--lang zh` 历史中文兼容开关。
 
+- [Neon、Carbon 与 Astra 6.2 国际象棋对称评测、计费折算与隐式缓存溯源](results/neon-carbon-astra-chess-20261119.md)（11-19，国际象棋，共 13 盘全部将死完赛）。`agy:gemini-4-neon`（`xhigh`）、`agy:gemini-4-carbon`（`high`）与 `codex:gpt-6.2-astra`（`xhigh` / `max`），独立连续 `session`、`real`、`--lang en`、`plain`、标准开局；含 `agy 1.5.12` 与 `codex-cli 0.167.2` 零工具桩核验（26 段棋手会话 0 工具、0 拒答、0 上下文压缩）。对称四盘三组交手：`Neon xhigh` 对 `Carbon high` **4:0**（执白 2/2、执黑 2/2，加权 ACPL 35.1 / 46.4，Lichess 大失误 8 / 13）、`Neon xhigh` 对 `Astra 6.2 max` **2:2**（各取执白 2 胜，加权 ACPL 40.8 / 41.0，大失误 9 / 9）、`Carbon high` 对 `Astra 6.2 max` **1:3**（加权 ACPL 45.1 / 35.8，大失误 14 / 8）；另附首轮 `Carbon high` 对 `Astra 6.2 xhigh` 单盘白胜（ACPL 22.5 / 47.1；首轮两盘无尾缀目录 PGN 头标签 `codex:astra` 对应 `gpt-6.2-astra`）。同步沉淀官方 API 与 Antigravity 同池五模型折算单价表（`Neon` 订阅抵扣 `$1/$0.05/$5` 为 API `$3/$0.15/$15` 的 1/3、同池 `Carbon` 的 2 倍可用量；13 盘 API 合计 `$177.56`、Gemini 池抵扣合计 `$71.92`）及跨轮跳格命中对服务端无粘性多副本隐式缓存的数学溯源。
+
 ## 仓库里有什么证据
 
 | 入库材料 | 能做什么 | 缺什么 |
 |---|---|---|
-| [34篇结果报告](results/) | 阅读条件、汇总数字、关键案例及限制 | 正式批次的棋谱、引擎分析与判卷汇总已入库 `runs/`；早期临时目录或截断分叉实验的底层事件流不在库 |
-| [正式对局与局面题判卷产物](../runs/) | 直接浏览全部 73 个正式模型对局目录——51 个模型互弈单盘目录 + 22 个模型对引擎目录（15 个单盘目录 `runs/<tag>/game.pgn` + 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`，合计 179 盘）——的 `game.pgn`（含每步思考理由、耗时与 token 统计）、`analysis.jsonl` / `analysis-summary.json`（178 盘）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的判卷结果 `judged.jsonl` 与 `report.txt` | 不含体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `games-engines.csv`）及 `.mp4` 录屏 |
+| [35篇结果报告](results/) | 阅读条件、汇总数字、关键案例及限制 | 正式批次的棋谱、引擎分析与判卷汇总已入库 `runs/`；早期临时目录或截断分叉实验的底层事件流不在库 |
+| [正式对局与局面题判卷产物](../runs/) | 直接浏览全部 86 个正式模型对局目录——64 个模型互弈单盘目录 + 22 个模型对引擎目录（15 个单盘目录 `runs/<tag>/game.pgn` + 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`，合计 192 盘）——的 `game.pgn`（含每步思考理由、耗时与 token 统计）、`analysis.jsonl` / `analysis-summary.json`（191 盘）、`summary.json` / `summary.md`，以及 9 个正式局面题批次（`quiz-*`，共 50 份 `judged.jsonl`）的判卷结果 `judged.jsonl` 与 `report.txt` | 不含体积庞大的底层过程事件流 `game.jsonl`、重复的 `record.txt`、纯引擎互弈标定原始对局（结果已在 `games-engines.csv`）及 `.mp4` 录屏 |
 | [第一批题库](../data/batch1/)与[第二批题库](../data/batch2/) | 查看选定局面与选题脚本；配合 `runs/quiz-*/judged.jsonl` 核对 9 个正式局面题批次的逐题判卷记录 | 早期未归入 `quiz-*` 正式目录的临时作答不在库；后续报告按各批剔除条件使用题库 |
 | [评级战绩与脚本](../analysis/rating/) | 从 `games-engines.csv`、`games-opus.csv`、`human-scale.json` 离线复算评级刻度（`rate.py report`），或直接查看已入库的批次汇总 `runs/zc/summary.md`、`runs/zx/summary.md` | `rate.py export` 重导 CSV 所需的纯引擎标定原始目录不在库（导出后的 CSV 已入库）；`stats.py` 统计每盘花费与墙钟需读取未入库的本机 `game.jsonl` |
 | [阅读器 fixtures](../viewer/test/fixtures/) | 测试、演示解析和显示 | 仅供测试演示；查看真实实验对局请直接打开单盘目录 `runs/<tag>/game.pgn` 或多盘批次子目录 `runs/<batch>/<game>/game.pgn` |
 
-评级复算在仓库根运行 `python3 analysis/rating/rate.py report --boot 10`（1.5 秒快检；去掉 `--boot 10` 跑完整 1,000 次自助法抽样约 1.5 分钟），不调用模型或引擎；9 批局面题判卷汇总表可运行 `python3 -m agi_chess.quiz report --batch batch2`（可换 `batch1`、`batch2`、`batch3`、`4p`、`4p2`、`5-ds`、`5-sol`、`6r`、`6r-sol`，0.1 秒出表）。`runs/` 现已随仓入库全部 179 盘正式模型对局的 `game.pgn`、引擎逐着复盘 `analysis.jsonl` 以及 9 批正式局面题判卷结果 `judged.jsonl`；仅体积庞大的底层事件流 `game.jsonl`、纯引擎互弈标定原始目录及录屏 `.mp4` 视频保持被 Git 忽略。
+评级复算在仓库根运行 `python3 analysis/rating/rate.py report --boot 10`（1.5 秒快检；去掉 `--boot 10` 跑完整 1,000 次自助法抽样约 1.5 分钟），不调用模型或引擎；9 批局面题判卷汇总表可运行 `python3 -m agi_chess.quiz report --batch batch2`（可换 `batch1`、`batch2`、`batch3`、`4p`、`4p2`、`5-ds`、`5-sol`、`6r`、`6r-sol`，0.1 秒出表）。`runs/` 现已随仓入库全部 192 盘正式模型对局的 `game.pgn`、引擎逐着复盘 `analysis.jsonl` 以及 9 批正式局面题判卷结果 `judged.jsonl`；仅体积庞大的底层事件流 `game.jsonl`、纯引擎互弈标定原始目录及录屏 `.mp4` 视频保持被 Git 忽略。
 
 ### `runs/` 目录前缀与实验批次速查表
 
@@ -125,6 +127,7 @@
 | `g7-c-*`、`g7-x-*` | 单盘目录 × 8（8 盘） | **巅峰对决**：国象 / 中象 Opus `max` vs Astra `max`（国象 3:1、中象 4:0） | [双方 Max 巅峰对决](results/game-opus-max-vs-astra-max-1.md) |
 | `argon-high-*`、`argon-vs-agy-opus-high-*`、`gemini38-*` | 单盘目录 × 7（7 盘） | Gemini Argon High 自弈（中象/国象各 1 盘）、Argon High vs agy Opus High 国象 4 盘（3:1）、Gemini 3.8 Flash High 中象自弈 | [Argon 中象自弈](results/argon-high-xiangqi-20261019.md)、[国象自弈](results/argon-high-chess-20261019.md)、[对 agy Opus 四盘](results/argon-vs-agy-opus-high-20261020.md) |
 | `carbon-vs-agy-opus-high-*` | 单盘目录 × 8（8 盘） | Gemini Carbon High vs agy Opus High 国象 4 盘（4:0）、中象 4 盘（3:1） | [国象四盘](results/carbon-vs-agy-opus-high-20261114.md)、[中象四盘](results/carbon-vs-agy-opus-high-xq-20261114.md) |
+| `neon-xhigh-vs-*`、`carbon-high-vs-astra-*` | 单盘目录 × 13（13 盘） | 国象（`--lang en`）：Neon `xhigh` vs Carbon `high` 4 盘（4:0）、Neon `xhigh` vs Astra 6.2 `max` 4 盘（2:2）、Carbon `high` vs Astra 6.2 `max` 4 盘（1:3）及 vs `xhigh` 1 盘（1:0） | [Neon / Carbon / Astra 6.2 对称评测](results/neon-carbon-astra-chess-20261119.md) |
 | `b1-ch-*`、`b1-xq-*` | 单盘目录 × 15（15 盘） | 第一批 B：Opus `high`（`stateless`/`notes`/`session`）对 Maia-1100（9 盘）与 FSF `nodes=100`（6 盘） | [第一批 B：思考延续](results/batch1-carryover.md) |
 | `b1`、`b1-session`、`b2` | 多盘批次目录 × 3（40 盘） | 第二批 B1/C 国象（24 盘，对 random / Maia-1500 / Maia-1900）与 B2 中象（16 盘，对 FSF `nodes=30,100`） | [第二批 B1/C 国象](results/batch2-chess-strength.md)、[第二批 B2 中象](results/batch2-xiangqi-strength.md) |
 | `b3max-ch`、`b3max-xq` | 多盘批次目录 × 2（6 盘） | 第三批 B：Opus `max`（`stateless`）对引擎（国象 4 盘、中象 2 盘全胜） | [第三批 B：Max 整盘](results/batch3-maxdepth.md) |

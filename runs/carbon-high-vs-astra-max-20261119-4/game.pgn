@@ -1,0 +1,209 @@
+[Event "agi-chess carbon-high-vs-astra-max-20261119-4"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "codex:gpt-6.2-astra"]
+[Black "agy:gemini-4-carbon"]
+[Result "1-0"]
+[Termination "将死"]
+[WhiteEffort "max"]
+[BlackEffort "high"]
+
+1. e4 { [%emt 0:00:09] [%think 8] [%out 38] [%in 2938] [%cacheread 0]
+[%cachewrite 0] White claims central space and opens lines for the queen and
+the f1-bishop. } 1... c5 { [%emt 0:00:10] [%think 422] [%out 483] [%in 907]
+[%cacheread 0] [%cachewrite 0] White opens with the King's Pawn, staking an
+immediate claim in the center and opening diagonals for the queen and
+light-squared bishop. Black responds with the Sicilian Defense to contest the
+d4 square asymmetrically and create a fighting, imbalanced game. } 2. Nf3 {
+[%emt 0:00:09] [%think 8] [%out 43] [%in 3187] [%cacheread 0] [%cachewrite 0]
+Black’s c-pawn contests d4. White develops the kingside knight to support a d4
+advance. } 2... d6 { [%emt 0:00:11] [%think 446] [%out 495] [%in 1798]
+[%cacheread 0] [%cachewrite 0] White develops the kingside knight to pressure
+the center and prepare the standard d4 pawn break. Black plays d6 to secure the
+e5 square and maintain flexible options for kingside development. } 3. d4 {
+[%emt 0:00:09] [%think 0] [%out 35] [%in 372] [%cacheread 3072] [%cachewrite 0]
+White challenges the c5-pawn directly. If Black exchanges on d4, White can
+recapture with the knight. } 3... cxd4 { [%emt 0:00:08] [%think 199] [%out 256]
+[%in 2702] [%cacheread 0] [%cachewrite 0] White initiates the Open Sicilian by
+advancing d4 to challenge Black's foothold in the center. Black captures on d4,
+exchanging a flank pawn for a central pawn while opening the semi-open c-file
+for counterplay. } 4. Nxd4 { [%emt 0:00:10] [%think 0] [%out 35] [%in 363]
+[%cacheread 3328] [%cachewrite 0] White recaptures on d4, placing the knight on
+a central square where it controls b5 and e6. } 4... Nf6 { [%emt 0:00:10]
+[%think 218] [%out 281] [%in 2811] [%cacheread 552] [%cachewrite 0] White
+recaptures on d4 with the knight, centralizing the piece and opening lines for
+the bishops. Black develops the knight to f6, attacking the undefended e4 pawn
+with tempo to prevent White from comfortably establishing a Maroczy Bind with
+c4. } 5. Nc3 { [%emt 0:00:10] [%think 0] [%out 30] [%in 3937] [%cacheread 0]
+[%cachewrite 0] Black’s knight attacks e4. White defends the pawn while
+developing the queenside knight. } 5... a6 { [%emt 0:00:14] [%think 385]
+[%out 452] [%in 2741] [%cacheread 1314] [%cachewrite 0] White develops the
+queenside knight to c3 to defend the e4 pawn and strengthen control over d5.
+Black enters the Najdorf Variation with a6, denying the b5 square to White's
+minor pieces and preparing queenside counterplay while keeping central pawn
+options flexible. } 6. Be3 { [%emt 0:00:10] [%think 28] [%out 76] [%in 1365]
+[%cacheread 2816] [%cachewrite 0] Black’s a6-pawn denies the white knights b5.
+White develops the bishop to e3, defending d4 and preparing Qd2 and queenside
+castling. } 6... e5 { [%emt 0:00:18] [%think 833] [%out 895] [%in 2917]
+[%cacheread 2006] [%cachewrite 0] White develops the dark-squared bishop to e3,
+initiating the English Attack setup. Black strikes immediately in the center
+with e5, gaining space and displacing White's centralized knight while opening
+the diagonal for the light-squared bishop to contest d5. } 7. Nb3 {
+[%emt 0:00:11] [%think 7] [%out 54] [%in 379] [%cacheread 4096] [%cachewrite 0]
+Black gains space with tempo but leaves d5 without pawn protection. White
+retreats the attacked knight to b3, keeping the c3-knight ready to occupy d5. }
+7... Be6 { [%emt 0:00:15] [%think 634] [%out 699] [%in 2185] [%cacheread 4051]
+[%cachewrite 0] White retreats the knight to b3, vacating the d-file for the
+queen while eyeing queenside squares. Black develops the light-squared bishop
+to e6 to fight for control of the d5 square and neutralize White's potential
+diagonal pressure with Bc4. } 8. f3 { [%emt 0:00:11] [%think 9] [%out 51]
+[%in 394] [%cacheread 4352] [%cachewrite 0] White reinforces e4 with the f-pawn
+and prepares g4, where a pawn advance could dislodge Black’s f6-knight. } 8...
+h5 { [%emt 0:00:36] [%think 2397] [%out 2461] [%in 2433] [%cacheread 4919]
+[%cachewrite 0] White plays f3 to bolster the e4 pawn and prepare a kingside
+pawn storm with g4 alongside queenside castling. Black responds
+prophylactically with h5, clamping down on the g4 square to disrupt White's
+attacking plan before committing the king. } 9. Qd2 { [%emt 0:00:12]
+[%think 69] [%out 117] [%in 1175] [%cacheread 3840] [%cachewrite 0] Black’s
+h-pawn restrains g4. White brings the queen to d2, connecting it with the
+e3-bishop and clearing the way to castle queenside. } 9... Nbd7 {
+[%emt 0:00:19] [%think 1165] [%out 1230] [%in 2879] [%cacheread 7353]
+[%cachewrite 0] White develops the queen to d2, clearing the first rank for
+queenside castling and aligning along the d-file. Black develops the knight to
+d7, preparing queenside operations with Rc8 and b5 while keeping options open
+for the dark-squared bishop. } 10. O-O-O { [%emt 0:00:12] [%think 8] [%out 41]
+[%in 360] [%cacheread 4992] [%cachewrite 0] White castles queenside, bringing
+the rook to d1 opposite Black’s backward d6-pawn. } 10... Be7 { [%emt 0:01:03]
+[%think 4889] [%out 4951] [%in 3702] [%cacheread 8183] [%cachewrite 0] White
+castles queenside, completing a battery along the d-file and moving the king
+out of the center. Black develops the dark-squared bishop to e7, preparing
+kingside castling and covering key kingside squares before initiating queenside
+counterplay. } 11. Kb1 { [%emt 0:00:14] [%think 145] [%out 188] [%in 876]
+[%cacheread 4736] [%cachewrite 0] White moves the king off the half-open c-file
+before Black can contest it with a rook. From b1 the king also defends a2. }
+11... Rc8 { [%emt 0:00:46] [%think 3635] [%out 3700] [%in 5373]
+[%cacheread 11886] [%cachewrite 0] White tucks the king away on b1 as a
+prophylactic measure to protect a2 and step off the semi-open c-file. Black
+activates the queenside rook to c8, seizing the c-file to pressure c3 and
+support upcoming queenside expansion. } 12. h4 { [%emt 0:00:28] [%think 516]
+[%out 556] [%in 772] [%cacheread 5248] [%cachewrite 0] White fixes Black’s
+h-pawn on h5 and gains control of g5, a useful square for the e3-bishop. }
+12... b5 { [%emt 0:03:14] [%think 17577] [%out 17645] [%in 4124]
+[%cacheread 17260] [%cachewrite 0] White advances h4 to control the g5 square,
+preventing Black from trading dark-squared bishops via Bg5 while preparing
+potential pressure on f6. Black initiates immediate queenside expansion with
+b5, gaining space and threatening b4 to dislodge White's knight from c3. } 13.
+Nd5 { [%emt 0:00:17] [%think 137] [%out 188] [%in 1294] [%cacheread 5504]
+[%cachewrite 0] White occupies d5 before Black can drive the knight back with
+b4. From d5 the knight attacks e7 and offers an exchange that would give White
+a protected grip on central space. } 13... Nxd5 { [%emt 0:02:00] [%think 10154]
+[%out 10228] [%in 18069] [%cacheread 21385] [%cachewrite 0] White jumps the c3
+knight into the central d5 outpost to challenge Black's minor pieces before b4
+can dislodge it. Black captures on d5 with the knight, opening the dark-squared
+bishop's diagonal toward h4 while preserving the light-squared bishop to
+pressure c2 from f5. } 14. exd5 { [%emt 0:00:10] [%think 8] [%out 48] [%in 423]
+[%cacheread 6784] [%cachewrite 0] White recaptures with the e-pawn, attacking
+the e6-bishop and fixing Black’s d6-pawn in place. } 14... Bf5 { [%emt 0:00:27]
+[%think 758] [%out 826] [%in 10649] [%cacheread 39455] [%cachewrite 0] White
+recaptures on d5 with the e-pawn, establishing a central wedge while attacking
+Black's light-squared bishop. Black redeploys the bishop to f5, combining with
+the c8-rook to create an immediate threat against the c2 pawn in front of
+White's king. } 15. Bd3 { [%emt 0:00:40] [%think 685] [%out 733] [%in 307]
+[%cacheread 7168] [%cachewrite 0] Black’s bishop and rook both bear down on c2.
+White develops the f1-bishop with tempo, blocking the diagonal and offering to
+exchange the f5-bishop. } 15... Bxd3 { [%emt 0:00:28] [%think 1575] [%out 1641]
+[%in 3301] [%cacheread 48055] [%cachewrite 0] White interposes the
+light-squared bishop on d3 to shield c2 and contest the h7-b1 diagonal. Black
+exchanges bishops on d3, eliminating a key defender of the c4 and f5 squares to
+prepare queenside pressure and kingside pawn expansion. } 16. Qxd3 {
+[%emt 0:00:13] [%think 43] [%out 77] [%in 1003] [%cacheread 7424]
+[%cachewrite 0] White recaptures with the queen, preserving the c2-pawn as a
+shield for the king. } 16... Nf6 { [%emt 0:02:57] [%think 14733] [%out 14804]
+[%in 2060] [%cacheread 51357] [%cachewrite 0] White recaptures on d3 with the
+queen, maintaining protection over c2 and d5 while keeping options open for
+central piece play. Black reroutes the knight to f6, simultaneously pressuring
+the d5 pawn, controlling the critical e4 outpost, and reinforcing h5 ahead of
+castling. } 17. Bg5 { [%emt 0:00:59] [%think 1115] [%out 1164] [%in 404]
+[%cacheread 8320] [%cachewrite 0] White pins the f6-knight to the queen on d8.
+Exchanging on f6 could clear the way for White’s remaining knight to reach e4
+via d2. } 17... O-O { [%emt 0:03:52] [%think 15462] [%out 15537] [%in 15225]
+[%cacheread 53418] [%cachewrite 0] White moves the bishop to g5 to challenge
+Black's centralized knight on f6 and connect the rooks on the first rank. Black
+castles kingside, securing the king and activating the f8-rook while
+maintaining latent pressure against h4 along the d8-h4 diagonal should White
+exchange on f6. } 18. Bxf6 { [%emt 0:00:39] [%think 791] [%out 839] [%in 1404]
+[%cacheread 8704] [%cachewrite 0] White removes the f6-knight, a defender of
+the castled king. If Black recaptures with the bishop, g4 can challenge the
+h5-pawn. } 18... Bxf6 { [%emt 0:00:14] [%think 621] [%out 688] [%in 15958]
+[%cacheread 68644] [%cachewrite 0] White exchanges the dark-squared bishop for
+Black's knight on f6 to contest control over the central light squares. Black
+recaptures with the bishop, activating an unopposed dark-squared piece and
+completing a queen-bishop battery that immediately threatens White's h4 pawn. }
+19. g4 { [%emt 0:00:18] [%think 165] [%out 211] [%in 7582] [%cacheread 3584]
+[%cachewrite 0] White challenges Black’s kingside shelter. After hxg4 and fxg4,
+the recapturing pawn would threaten to advance against the f6-bishop. } 19...
+hxg4 { [%emt 0:02:53] [%think 11690] [%out 11757] [%in 3157] [%cacheread 82553]
+[%cachewrite 0] White advances g4 to avoid passive defense of the h4 pawn and
+attempt to pry open kingside files toward Black's castled king. Black captures
+on g4, accepting the challenge to expose White's kingside structure and prepare
+active counterplay along the fourth rank. } 20. fxg4 { [%emt 0:00:14]
+[%think 28] [%out 67] [%in 1609] [%cacheread 9984] [%cachewrite 0] White
+restores material equality, opening the f-file and gaining a pair of kingside
+pawns that can advance against Black’s king. } 20... Rc4 { [%emt 0:03:11]
+[%think 6205] [%out 6272] [%in 12173] [%cacheread 85711] [%cachewrite 0] White
+recaptures on g4 with the f-pawn, establishing a mobile kingside duo while
+opening diagonals toward Black's king. Black activates the rook to c4,
+immediately targeting the undefended g4 pawn and preparing to advance e4 with
+support along the fourth rank. } 21. g5 { [%emt 0:00:22] [%think 313]
+[%out 352] [%in 355] [%cacheread 11520] [%cachewrite 0] The c4-rook attacks g4.
+White advances the pawn with tempo against the bishop, keeping it supported by
+h4. } 21... e4 { [%emt 0:01:41] [%think 6295] [%out 6363] [%in 6692]
+[%cacheread 97885] [%cachewrite 0] White advances g5 to save the attacked
+g-pawn and challenge Black's bishop on f6. Black counters immediately with e4,
+attacking White's queen with support from the c4-rook in order to vacate the
+dominating e5 outpost for the dark-squared bishop. } 22. Qe3 { [%emt 0:01:43]
+[%think 2334] [%out 2390] [%in 669] [%cacheread 11776] [%cachewrite 0] Black’s
+e-pawn attacks the queen, but its advance also blocks the c4-rook’s path to the
+kingside. From e3 the queen pressures e4 and supports a knight move to d4. }
+22... Be5 { [%emt 0:01:14] [%think 1857] [%out 1925] [%in 6785]
+[%cacheread 104578] [%cachewrite 0] White retreats the queen to e3 to blockade
+the e4 pawn while keeping the f6 bishop under attack. Black plants the
+unopposed dark-squared bishop on the central e5 outpost, permanently protected
+by the d6 pawn and aimed directly toward White's queenside king shelter. } 23.
+Nd4 { [%emt 0:01:23] [%think 1991] [%out 2039] [%in 3915] [%cacheread 11136]
+[%cachewrite 0] White centralizes the knight on d4, blocking the e5-bishop’s
+diagonal toward b2. The d5-pawn supports a possible knight jump to c6. } 23...
+Qb6 { [%emt 0:02:50] [%think 9996] [%out 10068] [%in 2342] [%cacheread 111364]
+[%cachewrite 0] White centralizes the knight to d4, cutting off the c4-rook's
+defense of e4 and threatening both Qxe4 and Nc6. Black plays Qb6, pinning the
+knight to White's queen along the a7-g1 diagonal and adding a third attacker
+against d4. } 24. Nf5 { [%emt 0:00:51] [%think 1074] [%out 1121] [%in 2326]
+[%cacheread 14976] [%cachewrite 0] Black has brought a third attacker to bear
+on d4. White moves the knight to f5, where it can recapture on e3 if the queens
+are exchanged. } 24... Qc5 { [%emt 0:02:16] [%think 9070] [%out 9138]
+[%in 10483] [%cacheread 113707] [%cachewrite 0] White breaks the pin
+dynamically with Nf5, defending the e3 queen while counterattacking Black's
+queen on b6. Black slides the queen to c5, maintaining the confrontation along
+the a7-g1 diagonal while forming an immediate battery with the c4-rook against
+c2. } 25. Ne7+ { [%emt 0:02:13] [%think 3093] [%out 3140] [%in 1353]
+[%cacheread 17280] [%cachewrite 0] White checks before deciding on the queen
+exchange. From e7 the knight denies the black king both g8 and g6, setting up
+mating threats on the h-file. } 25... Kh8 { [%emt 0:00:57] [%think 2936]
+[%out 3009] [%in 9558] [%cacheread 124191] [%cachewrite 0] White delivers a
+knight check on e7 to gain time before addressing the simultaneous threats
+against the e3 queen and c2 pawn. Black tucks the king safely onto h8, avoiding
+any check from a g6 advance while maintaining full pressure along the c-file
+and against White's undefended queen. } 26. Qe2 { [%emt 0:00:54] [%think 1201]
+[%out 1251] [%in 3427] [%cacheread 18560] [%cachewrite 0] White threatens Qh5
+mate: the knight covers g8, and Black’s own pawn occupies g7. Preventing that
+check will cost Black time or weaken the king’s shelter. } 26... Kh7 {
+[%emt 0:03:10] [%think 12315] [%out 12381] [%in 3426] [%cacheread 133750]
+[%cachewrite 0] White moves the queen to e2, defending c2 while setting up an
+immediate checkmate threat on h5. Black sidesteps the king to h7, neutralizing
+the mate threat without weakening the kingside pawns and preparing a decisive
+counterattack against b2 via Qd4. } 27. Qh5# { [%emt 0:00:24] [%think 339]
+[%out 390] [%in 11035] [%cacheread 12416] [%cachewrite 0] The knight on e7
+covers g8 and g6, and Black’s pawn blocks g7. The queen’s check on h5 cannot be
+captured or blocked, so it is mate. } 1-0
+
