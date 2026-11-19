@@ -19,7 +19,7 @@ Google 于 2026-11-18 发布 `gemini-4-neon`（支持 `low / medium / high / xhi
 
 1. **`agy 1.5.12` ACP 档位核验**：经零成本 `initialize → session/new → session/set_config_option` 握手确认，`gemini-4-neon` 原生暴露 `thought_level = ['low', 'medium', 'high', 'xhigh']`，`gemini-4-carbon` 暴露 `['low', 'medium', 'high']`；会话均采用 `llm-chat-session.md`（`tools: []`、`excludeDefaultComponents: true`）。
 2. **`codex-cli 0.167.2`（`gpt-6.2-astra`）本机桩抓包核验**：升级后经本地 HTTP 桩拦截并解压 `zstd` 请求体确认，顶层 `model = "gpt-6.2-astra"`、`tools = []`、`web_search = None`，无全局 `AGENTS.md` 或环境信息注入；`additional_tools` 仍仅含 `code_mode_host` 已关闭的 4 个惰性占位描述，与 `llm_chat.py` 白名单逐字一致。
-3. **棋手全名标注说明**：首轮两盘探路局 `carbon-high-vs-astra-{xhigh,max}-20261119` 命令行传短名 `codex:astra`（`game.jsonl` 中 `cfg.models.b` 已记为 `"gpt-6.2-astra"`，导出的 `game.pgn` 头标签保留原串 `[Black "codex:astra"]`）；随后并发运行的全部 10 盘统一显式传入完整型号 `agy:gemini-4-neon`、`agy:gemini-4-carbon`、`codex:gpt-6.2-astra`，以免与九月历史 `gpt-6-astra` 混名。
+3. **棋手全名标注说明**：首轮两盘探路局 `carbon-high-vs-astra-{xhigh,max}-20261119` 命令行传短名 `codex:astra`（底层 `game.jsonl` 的 `cfg.models.b` 与每次调用 `usage.model` 均实记为 `"gpt-6.2-astra"`）；随后并发运行的全部 10 盘统一显式传入完整型号 `agy:gemini-4-neon`、`agy:gemini-4-carbon`、`codex:gpt-6.2-astra`。为避免公开仓库读者误将两盘探路局与九月 `gpt-6-astra` 混淆、并保证阅读器四盘连播能正确合并系列赛比分，已将这两盘入库 `game.pgn` 的头标签统一补齐为 `[Black "codex:gpt-6.2-astra"]`。
 
 ---
 
@@ -37,7 +37,7 @@ Google 于 2026-11-18 发布 `gemini-4-neon`（支持 `low / medium / high / xhi
 | **`Carbon high` vs `Astra 6.2 xhigh`（首轮单盘）** | `en` | **1（不扩跑）** | **1:0**（白 1/1） | 40 / 39 | **22.5 / 47.1** | **61.7** (14) / **137.5** (13) | **2/0/3** 对 **2/2/3** |
 | *历史参照：`Carbon high` vs `agy Opus 5.5 high`（11-14）* | `zh` | 4 | 4:0（白 2/2、黑 2/2） | 221 / 219 | 18.1 / 35.4 | 26.5 (104) / 65.5 (108) | 2/2/11 对 7/5/16 |
 | *历史参照：`Argon high` vs `agy Opus 5.5 high`（10-20）* | `zh` | 4 | 3:1（白 2/2、黑 1/2） | 217 / 216 | 44.7 / 53.3 | 65.6 / 76.1 | 10/5/11 对 12/7/15 |
-| *历史参照：旧 CLI `Opus 5.5 max` vs `gpt-6-astra max`（09-30）* | `zh` | 4 | 3:1（白 2/2、黑 1/2） | 178 / 175 | 25.1 / 35.0 | — | 5 对 11（大失误） |
+| *历史参照：旧 CLI `Opus 5.5 max` vs `gpt-6-astra max`（09-30）* | `zh` | 4 | 3:1（白 2/2、黑 1/2） | 178 / 175 | 47.0 / 58.0 | — | 12 对 16（Lichess 大失误） |
 
 > 注：本批 `--lang en` 与历史 `--lang zh`、以及 `gpt-6.2-astra` 与九月 `gpt-6-astra` 分属不同提示语言或模型代际，仅并列展示，不跨行合并统计。本批三组四盘大量进入双翼对攻的西西里纳道尔夫英国式进攻（`6.Be3 e5`），盘面复杂度显著高于封闭西班牙布局，因此双方绝对 ACPL 均高于平稳局面，比较以同场配对差值为准。
 

@@ -3,7 +3,7 @@
 [Date "????.??.??"]
 [Round "?"]
 [White "agy:gemini-4-carbon"]
-[Black "codex:astra"]
+[Black "codex:gpt-6.2-astra"]
 [Result "1-0"]
 [Termination "将死"]
 [WhiteEffort "high"]

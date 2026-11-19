@@ -36,8 +36,10 @@
 
    浏览器打开（传目录名或 `game.pgn` 会自动叠加同目录 `analysis.jsonl` 的恶手标注）：
    - [空白阅读器（含 4 盘代表局一键直达入口）](http://127.0.0.1:8765/viewer/)
-   - [国际象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1)
-   - [中国象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-x-opus-astra-1)
+   - [国际象棋 · Gemini 4 Neon `xhigh` vs Carbon `high`（第 1 局，`36.Qd8#`，Neon 10.7 ACPL 零大失误）](http://127.0.0.1:8765/viewer/?files=/runs/neon-xhigh-vs-carbon-high-20261119)
+   - [国际象棋 · GPT-6.2 Astra `max` vs Gemini 4 Neon `xhigh`（第 4 局，`59.Qhd5#`，Astra 11.7 ACPL 零大失误）](http://127.0.0.1:8765/viewer/?files=/runs/neon-xhigh-vs-astra-max-20261119-4)
+   - [国际象棋巅峰对局（Opus Max vs GPT-6 Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1)
+   - [中国象棋巅峰对局（Opus Max vs GPT-6 Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-x-opus-astra-1)
    - [国际象棋 Argon High vs Opus High 第 1 局](http://127.0.0.1:8765/viewer/?files=/runs/argon-vs-agy-opus-high-20261019)
    - [国际象棋等级分锚定局（Opus Max vs Maia-1900）](http://127.0.0.1:8765/viewer/?files=/runs/zc/maia-1900-s1-w)
    - [国际象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn) · [中国象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
@@ -104,13 +106,27 @@
 - **棋力锚定区间（Opus Max 对引擎 67 盘标定）：** 国际象棋（30 盘）按 200 半回合上限引擎评分裁决（领先 ≥300 厘兵判胜）拟合为比 Maia-1900 高 **+189**（95% 区间 66–313），折合 **Lichess 超快棋约 1800 / 快棋约 1920**（按原始到上限判和口径为 +281，折合超快棋约 1910 / 快棋约 2020）；中国象棋（37 盘）比 Fairy-Stockfish `nodes=100` 高 **+121 Elo**（95% 区间 +1..+236），接近或略高于 `nodes=300`（+82）、明显低于 `nodes=1000`（+385）。
 - **合法着法与吃子规则并非主瓶颈：** 在真实棋手协议下，模型极少走非法着法；针对整盘漏吃/送子局面的复盘诊断（14 个失误点）显示，模型在单问“列出全部合法吃子”时 **26/26 全对**，但在正常选着时 13/14 次连可见理由都未提该吃子——失误主因是搜索中的注意力漏扫与多步算力不足，而非不认识棋盘或规则。
 - **局面表示与单步盲区（尤以中国象棋显著）：** 输入并非越多越好——中国象棋仅给**子力清单（`pieces`）**时大失误率最低（21%，而给全量 `FEN + 字符棋盘 + 清单` 时达 34%，且字符棋盘易把黑方 `車` 误认成红车）；模型在中国象棋中反复出现“炮隔己方炮打车”等单步自送吃及连续多步双方对挂着的大子视而不见的盲区。
-- **思考深度主导棋力，跨轮思考延续有利有弊：** 调高 `effort`（`medium → high → xhigh → max`）是降低大失误率最显著的单一手段（如 Opus vs Astra 巅峰对决升至双方 `max` 后，Opus 国象 3:1、中象 4:0）；连续会话（`session`）确实复用了前序思考并节省每步思考 token，但保留前序思考有时会固化早期盲区（Opus 开 `drop_thinking` 丢弃前序思考后漏吃减少，但思考 token 与耗时翻 2–3 倍）。
+- **思考深度主导棋力，跨轮思考延续有利有弊：** 调高 `effort`（`medium → high → xhigh → max`）是降低大失误率最显著的单一手段（如九月 Opus vs GPT-6 Astra 巅峰对决升至双方 `max` 后，Opus 国象 3:1、中象 4:0）；连续会话（`session`）确实复用了前序思考并节省每步思考 token，但保留前序思考有时会固化早期盲区（Opus 开 `drop_thinking` 丢弃前序思考后漏吃减少，但思考 token 与耗时翻 2–3 倍）。
+- **Gemini 4 与 GPT-6.2 Astra 对称评测（2026-11-19，英文提示国际象棋 13 盘）：** 三组对称先后手四盘全部规则将死完赛、0 工具调用、0 拒答（详见[完整报告](docs/results/neon-carbon-astra-chess-20261119.md)）：`gemini-4-neon`（`xhigh`）以 **4:0** 横扫 `gemini-4-carbon`（`high`）（加权 ACPL 35.1 对 46.4），与 `gpt-6.2-astra`（`max`）**2:2** 战平（双方各取执白 2 胜，ACPL 40.8 对 41.0）；`Carbon high` 对 `Astra 6.2 max` 为 **1:3**（ACPL 45.1 对 35.8，另首轮对 `Astra 6.2 xhigh` 单盘 1:0）。此前 11 月中文提示四盘对阵中，`Carbon high` 对 `agy Opus 5.5 high` 国象 **4:0**、中象 **3:1**。同时跨厂商思考 token 不可直比：`Astra 6.2 max` 每步均值约 800 token（约为 `Neon xhigh` 4,055 的 1/5），但每步实际耗时 40.1 秒，与 `Neon` 的 46.2 秒接近。
+
+**主要模型互弈战绩一览**（对称先后手四盘、`real` 协议；各批次日期、提示语言与思考预算不同，分列对照，不合并为单一 Elo 总榜）：
+
+| 棋种 · 语言 · 日期 | 对阵组合（先列方 vs 对手） | 盘数 | 比分 | 加权 ACPL | 报告 |
+| --- | --- | ---: | :---: | :---: | --- |
+| 国际象棋 · `en` · 2026-11-19 | `gemini-4-neon`（`xhigh`）vs `gemini-4-carbon`（`high`） | 4 | **4:0** | 35.1 / 46.4 | [报告](docs/results/neon-carbon-astra-chess-20261119.md) |
+| 国际象棋 · `en` · 2026-11-19 | `gemini-4-neon`（`xhigh`）vs `gpt-6.2-astra`（`max`） | 4 | **2:2** | 40.8 / 41.0 | [报告](docs/results/neon-carbon-astra-chess-20261119.md) |
+| 国际象棋 · `en` · 2026-11-19 | `gemini-4-carbon`（`high`）vs `gpt-6.2-astra`（`max`） | 4 | **1:3** | 45.1 / 35.8 | [报告](docs/results/neon-carbon-astra-chess-20261119.md) |
+| 国际象棋 · `zh` · 2026-11-14 | `gemini-4-carbon`（`high`）vs `agy claude-opus-5-5`（`high`） | 4 | **4:0** | 18.1 / 35.4 | [报告](docs/results/carbon-vs-agy-opus-high-20261114.md) |
+| 国际象棋 · `zh` · 2026-10-20 | `gemini-4-argon`（`high`）vs `agy claude-opus-5-5`（`high`） | 4 | **3:1** | 44.7 / 53.3 | [报告](docs/results/argon-vs-agy-opus-high-20261020.md) |
+| 国际象棋 · `zh` · 2026-09-30 | 旧 CLI `claude-opus-5-5`（`max`）vs `gpt-6-astra`（`max`） | 4 | **3:1** | 47.0 / 58.0 | [报告](docs/results/game-opus-max-vs-astra-max-1.md) |
+| 中国象棋 · `zh` · 2026-11-14 | `gemini-4-carbon`（`high`）vs `agy claude-opus-5-5`（`high`） | 4 | **3:1** | 50.1 / 56.0 | [报告](docs/results/carbon-vs-agy-opus-high-xq-20261114.md) |
+| 中国象棋 · `zh` · 2026-09-30 | 旧 CLI `claude-opus-5-5`（`max`）vs `gpt-6-astra`（`max`） | 4 | **4:0** | 54.8 / 86.3 | [报告](docs/results/game-opus-max-vs-astra-max-1.md) |
 
 [第一轮总结](docs/results/summary-round1.md) 只概括当时的研究阶段；后续模型对弈、评级及 Gemini 实验见[研究索引](docs/research.md)。各篇报告保留当时的条件和结论。
 
 ## 当前对弈原则
 
-整盘默认采用「模型就是真实棋手」协议：每方一个连续会话，依据局面选择着法并给出可见理由。新开对局（`play` 与 `batch run`）默认采用**英文提示词（`--lang en`）**，请模型在 `Move: <坐标>` 前写出 1–3 句客观第三人称局面短评（传 `--reason off` 仅输出单行着法，传 `--lang zh` 逐字节保留历史中文提示词；2026-11-15 前已入库的 179 盘正式对局按当时的中文提示生成，棋谱评注保留中文原貌）。程序验证走法、记录对局，不向模型提供引擎建议或合法着法列表；引擎用于对手和事后裁判。同一步连续三次非法判负，是本项目自定的赛制。
+整盘默认采用「模型就是真实棋手」协议：每方一个连续会话，依据局面选择着法并给出可见理由。新开对局（`play` 与 `batch run`）默认采用**英文提示词（`--lang en`）**，请模型在 `Move: <坐标>` 前写出 1–3 句客观第三人称局面短评（传 `--reason off` 仅输出单行着法，传 `--lang zh` 逐字节保留历史中文提示词；已入库的 192 盘正式对局中，2026-11-15 前的 179 盘按中文提示生成并保留中文评注，2026-11-19 新增的 13 盘按英文提示生成）。程序验证走法、记录对局，不向模型提供引擎建议或合法着法列表；引擎用于对手和事后裁判。同一步连续三次非法判负，是本项目自定的赛制。
 
 发现工具调用或尝试时暂停；出现防思维链泄露类拒答时终止并保留证据，不自动换措辞或续跑。上游工具事件存在观察盲区，因此“未观察到工具调用”不等于已经证明完全隔离。具体协议、历史差异与限制见[程序设计](docs/design.md)。
 
