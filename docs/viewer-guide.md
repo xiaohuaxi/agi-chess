@@ -4,33 +4,43 @@
 
 阅读器直接读取 PGN：国际象棋用标准 PGN，中国象棋用 xqbase PGN。可以直接浏览随仓入库的 192 盘正式模型对局（79 个单盘目录 `runs/<tag>/game.pgn` 与 7 个多盘批次子目录 `runs/<batch>/<game>/game.pgn`）、测试样例和自己的棋谱，不需要模型账号或棋类引擎。
 
-阅读器默认中文，网址加 `lang=en` 可切换英文。安装总览见[安装与运行](setup.md)，实现与完整参数说明见[阅读器设计](viewer.md)，素材与工具许可见[依赖说明](dependencies.md)。
+阅读器默认中文，页面顶栏与空白首页可直接一键切换中英文（也可在网址加 `lang=en`）。安装总览见[安装与运行](setup.md)，实现与完整参数说明见[阅读器设计](viewer.md)，素材与工具许可见[依赖说明](dependencies.md)。
 
-## 打开正式对局与仓内样例
+## 免安装在线浏览（GitHub Pages）
 
-在仓库根目录运行本机静态服务：
+若只想查看仓库已入库的 192 盘正式模型对局（或拖入自己的本地 `.pgn` 棋谱），无需克隆仓库或启动本地服务，直接在桌面或手机浏览器打开在线阅读器即可（传入对局目录名会自动叠加同目录 `analysis.jsonl` 的恶手标注）：
+
+- [在线阅读器首页（内置代表局直达与中英切换）](https://xiaohuaxi.github.io/agi-chess/)（[English UI](https://xiaohuaxi.github.io/agi-chess/?lang=en)）
+- [国际象棋 · Gemini 4 Neon `xhigh` vs Carbon `high`（第 1 局，第 40 半回合 `20...Re8??` 现场）](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-carbon-high-20261119&ply=40)
+- [国际象棋 · GPT-6.2 Astra `max` vs Gemini 4 Neon `xhigh`（第 4 局，`59.Qhd5#`，Astra 11.7 ACPL 零大失误）](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-astra-max-20261119-4)
+- [中国象棋 · Opus 5.5 `high` vs Gemini 4 Carbon `high`（第 3 局，第 9 半回合 `5.车九平八??` 炮隔炮打车）](https://xiaohuaxi.github.io/agi-chess/?files=runs/carbon-vs-agy-opus-high-xq-20261114-3&ply=9)
+- [国际象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](https://xiaohuaxi.github.io/agi-chess/?files=runs/g7-c-opus-astra-1)
+- [中国象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](https://xiaohuaxi.github.io/agi-chess/?files=runs/g7-x-opus-astra-1)
+- [国际象棋等级分锚定局（Opus Max vs Maia-1900）](https://xiaohuaxi.github.io/agi-chess/?files=runs/zc/maia-1900-s1-w)
+
+仓库 `runs/` 目录包含全部 86 个正式模型对局目录（共 192 盘）的 `game.pgn`：其中 **79 个单盘目录**（64 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）可直接写成 `runs/<tag>`，**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `runs/<batch>/<game>`（如 `runs/zc/maia-1900-s1-w`）。将在线网址中的 `files=` 替换为任意目录路径即可直接查看该盘棋谱、模型思考理由与引擎恶手徽章。
+
+## 本地离线运行、查看自跑新对局与测试样例
+
+在离线环境、查看本机新跑出的本地对局（`runs/<tag>`）、浏览仓内测试样例（`viewer/test/fixtures/*.pgn`）或准备录制 MP4 视频时，在仓库根目录启动本机静态服务：
 
 ```sh
 node viewer/serve.mjs
 # 默认监听 127.0.0.1:8765；无 Node.js 时可用：python3 -m http.server 8765 --bind 127.0.0.1
 ```
 
-打开下面任一网址（传入对局目录名或 `game.pgn` 会自动伴随加载同目录 `analysis.jsonl` 的恶手标注）：
+打开下面任一本机网址：
 
-- [空白阅读器（含 4 盘代表局一键直达入口）](http://127.0.0.1:8765/viewer/)
-- [国际象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1)
-- [中国象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-x-opus-astra-1)
-- [国际象棋 Argon High vs Opus High 第 1 局](http://127.0.0.1:8765/viewer/?files=/runs/argon-vs-agy-opus-high-20261019)
-- [国际象棋等级分锚定局（Opus Max vs Maia-1900）](http://127.0.0.1:8765/viewer/?files=/runs/zc/maia-1900-s1-w)
-- [国际象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn)
-- [中国象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
+- [本机阅读器首页（含代表局一键直达入口）](http://127.0.0.1:8765/viewer/)
+- [本机打开正式对局示例（Opus Max vs Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1)
+- [国际象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn) · [中国象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
 - [两种棋样例连播](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1)
 
-仓库 `runs/` 目录已包含全部 86 个正式模型对局目录（共 192 盘）的 `game.pgn`：其中 **79 个单盘目录**（64 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）可直接写成 `/runs/<tag>`（或 `/runs/<tag>/game.pgn`），**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `/runs/<batch>/<game>`（如 `/runs/zc/maia-1900-s1-w`）。只需将网址中的 `files=` 改为对应目录或 `.pgn` 路径即可查看对局与每步思考理由；当路径指向 `game.pgn`（或目录简写）时，阅读器会自动尝试请求同目录的 `analysis.jsonl` 并严格校验叠加引擎恶手/失误/不精确徽章（若无则静默忽略，也支持用逗号显式传入多个文件）。服务必须从仓库根目录启动，URL 中的路径相对站点根目录。只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8765 被占用时可用 `node viewer/serve.mjs --port 8000` 换一个端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
+当路径指向 `game.pgn`（或目录简写）时，阅读器会自动尝试请求同目录的 `analysis.jsonl` 并严格校验叠加引擎恶手/失误/不精确徽章（若无则静默忽略，也支持用逗号显式传入多个文件）。本机服务须从仓库根目录启动，只绑定 `127.0.0.1`；结束时回终端按 Ctrl-C。8765 被占用时可用 `node viewer/serve.mjs --port 8000` 换端口并修改网址。页面使用浏览器模块，不能用 `file://` 直接打开，无需构建，也不用先跑 `npm ci`。
 
-## 浏览自己的棋谱
+## 交互操作、拖入自己的棋谱与深链接分享
 
-打开 <http://127.0.0.1:8765/viewer/>，可直接点击页面上的内置代表局，或把自己的 `.pgn` 文件（可连带对应的 `analysis.jsonl`）拖进页面。多个文件按文件名排序连播；若想控制顺序，可以在文件名前加 `01-`、`02-`。
+打开[在线阅读器](https://xiaohuaxi.github.io/agi-chess/)或本机 <http://127.0.0.1:8765/viewer/>，可直接点击页面上的内置代表局，或把自己的 `.pgn` 文件（可连带对应的 `analysis.jsonl`）拖进页面（文件在浏览器本地解析，不会上传）。多个文件按文件名排序连播；若想控制顺序，可以在文件名前加 `01-`、`02-`。
 
 | 操作 | 快捷键 |
 | --- | --- |
@@ -39,7 +49,9 @@ node viewer/serve.mjs
 | 本盘开头 / 末尾 | Home / End |
 | 上一盘 / 下一盘 | PgUp / PgDn |
 
-宽窗口（至少 900 像素）右栏显示着法、评注和棋谱里已有的用时、token 等信息，也可以点着法跳步。窄窗口只显示棋盘和棋手信息。阅读器显示记录中的理由与标注，不自动评估每步优劣；没有写进棋谱的数据不会凭空补齐。
+- **桌面双栏与手机端纵向堆叠**：桌面宽窗口（至少 900 像素）采用左右双栏，右栏显示着法列表、评注理由、引擎恶手徽章及用时、token 等信息，也可点击任意着法跳步；手机端或窄于 900 像素的普通浏览窗口会自动切换为上下堆叠的可纵向滚动版式（上方棋盘与控制条，下方完整着法列表与评注详情），无需横屏也能读完理由（仅录制模式 `rec=1` 或显式传 `layout=compact` 时才隐藏信息栏、只保留棋盘与棋手条）。
+- **手动翻步自动同步地址栏 `ply`**：手动按方向键、点击着法或点按翻步按钮后，浏览器地址栏会自动更新当前 `ply=`（及多盘时的 `game=`），直接复制当前网址即可把指定半回合局面分享给他人。
+- **界面语言切换**：页面顶栏与空白首页提供中英切换入口，也可通过网址参数 `lang=en` / `lang=zh` 指定。阅读器只渲染记录中已有的理由与标注，不实时调用引擎，也不会凭空补齐棋谱未记录的指标。
 
 常用网址参数可以用 `&` 接在 `files=...` 后：
 
@@ -48,10 +60,10 @@ node viewer/serve.mjs
 | `autoplay=1&gap=1.5` | 自动播放，每个半回合 1.5 秒 |
 | `anim=0` | 关闭走子滑动动画（默认 0.3 秒，已算在 gap 内） |
 | `openhold=0.5` | 每盘开局停 0.5 秒再走第一步 |
-| `game=1&ply=20` | 静态打开第一盘第 20 个半回合之后的局面 |
+| `game=1&ply=20` | 静态打开第一盘第 20 个半回合之后的局面（手动翻步也会自动更新 `ply`） |
 | `ply=end` | 打开本盘终局 |
 | `summary=1` | 多盘的总比分画面 |
-| `layout=wide` / `layout=compact` | 强制宽版 / 窄版 |
+| `layout=wide` / `layout=compact` | 强制双栏宽版 / 强制无右栏录屏窄版（未指定时 `>=900px` 双栏、`<900px` 手机纵向堆叠） |
 | `sound=1&vol=0.5` | 打开音效并调轻；打开后先点页面或按键以允许浏览器发声 |
 | `lang=en` | 英文界面；评注原文与象棋汉字棋子保留，象棋着法改显 WXF 记法 |
 | `names=opus=Claude Opus,astra=GPT astra` | 覆盖显示名，比分仍按棋谱中的原名归属 |

@@ -10,7 +10,7 @@ All commands in this guide run from the repository root. For experimental conclu
 
 | Task | Quick Command | What You Need | Calls Models? |
 | --- | --- | --- | --- |
-| Browse official games, samples, or your own PGNs | `node viewer/serve.mjs` (open `http://127.0.0.1:8765/viewer/?lang=en`) | Web browser + local static HTTP server; no build step or `npm` install needed | No |
+| Browse official games, samples, or your own PGNs | **Live online**: open [`https://xiaohuaxi.github.io/agi-chess/?lang=en`](https://xiaohuaxi.github.io/agi-chess/?lang=en); **local offline**: `node viewer/serve.mjs` (open `http://127.0.0.1:8765/viewer/?lang=en`) | Web browser only for online; local static HTTP server for offline (no build step or `npm` install needed) | No |
 | Recompute published rating numbers | `python3 analysis/rating/rate.py report --boot 10` (~1.5s quick check; omit `--boot 10` for full 1,000 resamples in ~1.5m) | Python 3 standard library; CSV & JSON files in `analysis/rating/` | No |
 | Recompute 9 position-quiz summary tables | `python3 -m agi_chess.quiz report --batch batch2` (supports `batch1`, `batch2`, `batch3`, `4p`, `4p2`, `5-ds`, `5-sol`, `6r`, `6r-sol`) | Python 3 standard library; `runs/quiz-*/judged.jsonl` | No |
 | Verify position banks & run Python tests | `python3 data/batch1/select_positions.py check && python3 data/batch2/select_positions.py check && python3 -m unittest discover -s tests -t . -v` | Python 3, `chess`, `pyffish`; 21 live-engine tests also require local `stockfish` and `fairy-stockfish` (auto-skipped if absent) | No |
@@ -39,6 +39,13 @@ python3 -m agi_chess.quiz report --batch batch2    # Supports batch1, batch2, ba
 
 ## Free Quick Start: Browse Official Games & Samples
 
+If you only want to browse the 192 checked-in official games (or drag in your own `.pgn` files), open the hosted GitHub Pages viewer directly without cloning the repository or starting a local server:
+
+- Live Viewer Home (with featured games & Chinese/English toggle): <https://xiaohuaxi.github.io/agi-chess/?lang=en>
+- Live Direct Game Examples (`files=runs/<tag>&lang=en`): <https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-carbon-high-20261119&ply=40&lang=en> · <https://xiaohuaxi.github.io/agi-chess/?files=runs/carbon-vs-agy-opus-high-xq-20261114-3&ply=9&lang=en>
+
+For offline browsing, inspecting newly played local `runs/<tag>` directories, or verifying built-in test fixtures, start the local static HTTP server from the repository root:
+
 ```sh
 node viewer/serve.mjs
 # Listens on 127.0.0.1:8765 by default; without Node.js, use: python3 -m http.server 8765 --bind 127.0.0.1
@@ -46,7 +53,7 @@ node viewer/serve.mjs
 
 Keep this terminal running and open in your browser (passing a run directory or `game.pgn` automatically loads the companion `analysis.jsonl` blunder annotations):
 
-- Blank Viewer (with 4 clickable featured games): <http://127.0.0.1:8765/viewer/?lang=en>
+- Local Blank Viewer (with clickable featured games): <http://127.0.0.1:8765/viewer/?lang=en>
 - Chess Peak Match (Opus Max vs Astra Max, Game 1): <http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1&lang=en>
 - Xiangqi Peak Match (Opus Max vs Astra Max, Game 1): <http://127.0.0.1:8765/viewer/?files=/runs/g7-x-opus-astra-1&lang=en>
 - Chess: Argon High vs Opus High (Game 1): <http://127.0.0.1:8765/viewer/?files=/runs/argon-vs-agy-opus-high-20261019&lang=en>

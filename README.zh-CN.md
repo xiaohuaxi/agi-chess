@@ -6,9 +6,13 @@
 
 本项目让未经棋类专训的通用大模型在不借引擎、不给合法着法提示的条件下，像真人一样下国际象棋与中国象棋，实测它们的真实棋力、拆解它们为何犯错，并检验思考深度、局面表示与思考延续方式对下法的影响。仓库收录了完整的对弈与局面题程序、192 盘正式对局棋谱、9 批局面题数据、等级分标定脚本、研究报告及配套棋谱阅读器。
 
-> **棋谱阅读器（[`viewer/`](viewer/)）——零配置直接回放 192 盘对局**
+> **免安装在线棋谱阅读器（GitHub Pages）：[点此直接在浏览器打开（`xiaohuaxi.github.io/agi-chess`）](https://xiaohuaxi.github.io/agi-chess/)**
 >
-> 无需安装引擎或配置 API Key，在仓库根目录运行 `node viewer/serve.mjs`（默认监听 `127.0.0.1:8765`；若无 Node.js 可用 `python3 -m http.server 8765 --bind 127.0.0.1`），直接打开 [`http://127.0.0.1:8765/viewer/`](http://127.0.0.1:8765/viewer/) 点击页面上的内置代表局，或直达 [`http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1`](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1)（传对局目录名或 `game.pgn` 会自动伴随加载同目录 `analysis.jsonl` 的恶手标注），即可看到棋盘、每步模型思考理由、引擎复盘恶手徽章、耗时与 token 统计。也可将任意 `runs/<tag>/game.pgn` 或 `runs/<batch>/<game>/game.pgn`（可连带同目录 `analysis.jsonl`）拖入页面查看；导出 MP4 复盘视频需先执行 `npm --prefix viewer ci` 并具备 Chromium 与 `ffmpeg`（详见[棋谱阅读器指南](docs/viewer-guide.md)）。
+> 无需克隆仓库、无需安装引擎或配置 API Key，桌面端与手机浏览器均可直接打开**[在线棋谱阅读器](https://xiaohuaxi.github.io/agi-chess/)**，逐步查看每步模型思考理由、引擎复盘恶手徽章、耗时与 token 统计。首页内置近期 Gemini 4 Neon / Carbon / GPT-6.2 Astra 与经典 Claude Opus Max 代表局一键入口，仓库收录的**全部 192 盘正式对局**均可通过 `?files=runs/<tag>` 直接在线打开（也可拖入本地 `.pgn` 棋谱）。离线环境、查看本机新跑对局或导出 MP4 视频时，运行 `node viewer/serve.mjs` 即可（见下方离线说明与[棋谱阅读器指南](docs/viewer-guide.md)）。
+
+[![在线棋谱阅读器：Gemini 4 Neon xhigh 对 Carbon high 第 40 半回合 20...Re8??](docs/assets/viewer-hero.png)](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-carbon-high-20261119&ply=40)
+
+*点击上图直达 **[`neon-xhigh-vs-carbon-high-20261119` 第 40 半回合 `20...Re8??` 交互现场](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-carbon-high-20261119&ply=40)**（同屏查看棋盘、模型英文客观短评与 Stockfish `?? Blunder` 恶手红标）；想直接看中国象棋名场面，也可点开 **[Carbon High 对 Opus High 第 3 局第 9 半回合 `5.车九平八??`“炮隔炮打车”现场](https://xiaohuaxi.github.io/agi-chess/?files=runs/carbon-vs-agy-opus-high-xq-20261114-3&ply=9)**。*
 
 ## 从这里开始
 
@@ -23,28 +27,24 @@
 
 ## 快速开始（免模型账号、免引擎）
 
-以下命令均在仓库根目录执行，不需要模型账号或棋类引擎。
+第 1 步在浏览器直接点开即可（无需克隆仓库）；其余命令行步骤在仓库根目录执行，不需要模型账号或棋类引擎。
 
-### 第一部分：零依赖 30 秒即刻体验（仅需 Python 3 标准库或 Node.js）
+### 第一部分：零依赖 30 秒即刻体验（浏览器直看或仅需 Python 3 标准库）
 
-1. **浏览 192 盘棋谱与引擎恶手复盘**：
+1. **直接点开在线代表局与引擎恶手复盘（无需 clone 仓库）**：
 
-   ```sh
-   node viewer/serve.mjs
-   # 若未安装 Node.js，也可使用：python3 -m http.server 8765 --bind 127.0.0.1
-   ```
+   点击任一在线链接即可看谱（传对局目录会自动叠加同目录 `analysis.jsonl` 的恶手标注）：
+   - [在线阅读器首页（内置代表局一键直达与中英切换）](https://xiaohuaxi.github.io/agi-chess/)
+   - [国际象棋 · Gemini 4 Neon `xhigh` vs Carbon `high`（第 1 局，`36.Qd8#`，Neon 10.7 ACPL 零大失误）](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-carbon-high-20261119)
+   - [国际象棋 · GPT-6.2 Astra `max` vs Gemini 4 Neon `xhigh`（第 4 局，`59.Qhd5#`，Astra 11.7 ACPL 零大失误）](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-astra-max-20261119-4)
+   - [国际象棋 · Gemini 4 Carbon `high` vs Opus 5.5 `high`（首局，`69.Qg7#`，Carbon 7.0 ACPL 零大失误）](https://xiaohuaxi.github.io/agi-chess/?files=runs/carbon-vs-agy-opus-high-20261114)
+   - [中国象棋 · Opus 5.5 `high` vs Gemini 4 Carbon `high`（第 3 局，`5.车九平八??` 炮隔炮打车，Carbon 16.0 ACPL 零大失误）](https://xiaohuaxi.github.io/agi-chess/?files=runs/carbon-vs-agy-opus-high-xq-20261114-3)
+   - [国际象棋巅峰对局（Opus Max vs GPT-6 Astra Max 第 1 局）](https://xiaohuaxi.github.io/agi-chess/?files=runs/g7-c-opus-astra-1)
+   - [中国象棋巅峰对局（Opus Max vs GPT-6 Astra Max 第 1 局）](https://xiaohuaxi.github.io/agi-chess/?files=runs/g7-x-opus-astra-1)
+   - [国际象棋 Argon High vs Opus High 第 1 局](https://xiaohuaxi.github.io/agi-chess/?files=runs/argon-vs-agy-opus-high-20261019)
+   - [国际象棋等级分锚定局（Opus Max vs Maia-1900）](https://xiaohuaxi.github.io/agi-chess/?files=runs/zc/maia-1900-s1-w)
 
-   浏览器打开（传目录名或 `game.pgn` 会自动叠加同目录 `analysis.jsonl` 的恶手标注）：
-   - [空白阅读器（含 4 盘代表局一键直达入口）](http://127.0.0.1:8765/viewer/)
-   - [国际象棋 · Gemini 4 Neon `xhigh` vs Carbon `high`（第 1 局，`36.Qd8#`，Neon 10.7 ACPL 零大失误）](http://127.0.0.1:8765/viewer/?files=/runs/neon-xhigh-vs-carbon-high-20261119)
-   - [国际象棋 · GPT-6.2 Astra `max` vs Gemini 4 Neon `xhigh`（第 4 局，`59.Qhd5#`，Astra 11.7 ACPL 零大失误）](http://127.0.0.1:8765/viewer/?files=/runs/neon-xhigh-vs-astra-max-20261119-4)
-   - [国际象棋巅峰对局（Opus Max vs GPT-6 Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1)
-   - [中国象棋巅峰对局（Opus Max vs GPT-6 Astra Max 第 1 局）](http://127.0.0.1:8765/viewer/?files=/runs/g7-x-opus-astra-1)
-   - [国际象棋 Argon High vs Opus High 第 1 局](http://127.0.0.1:8765/viewer/?files=/runs/argon-vs-agy-opus-high-20261019)
-   - [国际象棋等级分锚定局（Opus Max vs Maia-1900）](http://127.0.0.1:8765/viewer/?files=/runs/zc/maia-1900-s1-w)
-   - [国际象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn) · [中国象棋测试样例](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn)
-
-   用左右方向键逐步看棋，空格播放或暂停；也可将网址中的 `files=` 替换为任意单盘目录 `/runs/<tag>`（79 个单盘目录）或多盘批次子目录 `/runs/<batch>/<game>`（7 个多盘批次目录 `b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`）。默认中文界面，网址加 `&lang=en` 切英文，`names=` 可覆盖棋手显示名（详见[阅读器指南](docs/viewer-guide.md)）。
+   用左右方向键逐步看棋（手动翻步会自动更新地址栏 `ply=`，方便直接复制链接分享当前局面），空格播放或暂停；手机端支持上下堆叠纵向滚动看谱。也可将网址中的 `files=` 替换为任意单盘目录 `runs/<tag>`（79 个单盘目录）或多盘批次子目录 `runs/<batch>/<game>`（7 个多盘批次目录 `b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`）。若在离线环境或需查看本机新跑的对局，可在仓库根目录运行 `node viewer/serve.mjs`（或 `python3 -m http.server 8765 --bind 127.0.0.1`）后打开 [`http://127.0.0.1:8765/viewer/`](http://127.0.0.1:8765/viewer/)（详见[阅读器指南](docs/viewer-guide.md)）。
 
 2. **秒级复算等级分刻度**（仅需 Python 3 标准库）：
 

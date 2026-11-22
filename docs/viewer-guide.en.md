@@ -4,33 +4,43 @@
 
 The web viewer reads PGN files directly: standard PGN for International Chess and xqbase PGN for Xiangqi (Chinese Chess). You can browse all 192 official model games checked into `runs/` (79 single-game directories `runs/<tag>/game.pgn` and 7 multi-game batch directories `runs/<batch>/<game>/game.pgn`), the built-in test fixtures, or your own PGN files without model accounts or chess engines.
 
-The viewer defaults to Chinese; append `lang=en` to the URL to switch the UI to English. For environment setup see [Setup & Running](setup.en.md), for viewer architecture and full URL parameter details see [Viewer Design (zh-CN)](viewer.md), and for asset and tool licenses see [Dependencies & Provenance](dependencies.en.md).
+The viewer defaults to Chinese; switch languages directly from the top bar or home page, or append `lang=en` to the URL. For environment setup see [Setup & Running](setup.en.md), for viewer architecture and full URL parameter details see [Viewer Design (zh-CN)](viewer.md), and for asset and tool licenses see [Dependencies & Provenance](dependencies.en.md).
 
-## Open Official Games & Built-in Samples
+## Browse Online Zero-Install (GitHub Pages)
 
-Start a local static HTTP server from the repository root:
+If you want to inspect the 192 official model games checked into `runs/` (or drag in your own local `.pgn` files), open the hosted GitHub Pages viewer directly on desktop or mobile without cloning the repository or starting a local server (passing a run directory automatically overlays engine blunder annotations from its companion `analysis.jsonl`):
+
+- [Live Viewer Home (with built-in featured games & Chinese/English toggle)](https://xiaohuaxi.github.io/agi-chess/?lang=en) ([中文界面](https://xiaohuaxi.github.io/agi-chess/))
+- [Chess: Gemini 4 Neon `xhigh` vs. Carbon `high` (Game 1, ply 40 `20...Re8??` blunder)](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-carbon-high-20261119&ply=40&lang=en)
+- [Chess: GPT-6.2 Astra `max` vs. Gemini 4 Neon `xhigh` (Game 4, `59.Qhd5#`, Astra 11.7 ACPL / 0 blunders)](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-astra-max-20261119-4&lang=en)
+- [Xiangqi: Opus 5.5 `high` vs. Gemini 4 Carbon `high` (Game 3, ply 9 `5.R9=8??` screened-Cannon blunder)](https://xiaohuaxi.github.io/agi-chess/?files=runs/carbon-vs-agy-opus-high-xq-20261114-3&ply=9&lang=en)
+- [Chess Peak Match (Opus Max vs. Astra Max, Game 1)](https://xiaohuaxi.github.io/agi-chess/?files=runs/g7-c-opus-astra-1&lang=en)
+- [Xiangqi Peak Match (Opus Max vs. Astra Max, Game 1)](https://xiaohuaxi.github.io/agi-chess/?files=runs/g7-x-opus-astra-1&lang=en)
+- [Chess Rating Calibration Match (Opus Max vs. Maia-1900)](https://xiaohuaxi.github.io/agi-chess/?files=runs/zc/maia-1900-s1-w&lang=en)
+
+The repository's `runs/` directory contains `game.pgn` for all 86 official model match directories (192 games in total): **79 single-game directories** (64 model-vs-model + 15 single-game model-vs-engine `b1-ch-*`/`b1-xq-*`) can be passed directly as `runs/<tag>`, and **7 multi-game batch directories** (`b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`, 113 games in total) place each game in a second-level subdirectory `runs/<batch>/<game>` (e.g. `runs/zc/maia-1900-s1-w`). Replace `files=` in the online URL with any of those paths to inspect that game, its move-by-move rationales, and its engine blunder badges.
+
+## Local Offline Server, Newly Played Local Runs & Test Fixtures
+
+For offline environments, inspecting newly played local runs (`runs/<tag>`), opening built-in test fixtures (`viewer/test/fixtures/*.pgn`), or recording MP4 videos, start a local static HTTP server from the repository root:
 
 ```sh
 node viewer/serve.mjs
 # Listens on 127.0.0.1:8765 by default; without Node.js, use: python3 -m http.server 8765 --bind 127.0.0.1
 ```
 
-Open any of the links below in your browser (passing a run directory or `game.pgn` automatically loads the companion `analysis.jsonl` blunder annotations):
+Open any of the local links below in your browser:
 
-- [Blank Viewer (with 4 clickable featured games)](http://127.0.0.1:8765/viewer/?lang=en)
-- [Chess Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1&lang=en)
-- [Xiangqi Peak Match (Opus Max vs Astra Max, Game 1)](http://127.0.0.1:8765/viewer/?files=/runs/g7-x-opus-astra-1&lang=en)
-- [Chess: Argon High vs Opus High (Game 1)](http://127.0.0.1:8765/viewer/?files=/runs/argon-vs-agy-opus-high-20261019&lang=en)
-- [Chess Rating Calibration Match (Opus Max vs Maia-1900)](http://127.0.0.1:8765/viewer/?files=/runs/zc/maia-1900-s1-w&lang=en)
-- [Chess Test Sample](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en)
-- [Xiangqi Test Sample](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en)
+- [Local Viewer Home (with featured games)](http://127.0.0.1:8765/viewer/?lang=en)
+- [Local Official Game Example (Opus Max vs. Astra Max, Game 1)](http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1&lang=en)
+- [Chess Test Sample](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn&lang=en) · [Xiangqi Test Sample](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/xq-sample.pgn&lang=en)
 - [Back-to-Back Playback of Both Samples](http://127.0.0.1:8765/viewer/?files=/viewer/test/fixtures/chess-sample.pgn,/viewer/test/fixtures/xq-sample.pgn&autoplay=1&lang=en)
 
-The repository's `runs/` directory contains `game.pgn` for all 86 official model match directories (192 games in total): **79 single-game directories** (64 model-vs-model + 15 single-game model-vs-engine `b1-ch-*`/`b1-xq-*`) can be passed directly as `/runs/<tag>` (or `/runs/<tag>/game.pgn`), and **7 multi-game batch directories** (`b1`, `b1-session`, `b2`, `b3max-ch`, `b3max-xq`, `zc`, `zx`, 113 games in total) place each game in a second-level subdirectory `/runs/<batch>/<game>` (e.g. `/runs/zc/maia-1900-s1-w`). Replace `files=` in the URL with any of those directory or `.pgn` paths to inspect that match and read the model's move-by-move rationales; when a path points to `game.pgn` (or a directory shorthand), the viewer automatically requests `analysis.jsonl` in the same directory to validate and overlay engine blunder/mistake/inaccuracy badges (silently ignoring 404s, while also supporting comma-separated multiple files). The HTTP server must be started from the repository root because paths in `files=` are resolved relative to the site root. Bind only to `127.0.0.1`, and press Ctrl-C in the terminal when finished. If port 8765 is in use, pass `--port 8000` to `node viewer/serve.mjs` and update the URL. Because the viewer uses native browser ES modules, it cannot be opened directly via `file://`, and requires neither a build step nor `npm ci` for browsing.
+When a path points to `game.pgn` (or a directory shorthand), the viewer automatically requests `analysis.jsonl` in the same directory to validate and overlay engine blunder/mistake/inaccuracy badges (silently ignoring 404s, while also supporting comma-separated multiple files). Start the local server from the repository root; it binds only to `127.0.0.1` (press Ctrl-C in the terminal when finished). If port 8765 is in use, pass `--port 8000` to `node viewer/serve.mjs` and update the URL. Because the viewer uses native browser ES modules, it cannot be opened directly via `file://`, and requires neither a build step nor `npm ci` for browsing.
 
-## Browse Your Own PGNs
+## Interactive Controls, Your Own PGNs & Deep-Link Sharing
 
-Open <http://127.0.0.1:8765/viewer/?lang=en> to click one of the built-in featured games or drag `.pgn` files (optionally alongside matching `analysis.jsonl` files) onto the page. Multiple dropped files play sequentially sorted by filename; prefix filenames with `01-`, `02-` to control playback order.
+Open the [Live Viewer](https://xiaohuaxi.github.io/agi-chess/?lang=en) or <http://127.0.0.1:8765/viewer/?lang=en> to click one of the built-in featured games or drag `.pgn` files (optionally alongside matching `analysis.jsonl` files) onto the page (dropped files are parsed locally in your browser and never uploaded). Multiple dropped files play sequentially sorted by filename; prefix filenames with `01-`, `02-` to control playback order.
 
 | Action | Shortcut |
 | --- | --- |
@@ -39,7 +49,9 @@ Open <http://127.0.0.1:8765/viewer/?lang=en> to click one of the built-in featur
 | Start / End of current game | `Home` / `End` |
 | Previous / Next game | `PgUp` / `PgDn` |
 
-In wide windows (at least 900 px wide), the right panel displays the move list, move rationales/comments, elapsed time, and token counts recorded in the PGN; you can also click any move to jump directly to that ply. Narrow windows display a compact layout with the board and player banners. The viewer renders only the annotations and metadata embedded in the PGN—it does not run a live engine or fabricate missing metrics.
+- **Desktop Two-Column & Mobile Stacked Layouts:** In wide windows (at least 900 px wide), the right panel displays the move list, move rationales/comments, engine blunder badges, elapsed time, and token counts recorded in the PGN (click any move to jump directly to that ply). On phones or narrow browser windows (`< 900 px` in normal browsing), the viewer switches to a vertically scrollable stacked layout with the board and controls on top and the full move list and rationales below; only recording mode (`rec=1`) or explicit `layout=compact` hides the side panel to show just the board and player banners.
+- **Shareable Position Deep Links (`ply=`):** Manually stepping through moves or clicking a move automatically updates `ply=` (and `game=` in multi-game playlists) in the browser address bar, so copying the URL shares that exact position.
+- **Language Toggle:** Switch between Chinese and English directly from the top bar or home page, or pass `lang=en` / `lang=zh` in the URL. The viewer renders only the annotations and metadata embedded in the PGN (and companion `analysis.jsonl`), without running a live engine or fabricating missing metrics.
 
 Common URL parameters (append after `files=...` with `&`):
 
@@ -48,10 +60,10 @@ Common URL parameters (append after `files=...` with `&`):
 | `autoplay=1&gap=1.5` | Auto-play at 1.5 seconds per half-move (ply) |
 | `anim=0` | Disable piece-sliding animation (default 0.3 s, counted inside `gap`) |
 | `openhold=0.5` | Hold the initial board position for 0.5 s at the start of each game |
-| `game=1&ply=20` | Open game 1 statically at the position after ply 20 |
+| `game=1&ply=20` | Open game 1 statically at the position after ply 20 (manual stepping also updates `ply` in the URL bar) |
 | `ply=end` | Jump directly to the final position of the game |
 | `summary=1` | Display the multi-game match summary scoreboard |
-| `layout=wide` / `layout=compact` | Force wide two-column layout or compact single-column layout |
+| `layout=wide` / `layout=compact` | Force wide two-column layout or recording-style compact board-only layout (defaults to two-column at `>= 900 px` and scrollable stacked mobile layout below `900 px`) |
 | `sound=1&vol=0.5` | Enable move/end sound effects at 50% volume (click or press a key first to unlock browser audio) |
 | `lang=en` | English UI (original comment language and Chinese Xiangqi piece glyphs are preserved; Xiangqi moves render in WXF notation) |
 | `names=opus=Claude Opus,astra=GPT astra` | Override displayed player names while keeping score attribution tied to raw PGN names |

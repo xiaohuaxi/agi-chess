@@ -10,7 +10,7 @@
 
 | 用途 | 直达命令 | 需要什么 | 是否调用模型 |
 | --- | --- | --- | --- |
-| 浏览正式对局、样例或自己的棋谱 | `node viewer/serve.mjs`（打开 `http://127.0.0.1:8765/viewer/`） | 浏览器、本机静态服务；页面无需构建或 npm 安装 | 否 |
+| 浏览正式对局、样例或自己的棋谱 | **免安装在线版**：打开 [`https://xiaohuaxi.github.io/agi-chess/`](https://xiaohuaxi.github.io/agi-chess/)；**本机离线版**：`node viewer/serve.mjs`（打开 `http://127.0.0.1:8765/viewer/`） | 在线版仅需浏览器；本机版另起静态服务，无需构建或 npm 安装 | 否 |
 | 复算已入库的评级数字 | `python3 analysis/rating/rate.py report --boot 10`（快检 1.5s；去掉 `--boot 10` 跑完整 1,000 次约 1.5m） | Python 标准库；`analysis/rating/` 的 CSV、JSON | 否 |
 | 复算 9 批局面题判卷汇总表 | `python3 -m agi_chess.quiz report --batch batch2`（可换 `batch1`、`batch2`、`batch3`、`4p`、`4p2`、`5-ds`、`5-sol`、`6r`、`6r-sol`） | Python 标准库；`runs/quiz-*/judged.jsonl` | 否 |
 | 校验题库与跑 Python 测试 | `python3 data/batch1/select_positions.py check && python3 data/batch2/select_positions.py check && python3 -m unittest discover -s tests -t . -v` | Python、`chess`、`pyffish`；21 项真引擎测试另需本机 `stockfish` 与 `fairy-stockfish`（未装自动 skip） | 否 |
@@ -39,6 +39,13 @@ python3 -m agi_chess.quiz report --batch batch2    # 可换 batch1、batch2、ba
 
 ## 免费入门：浏览正式对局与样例
 
+若只想直接查看已入库的 192 盘正式对局（或拖入本地 `.pgn` 棋谱），无需克隆仓库或启动本机服务，直接打开 GitHub Pages 在线版即可：
+
+- 在线阅读器首页（含代表局一键直达与中英切换）：<https://xiaohuaxi.github.io/agi-chess/>
+- 在线直达单盘示例（`files=runs/<tag>`）：<https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-carbon-high-20261119&ply=40> · <https://xiaohuaxi.github.io/agi-chess/?files=runs/carbon-vs-agy-opus-high-xq-20261114-3&ply=9>
+
+若需在离线环境浏览、查看本机新跑出的 `runs/<tag>` 对局或验证仓内测试样例，在仓库根目录启动本机静态服务：
+
 ```sh
 node viewer/serve.mjs
 # 默认监听 127.0.0.1:8765；无 Node.js 时可用：python3 -m http.server 8765 --bind 127.0.0.1
@@ -46,7 +53,7 @@ node viewer/serve.mjs
 
 保持这个终端运行，在浏览器打开（传入对局目录名或 `game.pgn` 会自动伴随加载同目录 `analysis.jsonl` 的恶手标注）：
 
-- 空白阅读器（含 4 盘代表局一键直达入口）：<http://127.0.0.1:8765/viewer/>
+- 本机空白阅读器（含代表局一键直达入口）：<http://127.0.0.1:8765/viewer/>
 - 国际象棋巅峰对局（Opus Max vs Astra Max 第 1 局）：<http://127.0.0.1:8765/viewer/?files=/runs/g7-c-opus-astra-1>
 - 中国象棋巅峰对局（Opus Max vs Astra Max 第 1 局）：<http://127.0.0.1:8765/viewer/?files=/runs/g7-x-opus-astra-1>
 - 国际象棋 Argon High vs Opus High 第 1 局：<http://127.0.0.1:8765/viewer/?files=/runs/argon-vs-agy-opus-high-20261019>
