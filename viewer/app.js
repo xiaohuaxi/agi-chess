@@ -384,9 +384,17 @@ function renderSide(gi, ply, final) {
   const cell = side.cells.get(ply);
   if (cell) {
     cell.classList.add('cur');
-    const box = $('s-moves'), top = cell.offsetTop, bottom = top + cell.offsetHeight;
-    if (top < box.scrollTop + 8) box.scrollTop = Math.max(0, top - 8);            // 只滚列表本身，不动页面
-    else if (bottom > box.scrollTop + box.clientHeight - 8) box.scrollTop = bottom - box.clientHeight + 8;
+    const box = $('s-moves');
+    if (layoutMode === 'mobile') {
+      const row = cell.closest('.r') || cell;
+      const rTop = row.offsetTop, rBot = rTop + row.offsetHeight;
+      if (rTop < box.scrollTop) box.scrollTop = rTop;
+      else if (rBot > box.scrollTop + box.clientHeight) box.scrollTop = rBot - box.clientHeight;
+    } else {
+      const top = cell.offsetTop, bottom = top + cell.offsetHeight;
+      if (top < box.scrollTop + 8) box.scrollTop = Math.max(0, top - 8);            // 只滚列表本身，不动页面
+      else if (bottom > box.scrollTop + box.clientHeight - 8) box.scrollTop = bottom - box.clientHeight + 8;
+    }
   }
   syncNavLinks();
 }
@@ -737,11 +745,12 @@ function showHint(text, withSamples = false) {
     top.append(lang);
     kids.push(top);
   }
-  kids.push(h('div', 'h-msg', text));
   if (withSamples) {
+    kids.push(h('div', 'h-brand', L.homeBrand));
     const samples = makeSamplesList();
     if (samples) kids.push(samples);
   }
+  kids.push(h('div', 'h-msg', text));
   box.replaceChildren(...kids);
 }
 

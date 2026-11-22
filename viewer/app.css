@@ -181,9 +181,11 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
 #hint { display: none; }
 #stage.empty > :not(#hint) { display: none; }
 #stage.empty > #hint { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center;
-  gap: 20px; padding: 24px 32px; box-sizing: border-box; text-align: center; font-size: var(--row2-size); line-height: 1.55; color: var(--text-weak); }
-#hint .h-topbar { width: 100%; max-width: 460px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
-#hint .h-msg { white-space: pre-line; }
+  gap: 18px; padding: 32px; box-sizing: border-box; text-align: center; font-size: var(--row2-size); line-height: 1.55; color: var(--text-weak); }
+#hint .h-topbar { position: fixed; top: max(16px, env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  z-index: 10; display: flex; align-items: center; gap: 8px; }
+#hint .h-brand { font-size: 18px; font-weight: 600; line-height: 1.35; color: #f0ede9; letter-spacing: -0.01em; }
+#hint .h-msg { white-space: pre-line; font-size: 13.5px; line-height: 1.55; color: #918a80; }
 #hint .h-samples { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 460px; text-align: left; }
 #hint .h-title { font-size: 14px; color: var(--text-weak); text-align: center; margin-bottom: 2px; }
 #hint .h-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px;
@@ -200,7 +202,7 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
   display: flex; flex-direction: column; gap: 6px; }
 #hint .e-title { font-size: 16px; line-height: 1.5; font-weight: 600; color: var(--text); }
 #hint .e-detail { font-family: ui-monospace, Menlo, monospace; font-size: 13px; line-height: 1.5; color: #f08a7e;
-  word-break: break-all; }
+  overflow-wrap: anywhere; word-break: normal; }
 #hint .e-hint { font-size: 14px; line-height: 1.5; color: var(--text-weak); }
 #hint .e-home { align-self: flex-start; margin-top: 4px; display: inline-flex; align-items: center; min-height: 36px;
   padding: 0 14px; background: #383430; border: 1px solid #524c46; border-radius: 6px; color: var(--text);
@@ -340,9 +342,19 @@ html.mobile-scroll, html.mobile-scroll body {
   pointer-events: none;
 }
 #stage.mobile #board-xq {
+  width: calc(100% - 16px);
+  height: auto;
+  aspect-ratio: auto !important;
+  margin: 6px auto;
+  padding: 6px 8px;
+  background: var(--xq-bg);
+  border-radius: 4px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+#stage.mobile #board-xq svg {
   width: 100%;
   height: auto;
-  pointer-events: none;
 }
 #stage.mobile > #summary {
   flex: none;
@@ -361,11 +373,8 @@ html.mobile-scroll, html.mobile-scroll body {
 #stage.mobile.empty > #hint {
   width: 100%;
   justify-content: flex-start;
-  padding: 16px 14px 24px;
-  gap: 16px;
-}
-#stage.mobile.empty #hint .h-msg {
-  order: 2;
+  padding: max(56px, calc(env(safe-area-inset-top, 0px) + 48px)) 14px 24px;
+  gap: 14px;
 }
 #stage.mobile #hint .h-link {
   padding: 10px 12px;
@@ -398,10 +407,16 @@ html.mobile-scroll, html.mobile-scroll body {
   order: 4;
   flex: none;
   min-height: 0;
-  max-height: 220px;
+  max-height: 216px;
+  padding: 0;
+  border-top: 6px solid var(--side-bg);
+  border-bottom: 6px solid var(--side-bg);
+  box-sizing: border-box;
   overflow-y: auto;
 }
-#stage.mobile #s-moves .m { padding: 5px 8px; }
+#stage.mobile #s-moves .r { height: 34px; }
+#stage.mobile #s-moves .m { padding: 5px 8px; margin: 0 4px; line-height: 22px; }
+#stage.mobile #s-moves .end { height: 34px; line-height: 34px; padding: 0 12px; box-sizing: border-box; }
 #stage.mobile #s-players { order: 5; }
 #stage.mobile #s-keys { display: none; }
 @media (max-width: 359px) {

@@ -128,11 +128,19 @@ test('手机屏（360/375/390）：国象与中象代表局零横向溢出、棋
     });
     assert.equal(xq.isMobile, true);
     assert.ok(xq.docScrollW <= xq.innerW, `XQ 390 overflow: ${xq.docScrollW} > ${xq.innerW}`);
-    assert.ok(xq.boardW > 340 && xq.boardLeft >= -0.5 && xq.boardRight <= xq.innerW + 0.5);
+    assert.ok(xq.boardW > 340 && xq.boardLeft >= 6 && xq.boardRight <= xq.innerW - 6);
     assert.ok(xq.boardH > xq.boardW);
     assert.deepEqual(xq.nags, ['?? 大错']);
     assert.ok(xq.whyLen > 20);
     assert.deepEqual(xq.players, ['gemini-4-carbon', 'claude-opus-5-5']);
+
+    // 着法框整行对齐：可见高度与 scrollTop 均为单行高度整数倍，无半行腰斩
+    const movesAlign = await page.evaluate(() => {
+      const box = document.getElementById('s-moves');
+      const rowH = box.querySelector('.r')?.offsetHeight || 0;
+      return { clientH: box.clientHeight, scrollTop: box.scrollTop, rowH };
+    });
+    assert.ok(movesAlign.rowH > 0 && movesAlign.clientH % movesAlign.rowH === 0 && movesAlign.scrollTop % movesAlign.rowH === 0);
 
     await page.setViewportSize({ width: 360, height: 640 });
     await page.waitForFunction(() => window.innerWidth === 360);
