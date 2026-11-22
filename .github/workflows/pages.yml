@@ -52,15 +52,30 @@ jobs:
 
       - name: Build and verify Pages artifact
         run: |
+          node viewer/build-catalog.mjs --check
           node viewer/build-pages.mjs _site
           test -f _site/.nojekyll
           test -f _site/index.html
+          test -f _site/series.html
+          test -f _site/series.js
+          test -f _site/catalog.html
+          test -f _site/catalog.js
+          test -f _site/pages.css
+          test -f _site/lib/catalog-data.json
           test -f _site/404.html
           test -f _site/og-card.png
           test -f _site/LICENSE
+          test ! -e _site/catalog-meta.json
           test ! -e _site/node_modules
           test ! -e _site/test
           test -z "$(find _site -name '*.mjs' -o -name '*.py' -o -name 'package*.json')"
+          node -e "
+            const fs = require('fs');
+            const buf = fs.readFileSync('_site/og-card.png');
+            if (buf.readUInt32BE(0) !== 0x89504e47) throw new Error('og-card.png is not PNG');
+            const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
+            if (w !== 1200 || h !== 628) throw new Error('Expected og-card.png 1200x628, got ' + w + 'x' + h);
+          "
 
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

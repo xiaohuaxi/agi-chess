@@ -134,13 +134,13 @@ test('手机屏（360/375/390）：国象与中象代表局零横向溢出、棋
     assert.ok(xq.whyLen > 20);
     assert.deepEqual(xq.players, ['gemini-4-carbon', 'claude-opus-5-5']);
 
-    // 着法框整行对齐：可见高度与 scrollTop 均为单行高度整数倍，无半行腰斩
+    // 着法框整行对齐：可见高度固定 8 行（8 * 34 = 272px）且与 scrollTop 均为单行高度整数倍，无半行腰斩
     const movesAlign = await page.evaluate(() => {
       const box = document.getElementById('s-moves');
       const rowH = box.querySelector('.r')?.offsetHeight || 0;
       return { clientH: box.clientHeight, scrollTop: box.scrollTop, rowH };
     });
-    assert.ok(movesAlign.rowH > 0 && movesAlign.clientH % movesAlign.rowH === 0 && movesAlign.scrollTop % movesAlign.rowH === 0);
+    assert.ok(movesAlign.rowH > 0 && movesAlign.clientH === 8 * movesAlign.rowH && movesAlign.scrollTop % movesAlign.rowH === 0);
 
     await page.setViewportSize({ width: 360, height: 640 });
     await page.waitForFunction(() => window.innerWidth === 360);
@@ -348,6 +348,11 @@ test('build-pages.mjs：静态产物完整性、过滤 *.mjs/*.py/package*.json 
     assert.equal(built.pgnCount, 192);
     assert.equal(built.analysisCount, 191);
     assert.equal(existsSync(join(siteDir, '.nojekyll')), true);
+    assert.equal(existsSync(join(siteDir, 'series.html')), true);
+    assert.equal(existsSync(join(siteDir, 'catalog.html')), true);
+    assert.equal(existsSync(join(siteDir, 'pages.css')), true);
+    assert.equal(existsSync(join(siteDir, 'lib', 'catalog-data.json')), true);
+    assert.equal(existsSync(join(siteDir, 'catalog-meta.json')), false);
     assert.equal(existsSync(join(siteDir, '404.html')), true);
     assert.equal(existsSync(join(siteDir, 'og-card.png')), true);
     assert.equal(existsSync(join(siteDir, 'LICENSE')), true);

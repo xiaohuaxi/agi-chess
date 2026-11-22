@@ -247,3 +247,45 @@ export function wxfMove(pos, iccs) {
   const op = dy === 0 ? '.' : dy > 0 ? '+' : '-';
   return head + op + ('rcpk'.includes(kind) && dy !== 0 ? Math.abs(dy) : xToFile(red, x2));
 }
+
+// ---------------------------------------------------------------- 中文纵线记谱生成（引擎最佳着 ICCS → 四字中文记谱）
+// 与导出端 agi_chess/xiangqi.py 的 pgn_move 严格同构：红汉字「一..九」、黑全角「１..９」，同线多子前缀在棋子名前，
+// 四五兵及双纵线多兵编号红黑双方一律写汉字「一二三四五」（如「一卒平５」）。非法或空起点返回 null。
+const CN_NAME = {
+  K: '帅', A: '仕', B: '相', N: '马', R: '车', C: '炮', P: '兵',
+  k: '将', a: '士', b: '象', n: '马', r: '车', c: '炮', p: '卒',
+};
+const RED_NUM = '零一二三四五六七八九';
+const BLACK_NUM = '０１２３４５６７８９';
+
+export function zhMove(pos, iccs) {
+  if (typeof iccs !== 'string' || !/^[a-i][0-9][a-i][0-9]$/.test(iccs)) return null;
+  const [x1, y1] = sqXY(iccs.slice(0, 2)), [x2, y2] = sqXY(iccs.slice(2, 4));
+  const p = pos.board[y1 * 9 + x1];
+  if (!p || isRed(p) !== (pos.turn === 'w')) return null;
+  const red = isRed(p), kind = p.toLowerCase(), name = CN_NAME[p];
+  const num = red ? RED_NUM : BLACK_NUM;
+  const ahead = (a, b) => (red ? b - a : a - b);
+  let head = name + num[xToFile(red, x1)];
+  if ('rncp'.includes(kind)) {
+    const files = new Map();
+    pos.board.forEach((q, i) => {
+      if (q !== p) return;
+      const x = i % 9;
+      if (!files.has(x)) files.set(x, []);
+      files.get(x).push((i - x) / 9);
+    });
+    const mine = files.get(x1).slice().sort(ahead);
+    const multi = [...files.keys()].filter((x) => files.get(x).length >= 2).sort((a, b) => xToFile(red, a) - xToFile(red, b));
+    if (kind === 'p' && multi.length >= 2 && multi.includes(x1)) {
+      const order = multi.flatMap((x) => files.get(x).slice().sort(ahead).map((y) => [x, y]));
+      head = '一二三四五'[order.findIndex(([x, y]) => x === x1 && y === y1)] + name;
+    } else if (mine.length === 2) head = '前后'[mine.indexOf(y1)] + name;
+    else if (mine.length === 3) head = '前中后'[mine.indexOf(y1)] + name;
+    else if (mine.length >= 4) head = '一二三四五'[mine.indexOf(y1)] + name;
+  }
+  const dy = (y2 - y1) * (red ? 1 : -1);
+  const op = dy === 0 ? '平' : dy > 0 ? '进' : '退';
+  const dest = 'rcpk'.includes(kind) && dy !== 0 ? Math.abs(dy) : xToFile(red, x2);
+  return dest >= 1 && dest <= 9 ? head + op + num[dest] : null;
+}

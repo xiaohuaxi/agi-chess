@@ -1,10 +1,10 @@
 <!doctype html>
 <!--
-  棋谱阅读器（docs/viewer.md）。经本机静态服务打开：仓库根目录 python3 -m http.server --bind 127.0.0.1 8000，
-  再开 http://127.0.0.1:8000/viewer/?files=/runs/a/game.pgn,/runs/b/game.pgn
-  也可以把棋谱文件拖进页面。播放、录制接口与网址参数见 app.js 开头和 docs/viewer.md「播放」。
-  版式按窗口宽度自动选（layout=compact / wide 强制）：窄版（录屏画面）只有棋手条和棋盘；宽版右边多一栏 #side
-  （对局信息、播放按钮、着法列表、这步的评注和数字、快捷键提示），窄版里它不显示。
+  棋谱阅读器（docs/viewer.md）。经本机静态服务打开：仓库根目录 node viewer/serve.mjs，
+  再开 http://127.0.0.1:8765/viewer/?files=/runs/a/game.pgn,/runs/b/game.pgn
+  也可以把棋谱文件拖进页面，或从同级页面 series.html（对阵总览）/ catalog.html（全部 192 盘目录）跳入。
+  版式按窗口宽度自动选（layout=compact / wide 强制，rec=1 恒为窄版）：
+  桌面宽版（≥900px）右边多一栏 #side，手机窄视口（<900px）纵向叠排棋盘、翻步栏、引擎评分/评注与着法表；窄版录屏态隐藏 #side。
 -->
 <html lang="zh-CN">
 <head>

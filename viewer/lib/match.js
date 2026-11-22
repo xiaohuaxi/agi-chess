@@ -33,7 +33,9 @@ export function fullName(game, side, vendor = true, names = null) {
   const t = game.tags, raw = side === 'w' ? (t.Red ?? t.White ?? '?') : (t.Black ?? '?');
   if (shownName(names, raw, playerOf(game, side).name) !== undefined) return { name: p.name, effort: p.effort };   // 覆盖了
   const v = vendor && VENDORS[raw.slice(0, Math.max(0, raw.indexOf(':'))).toLowerCase()];
-  return { name: v ? `${v} ${p.name}` : p.name, effort: p.effort };
+  const low = p.name.toLowerCase(), vLow = v ? v.toLowerCase() : '';
+  const hasVendor = v && (low === vLow || low.startsWith(vLow + '-') || low.startsWith(vLow + ' ') || low.startsWith(vLow + '_'));
+  return { name: v && !hasVendor ? `${v} ${p.name}` : p.name, effort: p.effort };
 }
 
 // 起始局面的回合数（FEN 第 6 段），没有就是 1。

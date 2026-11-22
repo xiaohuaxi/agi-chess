@@ -10,7 +10,7 @@ const VIEWER = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(VIEWER, '..');
 const DEFAULT_OUT = path.join(ROOT, '_site');
 
-const VIEWER_FILES = ['index.html', '404.html', 'og-card.png', 'app.css', 'app.js'];
+const VIEWER_FILES = ['index.html', 'series.html', 'catalog.html', '404.html', 'og-card.png', 'app.css', 'pages.css', 'app.js', 'series.js', 'catalog.js'];
 const VIEWER_DIRS = ['lib', 'vendor'];
 const FORBIDDEN_NAMES = new Set(['node_modules', 'test', 'package.json', 'package-lock.json']);
 

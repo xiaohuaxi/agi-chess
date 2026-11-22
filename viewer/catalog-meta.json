@@ -1,0 +1,789 @@
+{
+  "repoBlobBase": "https://github.com/xiaohuaxi/agi-chess/blob/main/",
+  "batchRules": [
+    {
+      "prefix": "runs/neon-xhigh-vs-carbon-high-20261119",
+      "date": "2026-11-19",
+      "batch": "2026-11-19",
+      "protocol": "real",
+      "lang": "en",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/neon-carbon-astra-chess-20261119.md"
+    },
+    {
+      "prefix": "runs/neon-xhigh-vs-astra-max-20261119",
+      "date": "2026-11-19",
+      "batch": "2026-11-19",
+      "protocol": "real",
+      "lang": "en",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/neon-carbon-astra-chess-20261119.md"
+    },
+    {
+      "prefix": "runs/carbon-high-vs-astra-max-20261119",
+      "date": "2026-11-19",
+      "batch": "2026-11-19",
+      "protocol": "real",
+      "lang": "en",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/neon-carbon-astra-chess-20261119.md"
+    },
+    {
+      "prefix": "runs/carbon-high-vs-astra-xhigh-20261119",
+      "date": "2026-11-19",
+      "batch": "2026-11-19",
+      "protocol": "real",
+      "lang": "en",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/neon-carbon-astra-chess-20261119.md"
+    },
+    {
+      "prefix": "runs/carbon-vs-agy-opus-high-xq-20261114",
+      "date": "2026-11-14",
+      "batch": "2026-11-14",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/carbon-vs-agy-opus-high-xq-20261114.md"
+    },
+    {
+      "prefix": "runs/carbon-vs-agy-opus-high-20261114",
+      "date": "2026-11-14",
+      "batch": "2026-11-14",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/carbon-vs-agy-opus-high-20261114.md"
+    },
+    {
+      "prefix": "runs/argon-vs-agy-opus-high-20261020",
+      "date": "2026-10-20",
+      "batch": "2026-10",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/argon-vs-agy-opus-high-20261020.md"
+    },
+    {
+      "prefix": "runs/argon-vs-agy-opus-high-20261019",
+      "date": "2026-10-19",
+      "batch": "2026-10",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/argon-vs-agy-opus-high-20261020.md"
+    },
+    {
+      "prefix": "runs/argon-high-chess-self-20261019",
+      "date": "2026-10-19",
+      "batch": "2026-10",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "selfplay",
+      "report": "docs/results/argon-high-chess-20261019.md"
+    },
+    {
+      "prefix": "runs/argon-high-self-20261019",
+      "date": "2026-10-19",
+      "batch": "2026-10",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "selfplay",
+      "report": "docs/results/argon-high-xiangqi-20261019.md"
+    },
+    {
+      "prefix": "runs/gemini38-flash-high-clean-20261015",
+      "date": "2026-10-15",
+      "batch": "2026-10",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "selfplay",
+      "report": "docs/results/carbon-vs-agy-opus-high-xq-20261114.md"
+    },
+    {
+      "prefix": "runs/zc/",
+      "date": "2026-10-03",
+      "batch": "zc",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "engine_anchor",
+      "report": "docs/results/opus-max-rating.md"
+    },
+    {
+      "prefix": "runs/zx/",
+      "date": "2026-10-03",
+      "batch": "zx",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "engine_anchor",
+      "report": "docs/results/opus-max-rating.md"
+    },
+    {
+      "prefix": "runs/g7-",
+      "date": "2026-09-30",
+      "batch": "g7",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-max-vs-astra-max-1.md"
+    },
+    {
+      "prefix": "runs/g6-",
+      "date": "2026-09-30",
+      "batch": "g6",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "drop_thinking",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-drop-vs-astra-1.md"
+    },
+    {
+      "prefix": "runs/g5-x-opus-astramax",
+      "date": "2026-09-29",
+      "batch": "g5",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-vs-astra-max-xq-1.md"
+    },
+    {
+      "prefix": "runs/g5-x-astramax-opus",
+      "date": "2026-09-29",
+      "batch": "g5",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-vs-astra-max-xq-1.md"
+    },
+    {
+      "prefix": "runs/g5-c-opus-astramax",
+      "date": "2026-09-29",
+      "batch": "g5",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-vs-astra-max-1.md"
+    },
+    {
+      "prefix": "runs/g5-c-astramax-opus",
+      "date": "2026-09-29",
+      "batch": "g5",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-vs-astra-max-1.md"
+    },
+    {
+      "prefix": "runs/g3-c-",
+      "date": "2026-09-29",
+      "batch": "g3",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-vs-astra-max-1.md"
+    },
+    {
+      "prefix": "runs/g5-c-",
+      "date": "2026-09-29",
+      "batch": "g5",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-vs-astra-1.md"
+    },
+    {
+      "prefix": "runs/g4-c-",
+      "date": "2026-09-29",
+      "batch": "g4",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-vs-astra-1.md"
+    },
+    {
+      "prefix": "runs/g2-c-",
+      "date": "2026-09-29",
+      "batch": "g2",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-vs-astra-1.md"
+    },
+    {
+      "prefix": "runs/g4-x-",
+      "date": "2026-09-29",
+      "batch": "g4",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-vs-astra-xq-1.md"
+    },
+    {
+      "prefix": "runs/g3-x-",
+      "date": "2026-09-29",
+      "batch": "g3",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-vs-astra-xq-1.md"
+    },
+    {
+      "prefix": "runs/g1-",
+      "date": "2026-09-28",
+      "batch": "g1",
+      "protocol": "real",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "h2h",
+      "report": "docs/results/game-opus-vs-sol-1.md"
+    },
+    {
+      "prefix": "runs/b3max-ch/",
+      "date": "2026-09-27",
+      "batch": "b3max-ch",
+      "protocol": "legacy",
+      "lang": "zh",
+      "sessionMode": "stateless",
+      "subcat": "legacy_engine",
+      "report": "docs/results/batch3-maxdepth.md"
+    },
+    {
+      "prefix": "runs/b3max-xq/",
+      "date": "2026-09-27",
+      "batch": "b3max-xq",
+      "protocol": "legacy",
+      "lang": "zh",
+      "sessionMode": "stateless",
+      "subcat": "legacy_engine",
+      "report": "docs/results/batch3-maxdepth.md"
+    },
+    {
+      "prefix": "runs/b1-session/",
+      "date": "2026-09-26",
+      "batch": "b1-session",
+      "protocol": "legacy",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "legacy_engine",
+      "report": "docs/results/batch2-chess-strength.md"
+    },
+    {
+      "prefix": "runs/b2/",
+      "date": "2026-09-26",
+      "batch": "b2",
+      "protocol": "legacy",
+      "lang": "zh",
+      "sessionMode": "stateless",
+      "subcat": "legacy_engine",
+      "report": "docs/results/batch2-xiangqi-strength.md"
+    },
+    {
+      "prefix": "runs/b1/",
+      "date": "2026-09-26",
+      "batch": "b1",
+      "protocol": "legacy",
+      "lang": "zh",
+      "sessionMode": "stateless",
+      "subcat": "legacy_engine",
+      "report": "docs/results/batch2-chess-strength.md"
+    },
+    {
+      "prefix": "runs/b1-ch-session-",
+      "date": "2026-09-26",
+      "batch": "b1-carryover",
+      "protocol": "legacy",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "legacy_engine",
+      "report": "docs/results/batch1-carryover.md"
+    },
+    {
+      "prefix": "runs/b1-ch-notes-",
+      "date": "2026-09-26",
+      "batch": "b1-carryover",
+      "protocol": "legacy",
+      "lang": "zh",
+      "sessionMode": "notes",
+      "subcat": "legacy_engine",
+      "report": "docs/results/batch1-carryover.md"
+    },
+    {
+      "prefix": "runs/b1-ch-stateless-",
+      "date": "2026-09-26",
+      "batch": "b1-carryover",
+      "protocol": "legacy",
+      "lang": "zh",
+      "sessionMode": "stateless",
+      "subcat": "legacy_engine",
+      "report": "docs/results/batch1-carryover.md"
+    },
+    {
+      "prefix": "runs/b1-xq-session-",
+      "date": "2026-09-26",
+      "batch": "b1-carryover",
+      "protocol": "legacy",
+      "lang": "zh",
+      "sessionMode": "session",
+      "subcat": "legacy_engine",
+      "report": "docs/results/batch1-carryover.md"
+    },
+    {
+      "prefix": "runs/b1-xq-notes-",
+      "date": "2026-09-26",
+      "batch": "b1-carryover",
+      "protocol": "legacy",
+      "lang": "zh",
+      "sessionMode": "notes",
+      "subcat": "legacy_engine",
+      "report": "docs/results/batch1-carryover.md"
+    },
+    {
+      "prefix": "runs/b1-xq-stateless-",
+      "date": "2026-09-26",
+      "batch": "b1-carryover",
+      "protocol": "legacy",
+      "lang": "zh",
+      "sessionMode": "stateless",
+      "subcat": "legacy_engine",
+      "report": "docs/results/batch1-carryover.md"
+    }
+  ],
+  "series": [
+    {
+      "id": "neon-vs-carbon-20261119",
+      "variant": "chess",
+      "date": "2026-11-19",
+      "lang": "en",
+      "protocol": "real",
+      "sessionMode": "session",
+      "roundRobinGroup": "chess-20261119",
+      "sideA": { "raw": "agy:gemini-4-neon", "effort": "xhigh", "labelZh": "Gemini 4 Neon", "labelEn": "Gemini 4 Neon", "shortLabel": "Neon xhigh" },
+      "sideB": { "raw": "agy:gemini-4-carbon", "effort": "high", "labelZh": "Gemini 4 Carbon", "labelEn": "Gemini 4 Carbon", "shortLabel": "Carbon high" },
+      "files": [
+        "runs/neon-xhigh-vs-carbon-high-20261119",
+        "runs/neon-xhigh-vs-carbon-high-20261119-2",
+        "runs/neon-xhigh-vs-carbon-high-20261119-3",
+        "runs/neon-xhigh-vs-carbon-high-20261119-4"
+      ],
+      "keyBlunders": [
+        { "file": "runs/neon-xhigh-vs-carbon-high-20261119", "ply": 40, "labelZh": "G1 · 20...Re8??", "labelEn": "G1 · 20...Re8??" },
+        { "file": "runs/neon-xhigh-vs-carbon-high-20261119-3", "ply": 43, "labelZh": "G3 · 22.Bxc5??", "labelEn": "G3 · 22.Bxc5??" }
+      ],
+      "report": "docs/results/neon-carbon-astra-chess-20261119.md"
+    },
+    {
+      "id": "neon-vs-astra62-20261119",
+      "variant": "chess",
+      "date": "2026-11-19",
+      "lang": "en",
+      "protocol": "real",
+      "sessionMode": "session",
+      "roundRobinGroup": "chess-20261119",
+      "sideA": { "raw": "agy:gemini-4-neon", "effort": "xhigh", "labelZh": "Gemini 4 Neon", "labelEn": "Gemini 4 Neon", "shortLabel": "Neon xhigh" },
+      "sideB": { "raw": "codex:gpt-6.2-astra", "effort": "max", "labelZh": "GPT-6.2 Astra", "labelEn": "GPT-6.2 Astra", "shortLabel": "Astra 6.2 max" },
+      "files": [
+        "runs/neon-xhigh-vs-astra-max-20261119-1",
+        "runs/neon-xhigh-vs-astra-max-20261119-2",
+        "runs/neon-xhigh-vs-astra-max-20261119-3",
+        "runs/neon-xhigh-vs-astra-max-20261119-4"
+      ],
+      "keyBlunders": [
+        { "file": "runs/neon-xhigh-vs-astra-max-20261119-1", "ply": 82, "labelZh": "G1 · 41...Rxf4??", "labelEn": "G1 · 41...Rxf4??" },
+        { "file": "runs/neon-xhigh-vs-astra-max-20261119-4", "ply": 36, "labelZh": "G4 · 18...Bxg5??", "labelEn": "G4 · 18...Bxg5??" }
+      ],
+      "report": "docs/results/neon-carbon-astra-chess-20261119.md"
+    },
+    {
+      "id": "carbon-vs-astra62-20261119",
+      "variant": "chess",
+      "date": "2026-11-19",
+      "lang": "en",
+      "protocol": "real",
+      "sessionMode": "session",
+      "roundRobinGroup": "chess-20261119",
+      "sideA": { "raw": "agy:gemini-4-carbon", "effort": "high", "labelZh": "Gemini 4 Carbon", "labelEn": "Gemini 4 Carbon", "shortLabel": "Carbon high" },
+      "sideB": { "raw": "codex:gpt-6.2-astra", "effort": "max", "labelZh": "GPT-6.2 Astra", "labelEn": "GPT-6.2 Astra", "shortLabel": "Astra 6.2 max" },
+      "files": [
+        "runs/carbon-high-vs-astra-max-20261119",
+        "runs/carbon-high-vs-astra-max-20261119-2",
+        "runs/carbon-high-vs-astra-max-20261119-3",
+        "runs/carbon-high-vs-astra-max-20261119-4"
+      ],
+      "keyBlunders": [
+        { "file": "runs/carbon-high-vs-astra-max-20261119-3", "ply": 111, "labelZh": "G3 · 56.Nd3??", "labelEn": "G3 · 56.Nd3??" },
+        { "file": "runs/carbon-high-vs-astra-max-20261119-4", "ply": 48, "labelZh": "G4 · 24...Qc5??", "labelEn": "G4 · 24...Qc5??" }
+      ],
+      "report": "docs/results/neon-carbon-astra-chess-20261119.md"
+    },
+    {
+      "id": "carbon-vs-agy-opus-20261114",
+      "variant": "chess",
+      "date": "2026-11-14",
+      "lang": "zh",
+      "protocol": "real",
+      "sessionMode": "session",
+      "sideA": { "raw": "agy:gemini-4-carbon", "effort": "high", "labelZh": "Gemini 4 Carbon", "labelEn": "Gemini 4 Carbon" },
+      "sideB": { "raw": "agy:claude-opus-5-5", "effort": "high", "labelZh": "Claude Opus 5.5 (agy)", "labelEn": "Claude Opus 5.5 (agy)" },
+      "files": [
+        "runs/carbon-vs-agy-opus-high-20261114",
+        "runs/carbon-vs-agy-opus-high-20261114-1",
+        "runs/carbon-vs-agy-opus-high-20261114-2",
+        "runs/carbon-vs-agy-opus-high-20261114-3"
+      ],
+      "keyBlunders": [
+        { "file": "runs/carbon-vs-agy-opus-high-20261114", "ply": 48, "labelZh": "G1 · 24...Qb3??", "labelEn": "G1 · 24...Qb3??" },
+        { "file": "runs/carbon-vs-agy-opus-high-20261114-2", "ply": 27, "labelZh": "G3 · 14.Nd5??", "labelEn": "G3 · 14.Nd5??" }
+      ],
+      "noteZh": "第 3 局（-2）含底层通道内部重试告警；剔除该局后为 3:0（加权 ACPL 17.7 / 35.0）。",
+      "noteEn": "Game 3 (-2) contains internal channel retry notices; 3:0 excluding Game 3 (weighted ACPL 17.7 / 35.0).",
+      "report": "docs/results/carbon-vs-agy-opus-high-20261114.md"
+    },
+    {
+      "id": "argon-vs-agy-opus-20261020",
+      "variant": "chess",
+      "date": "2026-10-20",
+      "lang": "zh",
+      "protocol": "real",
+      "sessionMode": "session",
+      "sideA": { "raw": "gemini:gemini-4-argon-high", "effort": "high", "labelZh": "Gemini 4 Argon", "labelEn": "Gemini 4 Argon" },
+      "sideB": { "raw": "agy:claude-opus-5-5-high", "effort": "high", "labelZh": "Claude Opus 5.5 (agy)", "labelEn": "Claude Opus 5.5 (agy)" },
+      "files": [
+        "runs/argon-vs-agy-opus-high-20261019",
+        "runs/argon-vs-agy-opus-high-20261020-1",
+        "runs/argon-vs-agy-opus-high-20261020-2",
+        "runs/argon-vs-agy-opus-high-20261020-3"
+      ],
+      "keyBlunders": [
+        { "file": "runs/argon-vs-agy-opus-high-20261020-1", "ply": 73, "labelZh": "G2 · 37.Rxh7+??", "labelEn": "G2 · 37.Rxh7+??" },
+        { "file": "runs/argon-vs-agy-opus-high-20261020-3", "ply": 94, "labelZh": "G4 · 47...g6??", "labelEn": "G4 · 47...g6??" }
+      ],
+      "report": "docs/results/argon-vs-agy-opus-high-20261020.md"
+    },
+    {
+      "id": "opus-max-vs-astra-max-ch-20260930",
+      "variant": "chess",
+      "date": "2026-09-30",
+      "lang": "zh",
+      "protocol": "real",
+      "sessionMode": "session",
+      "sideA": { "raw": "claude:opus", "effort": "max", "labelZh": "Claude Opus 5.5 (CLI)", "labelEn": "Claude Opus 5.5 (CLI)" },
+      "sideB": { "raw": "codex:astra", "effort": "max", "labelZh": "GPT-6 Astra", "labelEn": "GPT-6 Astra" },
+      "files": [
+        "runs/g7-c-opus-astra-1",
+        "runs/g7-c-astra-opus-1",
+        "runs/g7-c-opus-astra-2",
+        "runs/g7-c-astra-opus-2"
+      ],
+      "keyBlunders": [
+        { "file": "runs/g7-c-opus-astra-1", "ply": 75, "labelZh": "G1 · 38.Kd1??", "labelEn": "G1 · 38.Kd1??" },
+        { "file": "runs/g7-c-opus-astra-2", "ply": 62, "labelZh": "G3 · 31...Qf6??", "labelEn": "G3 · 31...Qf6??" }
+      ],
+      "report": "docs/results/game-opus-max-vs-astra-max-1.md"
+    },
+    {
+      "id": "opus-xhigh-vs-astra-max-ch-20260929",
+      "variant": "chess",
+      "date": "2026-09-29",
+      "lang": "zh",
+      "protocol": "real",
+      "sessionMode": "session",
+      "sideA": { "raw": "claude:opus", "effort": "xhigh", "labelZh": "Claude Opus 5.5 (CLI)", "labelEn": "Claude Opus 5.5 (CLI)" },
+      "sideB": { "raw": "codex:astra", "effort": "max", "labelZh": "GPT-6 Astra", "labelEn": "GPT-6 Astra" },
+      "files": [
+        "runs/g3-c-opus-astramax",
+        "runs/g3-c-astramax-opus",
+        "runs/g5-c-opus-astramax-2",
+        "runs/g5-c-astramax-opus-2"
+      ],
+      "keyBlunders": [
+        { "file": "runs/g5-c-opus-astramax-2", "ply": 50, "labelZh": "G3 · 25...Rc8??", "labelEn": "G3 · 25...Rc8??" },
+        { "file": "runs/g5-c-astramax-opus-2", "ply": 44, "labelZh": "G4 · 22...Nc2??", "labelEn": "G4 · 22...Nc2??" }
+      ],
+      "report": "docs/results/game-opus-vs-astra-max-1.md"
+    },
+    {
+      "id": "opus-xhigh-vs-astra-xhigh-ch-20260929",
+      "variant": "chess",
+      "date": "2026-09-29",
+      "lang": "zh",
+      "protocol": "real",
+      "sessionMode": "session",
+      "sideA": { "raw": "claude:opus", "effort": "xhigh", "labelZh": "Claude Opus 5.5 (CLI)", "labelEn": "Claude Opus 5.5 (CLI)" },
+      "sideB": { "raw": "codex:astra", "effort": "xhigh", "labelZh": "GPT-6 Astra", "labelEn": "GPT-6 Astra" },
+      "files": [
+        "runs/g2-c-opus-astra",
+        "runs/g2-c-astra-opus",
+        "runs/g4-c-opus-astra",
+        "runs/g4-c-astra-opus",
+        "runs/g5-c-opus-astra",
+        "runs/g5-c-astra-opus"
+      ],
+      "keyBlunders": [
+        { "file": "runs/g4-c-opus-astra", "ply": 68, "labelZh": "G3 · 34...Qe6??", "labelEn": "G3 · 34...Qe6??" },
+        { "file": "runs/g5-c-opus-astra", "ply": 85, "labelZh": "G5 · 43.Nc2??", "labelEn": "G5 · 43.Nc2??" }
+      ],
+      "report": "docs/results/game-opus-vs-astra-1.md"
+    },
+    {
+      "id": "carbon-vs-agy-opus-xq-20261114",
+      "variant": "xiangqi",
+      "date": "2026-11-14",
+      "lang": "zh",
+      "protocol": "real",
+      "sessionMode": "session",
+      "sideA": { "raw": "agy:gemini-4-carbon", "effort": "high", "labelZh": "Gemini 4 Carbon", "labelEn": "Gemini 4 Carbon" },
+      "sideB": { "raw": "agy:claude-opus-5-5", "effort": "high", "labelZh": "Claude Opus 5.5 (agy)", "labelEn": "Claude Opus 5.5 (agy)" },
+      "files": [
+        "runs/carbon-vs-agy-opus-high-xq-20261114-1",
+        "runs/carbon-vs-agy-opus-high-xq-20261114-2",
+        "runs/carbon-vs-agy-opus-high-xq-20261114-3",
+        "runs/carbon-vs-agy-opus-high-xq-20261114-4"
+      ],
+      "keyBlunders": [
+        { "file": "runs/carbon-vs-agy-opus-high-xq-20261114-3", "ply": 9, "labelZh": "G3 · 5.车九平八??", "labelEn": "G3 · 5.R9.8??" },
+        { "file": "runs/carbon-vs-agy-opus-high-xq-20261114-4", "ply": 42, "labelZh": "G4 · 21.炮７平１??", "labelEn": "G4 · 21.C7.1??" }
+      ],
+      "noteZh": "剔除 11 步含通道重试告警的第 2 局后为 2:1（ACPL 51.7 / 55.1）；仅计零告警的第 1、3 局为 2:0（ACPL 51.2 / 67.7）。",
+      "noteEn": "2:1 excluding Game 2 with 11 channel retry plies (ACPL 51.7 / 55.1); 2:0 across notice-free Games 1 & 3 (ACPL 51.2 / 67.7).",
+      "report": "docs/results/carbon-vs-agy-opus-high-xq-20261114.md"
+    },
+    {
+      "id": "opus-max-vs-astra-max-xq-20260930",
+      "variant": "xiangqi",
+      "date": "2026-09-30",
+      "lang": "zh",
+      "protocol": "real",
+      "sessionMode": "session",
+      "sideA": { "raw": "claude:opus", "effort": "max", "labelZh": "Claude Opus 5.5 (CLI)", "labelEn": "Claude Opus 5.5 (CLI)" },
+      "sideB": { "raw": "codex:astra", "effort": "max", "labelZh": "GPT-6 Astra", "labelEn": "GPT-6 Astra" },
+      "files": [
+        "runs/g7-x-opus-astra-1",
+        "runs/g7-x-astra-opus-1",
+        "runs/g7-x-opus-astra-2",
+        "runs/g7-x-astra-opus-2"
+      ],
+      "keyBlunders": [
+        { "file": "runs/g7-x-astra-opus-1", "ply": 59, "labelZh": "G2 · 30.车四平一??", "labelEn": "G2 · 30.R4.1??" },
+        { "file": "runs/g7-x-astra-opus-2", "ply": 131, "labelZh": "G4 · 66.车九进三??", "labelEn": "G4 · 66.R9+3??" }
+      ],
+      "report": "docs/results/game-opus-max-vs-astra-max-1.md"
+    },
+    {
+      "id": "opus-xhigh-vs-astra-max-xq-20260929",
+      "variant": "xiangqi",
+      "date": "2026-09-29",
+      "lang": "zh",
+      "protocol": "real",
+      "sessionMode": "session",
+      "sideA": { "raw": "claude:opus", "effort": "xhigh", "labelZh": "Claude Opus 5.5 (CLI)", "labelEn": "Claude Opus 5.5 (CLI)" },
+      "sideB": { "raw": "codex:astra", "effort": "max", "labelZh": "GPT-6 Astra", "labelEn": "GPT-6 Astra" },
+      "files": [
+        "runs/g5-x-opus-astramax-1",
+        "runs/g5-x-astramax-opus-1",
+        "runs/g5-x-opus-astramax-2",
+        "runs/g5-x-astramax-opus-2"
+      ],
+      "keyBlunders": [
+        { "file": "runs/g5-x-opus-astramax-1", "ply": 23, "labelZh": "G1 · 12.车四平五??", "labelEn": "G1 · 12.R4.5??" },
+        { "file": "runs/g5-x-opus-astramax-2", "ply": 100, "labelZh": "G3 · 50.马６进８??", "labelEn": "G3 · 50.H6+8??" }
+      ],
+      "report": "docs/results/game-opus-vs-astra-max-xq-1.md"
+    },
+    {
+      "id": "opus-xhigh-vs-astra-xhigh-xq-20260929",
+      "variant": "xiangqi",
+      "date": "2026-09-29",
+      "lang": "zh",
+      "protocol": "real",
+      "sessionMode": "session",
+      "sideA": { "raw": "claude:opus", "effort": "xhigh", "labelZh": "Claude Opus 5.5 (CLI)", "labelEn": "Claude Opus 5.5 (CLI)" },
+      "sideB": { "raw": "codex:astra", "effort": "xhigh", "labelZh": "GPT-6 Astra", "labelEn": "GPT-6 Astra" },
+      "files": [
+        "runs/g3-x-opus-astra",
+        "runs/g3-x-astra-opus",
+        "runs/g4-x-opus-astra",
+        "runs/g4-x-astra-opus"
+      ],
+      "keyBlunders": [
+        { "file": "runs/g3-x-opus-astra", "ply": 11, "labelZh": "G1 · 6.车九平八??", "labelEn": "G1 · 6.R9.8??" },
+        { "file": "runs/g4-x-astra-opus", "ply": 13, "labelZh": "G4 · 7.车九平八??", "labelEn": "G4 · 7.R9.8??" }
+      ],
+      "report": "docs/results/game-opus-vs-astra-xq-1.md"
+    }
+  ],
+  "exploratory": [
+    {
+      "id": "pilot-carbon-vs-astra-xhigh-20261119",
+      "variant": "chess",
+      "date": "2026-11-19",
+      "lang": "en",
+      "tagZh": "探路单局",
+      "tagEn": "Single-Game Pilot",
+      "sideA": { "raw": "agy:gemini-4-carbon", "effort": "high", "labelZh": "Gemini 4 Carbon", "labelEn": "Gemini 4 Carbon" },
+      "sideB": { "raw": "codex:gpt-6.2-astra", "effort": "xhigh", "labelZh": "GPT-6.2 Astra", "labelEn": "GPT-6.2 Astra" },
+      "files": ["runs/carbon-high-vs-astra-xhigh-20261119"],
+      "descZh": "正式切至 Astra max 四盘对称赛前的首轮 xhigh 探路单盘（Carbon 执白）。",
+      "descEn": "Initial single-game pilot with Astra at xhigh before running the symmetric max match (Carbon as White).",
+      "report": "docs/results/neon-carbon-astra-chess-20261119.md"
+    },
+    {
+      "id": "selfplay-argon-ch-20261019",
+      "variant": "chess",
+      "date": "2026-10-19",
+      "lang": "zh",
+      "selfPlay": true,
+      "tagZh": "同模型自弈",
+      "tagEn": "Self-Play",
+      "sideA": { "raw": "gemini:gemini-4-argon-high", "effort": "high", "labelZh": "Gemini 4 Argon（白）", "labelEn": "Gemini 4 Argon (White)" },
+      "sideB": { "raw": "gemini:gemini-4-argon-high", "effort": "high", "labelZh": "Gemini 4 Argon（黑）", "labelEn": "Gemini 4 Argon (Black)" },
+      "files": ["runs/argon-high-chess-self-20261019"],
+      "descZh": "通道接入与行棋稳定性自弈单盘（85 半回合，白胜）。",
+      "descEn": "Single-game self-play diagnostic for channel stability and move quality (85 plies, White wins).",
+      "report": "docs/results/argon-high-chess-20261019.md"
+    },
+    {
+      "id": "control-g6-drop-ch-20260930",
+      "variant": "chess",
+      "date": "2026-09-30",
+      "lang": "zh",
+      "tagZh": "非对称思考对照",
+      "tagEn": "Asymmetric Carryover Control",
+      "sideA": { "raw": "claude:opus", "effort": "xhigh", "labelZh": "Claude Opus 5.5 (drop_thinking)", "labelEn": "Claude Opus 5.5 (drop_thinking)" },
+      "sideB": { "raw": "codex:astra", "effort": "xhigh", "labelZh": "GPT-6 Astra (session)", "labelEn": "GPT-6 Astra (session)" },
+      "files": [
+        "runs/g6-c-opusdrop-astra-1",
+        "runs/g6-c-astra-opusdrop-1",
+        "runs/g6-c-opusdrop-astra-2",
+        "runs/g6-c-astra-opusdrop-2"
+      ],
+      "descZh": "仅 Opus 侧开启 drop_thinking=on 删去历史加密思考块，与双方保留思考条件不等同。",
+      "descEn": "One-sided drop_thinking=on enabled for Opus while Astra retained prior session thinking.",
+      "report": "docs/results/game-opus-drop-vs-astra-1.md"
+    },
+    {
+      "id": "pilot-g1-opus-sol-ch-20260928",
+      "variant": "chess",
+      "date": "2026-09-28",
+      "lang": "zh",
+      "tagZh": "无理由首跑",
+      "tagEn": "No-Rationale Initial Run",
+      "sideA": { "raw": "claude:opus", "effort": "xhigh", "labelZh": "Claude Opus 5.5 (CLI)", "labelEn": "Claude Opus 5.5 (CLI)" },
+      "sideB": { "raw": "codex:sol", "effort": "xhigh", "labelZh": "GPT-6 Sol", "labelEn": "GPT-6 Sol" },
+      "files": ["runs/g1-c-opus-sol"],
+      "descZh": "real 协议首次跑通验证（reason=off 不写可见理由，仅 Opus 执白单盘）。",
+      "descEn": "First real-protocol verification game with reason=off (single game, Opus as White).",
+      "report": "docs/results/game-opus-vs-sol-1.md"
+    },
+    {
+      "id": "selfplay-argon-xq-20261019",
+      "variant": "xiangqi",
+      "date": "2026-10-19",
+      "lang": "zh",
+      "selfPlay": true,
+      "tagZh": "同模型自弈",
+      "tagEn": "Self-Play",
+      "sideA": { "raw": "gemini:gemini-4-argon-high", "effort": "high", "labelZh": "Gemini 4 Argon（红）", "labelEn": "Gemini 4 Argon (Red)" },
+      "sideB": { "raw": "gemini:gemini-4-argon-high", "effort": "high", "labelZh": "Gemini 4 Argon（黑）", "labelEn": "Gemini 4 Argon (Black)" },
+      "files": ["runs/argon-high-self-20261019"],
+      "descZh": "仅给子力清单下的中国象棋自弈诊断单盘（158 半回合，黑胜）。",
+      "descEn": "Single-game Xiangqi self-play diagnostic with piece-list input only (158 plies, Black wins).",
+      "report": "docs/results/argon-high-xiangqi-20261019.md"
+    },
+    {
+      "id": "selfplay-flash38-xq-20261015",
+      "variant": "xiangqi",
+      "date": "2026-10-15",
+      "lang": "zh",
+      "selfPlay": true,
+      "tagZh": "同模型自弈",
+      "tagEn": "Self-Play",
+      "sideA": { "raw": "gemini:gemini-3.8-flash-high", "effort": "high", "labelZh": "Gemini 3.8 Flash（红）", "labelEn": "Gemini 3.8 Flash (Red)" },
+      "sideB": { "raw": "gemini:gemini-3.8-flash-high", "effort": "high", "labelZh": "Gemini 3.8 Flash（黑）", "labelEn": "Gemini 3.8 Flash (Black)" },
+      "files": ["runs/gemini38-flash-high-clean-20261015"],
+      "descZh": "早期通道清洁度核验自弈单盘（104 半回合，未跑引擎复盘）。",
+      "descEn": "Early channel verification self-play game (104 plies, no post-game engine analysis).",
+      "report": "docs/results/carbon-vs-agy-opus-high-xq-20261114.md"
+    },
+    {
+      "id": "control-g6-drop-xq-20260930",
+      "variant": "xiangqi",
+      "date": "2026-09-30",
+      "lang": "zh",
+      "tagZh": "非对称思考对照",
+      "tagEn": "Asymmetric Carryover Control",
+      "sideA": { "raw": "claude:opus", "effort": "xhigh", "labelZh": "Claude Opus 5.5 (drop_thinking)", "labelEn": "Claude Opus 5.5 (drop_thinking)" },
+      "sideB": { "raw": "codex:astra", "effort": "xhigh", "labelZh": "GPT-6 Astra (session)", "labelEn": "GPT-6 Astra (session)" },
+      "files": [
+        "runs/g6-x-opusdrop-astra-1",
+        "runs/g6-x-astra-opusdrop-1",
+        "runs/g6-x-opusdrop-astra-2",
+        "runs/g6-x-astra-opusdrop-2"
+      ],
+      "descZh": "仅 Opus 侧开启 drop_thinking=on 删去历史加密思考块，单步思考量与耗时升至约 3 倍。",
+      "descEn": "One-sided drop_thinking=on enabled for Opus while Astra retained prior session thinking (~3x Opus tokens/move).",
+      "report": "docs/results/game-opus-drop-vs-astra-1.md"
+    },
+    {
+      "id": "pilot-g1-opus-sol-xq-20260928",
+      "variant": "xiangqi",
+      "date": "2026-09-28",
+      "lang": "zh",
+      "tagZh": "无理由首跑",
+      "tagEn": "No-Rationale Initial Run",
+      "sideA": { "raw": "claude:opus", "effort": "xhigh", "labelZh": "Claude Opus 5.5 (CLI)", "labelEn": "Claude Opus 5.5 (CLI)" },
+      "sideB": { "raw": "codex:sol", "effort": "xhigh", "labelZh": "GPT-6 Sol", "labelEn": "GPT-6 Sol" },
+      "files": ["runs/g1-x-opus-sol"],
+      "descZh": "real 协议中国象棋首跑验证（reason=off 不写可见理由，仅 Opus 执红单盘）。",
+      "descEn": "First Xiangqi real-protocol verification game with reason=off (single game, Opus as Red).",
+      "report": "docs/results/game-opus-vs-sol-1.md"
+    }
+  ],
+  "engineAnchors": {
+    "chess": {
+      "batch": "zc",
+      "date": "2026-10-03",
+      "modelZh": "CLI Claude Opus 5.5 (max)",
+      "modelEn": "CLI Claude Opus 5.5 (max)",
+      "headlineZh": "约 Lichess Blitz 1800 / Rapid 1920（新规上限裁决回看）",
+      "headlineEn": "~1800 Lichess Blitz / ~1920 Lichess Rapid (under 200-ply engine adjudication)",
+      "detailZh": "对阵 Maia-1900 与 Stockfish 19 限强 1900 / 2100 / 2300 共 30 盘（随机 8 半回合开局；原始棋谱 13 胜 12 和 5 负，按 200 半回合引擎裁决回看为 13 胜 5 和 12 负、本机刻度高于 Maia-1900 约 +189 分；原满上限判和赛制下约 Blitz 1910 / Rapid 2020）。",
+      "detailEn": "30 games vs Maia-1900 and strength-limited Stockfish 19 (UCI_Elo 1900 / 2100 / 2300) with 8-ply random openings (raw PGN 13W-12D-5L; 13W-5D-12L and +189 scale points above Maia-1900 under 200-ply engine adjudication, or ~1910 Blitz / ~2020 Rapid under cap-is-draw).",
+      "report": "docs/results/opus-max-rating.md"
+    },
+    "xiangqi": {
+      "batch": "zx",
+      "date": "2026-10-03",
+      "modelZh": "CLI Claude Opus 5.5 (max)",
+      "modelEn": "CLI Claude Opus 5.5 (max)",
+      "headlineZh": "Fairy-Stockfish nodes=100 基准之上 +121 Elo（95% CI: +1..+236）",
+      "headlineEn": "+121 Elo above Fairy-Stockfish nodes=100 (95% CI: +1 to +236)",
+      "detailZh": "对阵 Fairy-Stockfish 14.0.1 节点阶梯 nodes=30 / 100 / 300 / 1000 共 37 盘（随机 6 半回合开局，19 胜 3 和 15 负）：与 nodes=300（+82）相当或略强，明显低于 nodes=1000（+298）；因缺乏公开人类段位锚点不折算段位。",
+      "detailEn": "37 games vs Fairy-Stockfish 14.0.1 node ladder (nodes=30 / 100 / 300 / 1000, 6-ply random openings, 19W-3D-15L): comparable to or slightly above nodes=300 (+82) and clearly below nodes=1000 (+298); no human dan conversion due to lack of public anchors.",
+      "report": "docs/results/opus-max-rating.md"
+    }
+  }
+}

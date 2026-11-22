@@ -1,9 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { parsePgn } from '../lib/pgn.js';
-import { replay } from '../lib/replay.js';
-import { START_FEN, inCheck, makeMove, parseFen, parseMove, toFen } from '../lib/xiangqi.js';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { decodeText, parsePgn } from '../lib/pgn.js';
+import { isXiangqi, replay } from '../lib/replay.js';
+import { START_FEN, inCheck, makeMove, parseFen, parseMove, toFen, zhMove } from '../lib/xiangqi.js';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 const fixture = (name) => new URL('./fixtures/' + name, import.meta.url);
 const readJson = (name) => JSON.parse(readFileSync(fixture(name), 'utf8'));
@@ -100,4 +105,65 @@ test('国际象棋走不下去时停在那步并给原因', () => {
   const r = replay(g);
   assert.equal(r.steps.length, 2);
   assert.equal(r.error.ply, 3);
+});
+
+test('zhMove：xq-roundtrip 全集与入库全部 84 盘中象 PGN + 83 份引擎最佳着 100% 精确吻合', () => {
+  const data = readJson('xq-roundtrip.json');
+  let roundCount = 0;
+  for (const { fen, moves } of data) {
+    const pos = parseFen(fen);
+    for (const [iccs, text] of moves) {
+      assert.equal(zhMove(pos, iccs), text, `${fen} ${iccs}`);
+      roundCount++;
+    }
+  }
+  assert.ok(roundCount > 4000);
+
+  // 边界防御：空起点、走错颜色、非法坐标返回 null
+  const startPos = parseFen(START_FEN);
+  assert.equal(zhMove(startPos, 'e4e5'), null);
+  assert.equal(zhMove(startPos, 'h9g7'), null);
+  assert.equal(zhMove(startPos, 'bad'), null);
+
+  // 黑方多卒及双纵线多卒汉字「一二三四五」前缀校验
+  const blackMultiPawns = parseFen('4k4/9/9/3p1p3/3ppp3/9/9/9/9/4K4 b');
+  assert.equal(zhMove(blackMultiPawns, 'd5c5'), '一卒平３');
+
+  const tracked = execFileSync('git', ['ls-files', '-z', 'runs/'], { cwd: ROOT, maxBuffer: 16 * 1024 * 1024 })
+    .toString('utf8')
+    .split('\0')
+    .filter(Boolean);
+  const trackedSet = new Set(tracked);
+  const pgns = tracked.filter((f) => /^runs\/(?!quiz-).+\/game\.pgn$/.test(f)).sort();
+
+  let xqGames = 0, xqMoves = 0, bestChecked = 0;
+  for (const rel of pgns) {
+    const [g] = parsePgn(decodeText(readFileSync(join(ROOT, rel))));
+    if (!isXiangqi(g)) continue;
+    xqGames++;
+    let pos = parseFen(g.tags.FEN || START_FEN);
+    for (let i = 0; i < g.moves.length; i++) {
+      const m = g.moves[i];
+      const parsed = parseMove(pos, m.text);
+      assert.equal(zhMove(pos, parsed.iccs), m.text, `${rel} ply=${i + 1}`);
+      pos = makeMove(pos, parsed.iccs);
+      xqMoves++;
+    }
+    const anaRel = rel.replace(/game\.pgn$/, 'analysis.jsonl');
+    if (trackedSet.has(anaRel)) {
+      const rows = readFileSync(join(ROOT, anaRel), 'utf8').trim().split(/\r?\n/).map((l) => JSON.parse(l));
+      for (const r of rows) {
+        if (typeof r.best === 'string' && r.best.length === 4) {
+          const posBefore = parseFen(r.fen);
+          const z = zhMove(posBefore, r.best);
+          assert.ok(z && Array.from(z).length === 4, `${anaRel} ply=${r.ply} best=${r.best} -> ${z}`);
+          assert.equal(parseMove(posBefore, z).iccs, r.best, `${anaRel} ply=${r.ply} best roundtrip`);
+          bestChecked++;
+        }
+      }
+    }
+  }
+  assert.equal(xqGames, 84);
+  assert.ok(xqMoves >= 7600, `checked ${xqMoves} moves`);
+  assert.ok(bestChecked >= 7500, `checked ${bestChecked} engine best moves`);
 });

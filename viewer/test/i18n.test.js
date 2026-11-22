@@ -57,6 +57,7 @@ test('结束原因：导出端写的每一种都有英文，认不出的中文�
   const cases = {
     '将死': 'Checkmate', '困毙': 'Stalemate', '逼和，判和': 'Stalemate', '双方子力都不足以将死，判和': 'Insufficient material',
     '七十五回合没有吃子和兵的走动，判和': '75-move rule', '同一局面出现五次，判和': 'Fivefold repetition',
+    '同一局面出现三次，判和': 'Threefold repetition',
     '同一局面出现三次，程序替棋手申诉，判和': 'Threefold repetition', '五十回合没有吃子和兵的走动，程序替棋手申诉，判和': '50-move rule',
     '一百个半回合没有吃子，判和': 'No capture in 100 plies', '长将，判负': 'Perpetual check', '长捉，判负': 'Perpetual chase',
     '满 200 个半回合（研究设的上限），判和': 'Move limit (200 plies)', '红方连续 3 次给出非法着法，判负': '3 illegal moves in a row',

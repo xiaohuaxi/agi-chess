@@ -1,11 +1,11 @@
-// 棋谱阅读器页面外壳（docs/viewer.md）。两种版式共用：顶部细条、两条棋手条、棋盘、终局横幅、标题画面、总比分，
-// 加上自动播放、连播和录制接口。宽版（给人读棋谱）右边多一栏：对局信息、播放按钮、着法列表、这步的评注和数字。
-// 版式：layout=compact / wide 强制，不给按窗口宽度自动选（宽 ≥ WIDE_MIN 用宽版，窗口改大小时跟着切）；rec=1 恒为窄版。
+// 棋谱阅读器页面外壳（docs/viewer.md）。三种版式共用棋手条、棋盘、终局横幅、标题画面、总比分及自动播放/连播/录制接口：
+// 宽版（≥ WIDE_MIN，给人读棋谱）右边多一栏 #side（对局信息、播放按钮、着法列表、逐着引擎评分与评注、快捷键提示）；
+// 手机自动窄屏态（< WIDE_MIN 且未强制 layout=）纵向可滚动叠排；窄版录屏态（layout=compact 或 rec=1）仅显示棋手条与棋盘。
 // 键盘（rec=1 时都不理）：← → 单步，空格 播放 / 暂停，Home / End 本盘首尾，PgUp / PgDn 上一盘 / 下一盘；
 // 手动跳步会先停下自动播放，再播从跳到的那一格接着往下。
 //
 // 网址参数（docs/viewer.md「播放」有完整清单）：
-//   files=逗号分隔的棋谱路径（按站点根解析，一个文件可以有多盘）；也可以把文件拖进页面。
+//   files=逗号分隔的棋谱路径（按站点根解析，支持目录简写如 runs/<tag>，一个文件可以有多盘）；也可以把文件拖进页面。
 //   autoplay=1 打开就自动播放；gap / titlehold / resulthold / summaryhold 各格停几秒，openhold 每盘开局局面停几秒（默认同 gap）；
 //   title=1 加标题画面（默认不加）；
 //   anim=走子滑动的秒数（默认 0.3，算在 gap 之内，0 关掉）。静态看某一格不带动画。
@@ -25,9 +25,10 @@
 import { decodeText, moveNote } from './lib/pgn.js';
 import { loadGamesWithAnalysis } from './lib/replay.js';
 import { playerOf, fullName, startMoveNumber, fmtTokens, thinkTotals, points, scoresBefore, fmtScore, resultParts, resultText, totals } from './lib/match.js';
-import { moveRows, nagLabel, noteItems } from './lib/panel.js';
+import { formatStepEval, moveRows, nagLabel, noteItems, splitWarnings } from './lib/panel.js';
 import { playOptions, sequence } from './lib/play.js';
 import { T, langOf, parseNames } from './lib/i18n.js';
+import { VIEWER_DIR, SITE_ROOT, pageHref, consumeReturnContext, persistReturnForReload, clearReturnContext, buildBackHref } from './lib/nav.js';
 import { SOUNDS, linear, soundOptions, stepSound } from './lib/sound.js';
 import { ChessBoard, kingSquare } from './lib/chessboard.js';
 import { XiangqiBoard, xqKingSquare } from './lib/xqboard.js';
@@ -45,9 +46,7 @@ const TITLE_INSET = 24;                        // 标题卡片左右各离棋盘
 const FORCED = REC ? 'compact' : ['compact', 'wide'].includes(params.get('layout')) ? params.get('layout') : null;
 // 自动选版式的分界：宽 ≥ WIDE_MIN 为桌面宽版，未传 layout 的窄视口进可滚动手机态 .mobile；rec=1 恒为窄版 .compact
 const WIDE_MIN = 900;
-// 站点根自适应：本机开发从仓库根起服务访问 /viewer/ 时回退上一级，线上 Pages 平铺部署（如 /agi-chess/）时取当前目录。
-const SELF_DIR = new URL('.', import.meta.url);
-const SITE_ROOT = SELF_DIR.pathname.endsWith('/viewer/') ? new URL('..', import.meta.url) : SELF_DIR;
+const SELF_DIR = VIEWER_DIR;
 const frames = (n = 2) => new Promise((ok) => {
   const step = () => (n-- <= 0 ? ok() : requestAnimationFrame(step));
   step();
@@ -264,10 +263,11 @@ function showTitle(gi) {
 
 // ---------------------------------------------------------------- 宽版右栏 / 手机面板与导航链接
 // 换了一盘（或换了棋谱）才重建对局信息和着法列表；同一盘里走动只改高亮和下面的评注。
-let side = { games: null, gi: -1, hasNav: false, cells: new Map() };
+let side = { games: null, gi: -1, hasNav: false, backKey: '', cells: new Map() };
 let hasUrlFiles = false;
 let manualStepped = false;
 let urlTimer = null;
+let backContext = null;
 
 const homeHref = (lang = LANG) => location.pathname + (lang === 'en' ? '?lang=en' : '');
 
@@ -306,7 +306,7 @@ function scheduleReplaceUrl() {
     urlTimer = null;
     if (REC || !hasUrlFiles || playing || !games.length) return;
     const url = buildStateUrl({ lang: LANG, dropAutoplay: true });
-    try { history.replaceState(null, '', url); } catch { /* 受限沙箱静默忽略 */ }
+    try { history.replaceState(history.state, '', url); } catch { /* 受限沙箱静默忽略 */ }
   }, 150);
 }
 
@@ -314,9 +314,10 @@ function renderSide(gi, ply, final) {
   const g = games[gi], { game, rep, notes, startTurn, xiangqi } = g;
   const steps = rep.steps;
   const wantNav = !REC && hasUrlFiles;
-  if (side.games !== games || side.gi !== gi || side.hasNav !== wantNav) {
-    side = { games, gi, hasNav: wantNav, cells: new Map() };
-    // 对局信息：棋种（保持第一个 span 为棋种名）、第几局（多盘时是下拉框，可以换盘）、末尾首页与中英切换
+  const backKey = backContext ? `${backContext.page}:${JSON.stringify(backContext.params)}` : '';
+  if (side.games !== games || side.gi !== gi || side.hasNav !== wantNav || side.backKey !== backKey) {
+    side = { games, gi, hasNav: wantNav, backKey, cells: new Map() };
+    // 对局信息：棋种（保持第一个 span 为棋种名）、第几局（多盘时是下拉框，可以换盘）、末尾导航与中英切换
     const head = [h('span', null, xiangqi ? L.xiangqi : L.chess)];
     if (games.length > 1) {
       const sel = h('select');
@@ -332,11 +333,24 @@ function renderSide(gi, ply, final) {
     }
     if (wantNav) {
       const nav = h('div', 's-nav');
+      if (backContext) {
+        const back = h('a', 'nav-pill back-link', backContext.page === 'series' ? L.backSeries : L.backCatalog);
+        back.href = buildBackHref(backContext, LANG);
+        nav.append(back);
+      }
       const home = h('a', 'nav-pill home-link', L.home);
       home.href = homeHref();
+      nav.append(home);
+      if (!backContext) {
+        const series = h('a', 'nav-pill series-link', L.navSeriesShort);
+        series.href = pageHref('series', xiangqi ? { variant: 'xiangqi' } : {}, LANG);
+        const cat = h('a', 'nav-pill catalog-link', L.navCatalogShort);
+        cat.href = pageHref('catalog', {}, LANG);
+        nav.append(series, cat);
+      }
       const lang = h('a', 'nav-pill lang-switch', LANG === 'en' ? '中文' : 'EN');
       lang.href = buildStateUrl({ lang: LANG === 'en' ? 'zh' : 'en', dropAutoplay: true });
-      nav.append(home, lang);
+      nav.append(lang);
       head.push(nav);
     }
     $('s-head').replaceChildren(...head);
@@ -416,6 +430,19 @@ function noteView(g, ply, final) {
   const p = pl(game, st.side);
   head.append(h('span', 'who', p.name + (p.effort ? '+' + p.effort : '')));
   const kids = [head];
+  const ev = formatStepEval(st, xiangqi, LANG);
+  if (ev) {
+    const evalBox = h('div', 'n-eval');
+    const addEv = (cls, kText, vText, strong = false) => {
+      const item = h('span', 'ev-item' + (cls ? ' ' + cls : ''));
+      item.append(h('span', 'ev-k', kText), ' ', h(strong ? 'b' : 'span', 'ev-v', vText));
+      evalBox.append(item);
+    };
+    if (ev.score) addEv('', ev.scoreLabel, ev.score, true);
+    if (ev.wp) addEv('', ev.wpLabel, ev.wp, false);
+    if (ev.best) addEv('ev-best', ev.bestLabel, ev.best, true);
+    kids.push(evalBox);
+  }
   const items = noteItems(note, LANG);
   if (items.length) {
     const dl = h('dl');
@@ -425,9 +452,22 @@ function noteView(g, ply, final) {
     }
     kids.push(dl);
   }
-  if (note.text) kids.push(h('div', 'lbl', L.reason), h('div', 'why', note.text));
+  if (note.text) {
+    kids.push(h('div', 'lbl', L.reason));
+    const segs = splitWarnings(note.text);
+    if (segs.some((s) => s.warn)) {
+      const whyWrap = h('div', 'why why-split');
+      segs.forEach((s, idx) => {
+        if (idx > 0) whyWrap.append(' ');
+        whyWrap.append(h('div', s.warn ? 'why-warn' : 'why-body', s.text));
+      });
+      kids.push(whyWrap);
+    } else {
+      kids.push(h('div', 'why', note.text));
+    }
+  }
   if (note.unknown.length) kids.push(h('div', 'lbl', L.otherCmds), h('div', 'raw', note.unknown.join(' ')));
-  if (!items.length && !note.text && !note.unknown.length) kids.push(h('div', 'none', L.noNote));
+  if (!ev && !items.length && !note.text && !note.unknown.length) kids.push(h('div', 'none', L.noNote));
   if (final && ply === rep.steps.length) {
     const r = rep.error ? L.unreadable(rep.error.ply, rep.error.text) : resultText(game, xiangqi, LANG);
     if (r) kids.push(h('div', 'lbl', L.finalLbl), h('div', null, r));
@@ -733,20 +773,39 @@ function makeSamplesList() {
   return wrap;
 }
 
+function makeHomeTopbar(langHref) {
+  const top = h('div', 'h-topbar');
+  const inner = h('div', 'h-topbar-inner');
+  const left = h('div', 'h-brand-nav');
+  const brand = h('a', 'h-top-brand', L.pages.brand);
+  brand.href = homeHref();
+  const group = h('nav', 'h-nav-group');
+  const cur = h('a', 'nav-pill active', L.navFeatured);
+  cur.href = homeHref();
+  cur.setAttribute('aria-current', 'page');
+  const series = h('a', 'nav-pill', L.navSeries);
+  series.href = pageHref('series', {}, LANG);
+  const cat = h('a', 'nav-pill', L.navCatalog(192));
+  cat.href = pageHref('catalog', {}, LANG);
+  group.append(cur, series, cat);
+  left.append(brand, group);
+  const lang = h('a', 'nav-pill lang-switch', LANG === 'en' ? '中文' : 'EN');
+  lang.href = langHref;
+  inner.append(left, lang);
+  top.append(inner);
+  return top;
+}
+
 function showHint(text, withSamples = false) {
   $('stage').classList.remove('error');
   $('stage').classList.add('empty');
   const box = $('hint');
   const kids = [];
   if (!REC && FORCED !== 'compact') {
-    const top = h('div', 'h-topbar');
-    const lang = h('a', 'nav-pill lang-switch', LANG === 'en' ? '中文' : 'EN');
-    lang.href = homeHref(LANG === 'en' ? 'zh' : 'en');
-    top.append(lang);
-    kids.push(top);
+    kids.push(makeHomeTopbar(homeHref(LANG === 'en' ? 'zh' : 'en')));
   }
   if (withSamples) {
-    kids.push(h('div', 'h-brand', L.homeBrand));
+    kids.push(h('h1', 'h-brand', L.homeBrand));
     const samples = makeSamplesList();
     if (samples) kids.push(samples);
   }
@@ -762,11 +821,7 @@ function showError(err) {
   const box = $('hint');
   const kids = [];
   if (FORCED !== 'compact') {
-    const top = h('div', 'h-topbar');
-    const lang = h('a', 'nav-pill lang-switch', LANG === 'en' ? '中文' : 'EN');
-    lang.href = buildStateUrl({ lang: LANG === 'en' ? 'zh' : 'en' });
-    top.append(lang);
-    kids.push(top);
+    kids.push(makeHomeTopbar(buildStateUrl({ lang: LANG === 'en' ? 'zh' : 'en' })));
   }
   const card = h('div', 'h-error');
   card.append(h('div', 'e-title', L.errTitle), h('div', 'e-detail', displayErr), h('div', 'e-hint', L.errHint));
@@ -782,13 +837,16 @@ function showError(err) {
 async function init() {
   try {
     loadAudio();
-    const files = (params.get('files') || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const rawFiles = params.get('files') || '';
+    const files = rawFiles.split(',').map((s) => s.trim()).filter(Boolean);
     if (!files.length) {
       if (REC) throw new Error('没给棋谱：网址加 ?files=/runs/xxx/game.pgn');
       hasUrlFiles = false;
+      backContext = null;
       showHint(L.hint, true);
       return true;
     }
+    backContext = !REC ? consumeReturnContext(rawFiles) : null;
     await useTexts(await fetchTexts(files));
     hasUrlFiles = true;
     manualStepped = false;
@@ -821,6 +879,8 @@ async function onDrop(e) {
   if (!list.length) return;
   hasUrlFiles = false;
   manualStepped = false;
+  backContext = null;
+  clearReturnContext();
   clearTimeout(urlTimer);
   urlTimer = null;
   try {
@@ -837,6 +897,10 @@ async function onDrop(e) {
 }
 document.addEventListener('dragover', (e) => e.preventDefault());
 document.addEventListener('drop', onDrop);
+document.addEventListener('click', (e) => {
+  const a = e.target.closest?.('a.lang-switch');
+  if (a && backContext && hasUrlFiles) persistReturnForReload(backContext);
+});
 const KEYS = {
   Space: toggle, ArrowRight: () => step(1), ArrowLeft: () => step(-1), Home: toStart, End: toEnd,
   PageDown: () => toGame(1), PageUp: () => toGame(-1),

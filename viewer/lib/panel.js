@@ -54,3 +54,87 @@ export function moveRows(steps, moves, startTurn, moveNo0, xiangqi, wxf = false)
   });
   return rows;
 }
+
+// ---------------------------------------------------------------- 逐着引擎评估换算（统一白方 / 红方固定先手视角）
+const EVAL_RE = /^(cp|mate|end)\s+([+-]?\d+)$/;
+
+function parseEvalRaw(raw) {
+  if (typeof raw !== 'string') return null;
+  const m = raw.trim().match(EVAL_RE);
+  return m ? { kind: m[1], n: Number(m[2]) } : null;
+}
+
+function fmtEvalToken(parsed, k, xiangqi) {
+  if (!parsed || parsed.kind === 'end') return null;
+  if (parsed.kind === 'mate') {
+    if (parsed.n === 0) return null;
+    const m = k * parsed.n;
+    return m > 0 ? `+M${Math.abs(parsed.n)}` : `-M${Math.abs(parsed.n)}`;
+  }
+  const v = k * parsed.n;
+  if (xiangqi) return v === 0 ? '0' : v > 0 ? `+${v}` : String(v);
+  return v === 0 ? '0.00' : v > 0 ? `+${(v / 100).toFixed(2)}` : (v / 100).toFixed(2);
+}
+
+export function formatStepEval(step, xiangqi, lang = 'zh') {
+  const ev = step?.eval;
+  if (!ev) return null;
+  const L = T(lang);
+  const k = step.side === 'w' ? 1 : -1;
+  const bParsed = parseEvalRaw(ev.before);
+  const aParsed = parseEvalRaw(ev.after);
+  let score = null;
+  if (bParsed && aParsed && aParsed.kind !== 'end') {
+    const bTxt = fmtEvalToken(bParsed, k, xiangqi);
+    const aTxt = fmtEvalToken(aParsed, k, xiangqi);
+    if (bTxt !== null && aTxt !== null) {
+      if (!xiangqi) score = `${bTxt} → ${aTxt}`;
+      else if (bParsed.kind === 'cp' && aParsed.kind === 'cp') score = `${bTxt} → ${aTxt} cp`;
+      else if (bParsed.kind === 'cp') score = `${bTxt} cp → ${aTxt}`;
+      else if (aParsed.kind === 'cp') score = `${bTxt} → ${aTxt} cp`;
+      else score = `${bTxt} → ${aTxt}`;
+    }
+  }
+  let wp = null;
+  if (!xiangqi && aParsed?.kind !== 'end' && typeof ev.wp_before === 'number' && typeof ev.wp_after === 'number') {
+    const w1 = step.side === 'w' ? ev.wp_before : 100 - ev.wp_before;
+    const w2 = step.side === 'w' ? ev.wp_after : 100 - ev.wp_after;
+    wp = `${w1.toFixed(1)}% → ${w2.toFixed(1)}%`;
+  }
+  let best = null;
+  if (ev.played_best === false && typeof ev.best === 'string' && ev.best.length >= 4) {
+    best = xiangqi ? (lang === 'en' ? ev.bestWxf : ev.bestZh) : ev.bestSan;
+  }
+  if (!score && !wp && !best) return null;
+  return {
+    scoreLabel: xiangqi ? L.evalRed : L.evalWhite,
+    score,
+    wpLabel: L.evalWp,
+    wp,
+    bestLabel: L.evalBest,
+    best,
+  };
+}
+
+// ---------------------------------------------------------------- 通道内部重试告警分段（精确匹配 3 种已知英文注入模板，零误切）
+export const CHANNEL_WARN_RE = /⚠ (?:Model produced invalid output\.|Your previous response (?:was blocked by content safety filters Please provide a response that complies with content policies, or briefly explain to the user why you cannot help with this request|contained an improperly formatted function call: Malformed function call: Failed to parse function call: Function call is empty - no input to parse\. Please retry with a properly formatted function call) Retries remaining: \d+)/g;
+
+export function splitWarnings(text) {
+  const s = String(text || '');
+  if (!s) return [];
+  const out = [];
+  let pos = 0;
+  for (const m of s.matchAll(CHANNEL_WARN_RE)) {
+    const start = m.index, end = start + m[0].length;
+    if ((start > 0 && s[start - 1] !== ' ') || (end < s.length && s[end] !== ' ')) continue;
+    if (start > pos) {
+      const prev = s.slice(pos, start - 1);
+      if (prev) out.push({ warn: false, text: prev });
+    }
+    out.push({ warn: true, text: m[0] });
+    pos = end < s.length && s[end] === ' ' ? end + 1 : end;
+  }
+  if (!out.length) return [{ warn: false, text: s }];
+  if (pos < s.length) out.push({ warn: false, text: s.slice(pos) });
+  return out;
+}

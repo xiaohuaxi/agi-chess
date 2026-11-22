@@ -23,6 +23,13 @@ test('标题画面全称：补厂商，认不出的照原名（agy 同时跑多�
   const agyGame = { tags: { White: 'agy:gemini-4-neon', Black: 'agy:claude-opus-5-5', WhiteEffort: 'xhigh', BlackEffort: 'high' } };
   assert.deepEqual(fullName(agyGame, 'w'), { name: 'gemini-4-neon', effort: 'xhigh' });
   assert.deepEqual(fullName(agyGame, 'b'), { name: 'claude-opus-5-5', effort: 'high' });
+  // 冒号后模型名本身已带厂商前缀时不再重复拼接（消除 GPT gpt-6.2-astra / Gemini gemini-4-argon-high）
+  const dupGame = { tags: { White: 'codex:gpt-6.2-astra', Black: 'gemini:gemini-4-argon-high', WhiteEffort: 'max', BlackEffort: 'high' } };
+  assert.deepEqual(fullName(dupGame, 'w'), { name: 'gpt-6.2-astra', effort: 'max' });
+  assert.deepEqual(fullName(dupGame, 'b'), { name: 'gemini-4-argon-high', effort: 'high' });
+  assert.deepEqual(playerOf(dupGame, 'w'), { name: 'gpt-6.2-astra', effort: 'max', key: 'gpt-6.2-astra+max' });
+  const flashGame = { tags: { Red: 'gemini:gemini-3.8-flash-high', RedEffort: 'high' } };
+  assert.deepEqual(fullName(flashGame, 'w'), { name: 'gemini-3.8-flash-high', effort: 'high' });
 });
 
 test('token 写法', () => {

@@ -182,9 +182,14 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
 #stage.empty > :not(#hint) { display: none; }
 #stage.empty > #hint { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center;
   gap: 18px; padding: 32px; box-sizing: border-box; text-align: center; font-size: var(--row2-size); line-height: 1.55; color: var(--text-weak); }
-#hint .h-topbar { position: fixed; top: max(16px, env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
-  z-index: 10; display: flex; align-items: center; gap: 8px; }
-#hint .h-brand { font-size: 18px; font-weight: 600; line-height: 1.35; color: #f0ede9; letter-spacing: -0.01em; }
+#hint .h-topbar { position: fixed; top: max(14px, env(safe-area-inset-top, 0px));
+  left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  z-index: 10; }
+#hint .h-topbar-inner { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; box-sizing: border-box; }
+#hint .h-brand-nav { display: flex; align-items: center; min-width: 0; }
+#hint .h-top-brand { display: none; }
+#hint .h-nav-group { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
+#hint .h-brand { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.35; color: #f0ede9; letter-spacing: -0.01em; }
 #hint .h-msg { white-space: pre-line; font-size: 13.5px; line-height: 1.55; color: #918a80; }
 #hint .h-samples { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 460px; text-align: left; }
 #hint .h-title { font-size: 14px; color: var(--text-weak); text-align: center; margin-bottom: 2px; }
@@ -217,6 +222,8 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
   text-decoration: none; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
 .nav-pill:hover { color: var(--text); background: #383430; border-color: #524c46; }
 .nav-pill:active { color: var(--text); background: var(--bar-active-bg); border-color: var(--accent); }
+.nav-pill.active { color: var(--text); background: var(--bar-active-bg); border-color: #5a534c; font-weight: 600; }
+.nav-pill.back-link { color: var(--text); border-color: #524c46; }
 #stage.compact .h-topbar, #stage.compact .s-nav { display: none; }
 
 /* ================================================================ 宽版（给人读棋谱；docs/viewer.md「版式」）
@@ -262,8 +269,8 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
 #s-ctrl #s-play { flex: 2; }
 #s-ctrl #s-play.on { background: var(--bar-active-bg); box-shadow: inset 0 -2px 0 var(--accent); }
 
-#s-moves { position: relative; flex: 1 1 0; min-height: 120px; overflow-y: auto; background: var(--side-bg); border-radius: 8px; padding: 6px 0;
-  font-variant-numeric: tabular-nums; }
+#s-moves { position: relative; flex: 1 1 0; min-height: 120px; overflow-y: auto; background: var(--side-bg); border-radius: 8px; padding: 0;
+  border-top: 6px solid var(--side-bg); border-bottom: 6px solid var(--side-bg); box-sizing: border-box; font-variant-numeric: tabular-nums; }
 #s-moves .r { display: grid; grid-template-columns: 44px 1fr 1fr; align-items: center; }
 #s-moves .no { color: var(--text-weak); text-align: right; padding-right: 10px; font-size: 13px; }
 #s-moves .m { padding: 2px 8px; margin: 1px 4px; border-radius: 4px; cursor: pointer; white-space: nowrap;
@@ -275,18 +282,29 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
 #s-moves .start { grid-column: 2 / 4; color: var(--text-weak); }
 #s-moves .end { padding: 4px 12px 2px; color: var(--text-weak); font-size: 14px; }
 
-#s-note { flex: 0 1 auto; max-height: 42%; overflow-y: auto; background: var(--side-bg); border-radius: 8px; padding: 10px 12px; }
+#s-note { flex: 0 1 auto; max-height: 48%; overflow-y: auto; background: var(--side-bg); border-radius: 8px; padding: 10px 12px; }
 #s-note .n-head { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
 #s-note .n-head .who { font-weight: 400; font-size: 14px; color: var(--text-weak); margin-left: 8px; }
 #s-note .nag { display: inline-block; margin-left: 8px; padding: 0 6px; border-radius: 4px; font-size: 13px; font-weight: 400;
   background: var(--side-line); }
 #s-note .nag.bad { background: var(--tag-bg); color: #fff; } #s-note .nag.good { background: var(--win-bg); color: #fff; }
+#s-note .n-eval { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 6px 9px; margin: 0 0 8px;
+  background: rgba(0, 0, 0, 0.2); border: 1px solid var(--side-line); border-radius: 6px; font-size: 13.5px; line-height: 1.45;
+  font-variant-numeric: tabular-nums; }
+#s-note .ev-item { white-space: nowrap; }
+#s-note .ev-k { color: var(--text-weak); }
+#s-note .ev-v { color: var(--text); font-weight: 600; }
+#s-note .ev-best .ev-v { color: #8fd19e; }
 #s-note dl { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr); gap: 2px 12px; margin: 0 0 6px;
   font-size: 14px; font-variant-numeric: tabular-nums; }
 #s-note dt { color: var(--text-weak); } #s-note dd { margin: 0; min-width: 0; }
 #s-note dd.warn { color: var(--accent); }
 #s-note .lbl { color: var(--text-weak); font-size: 13px; margin-top: 6px; }
 #s-note .why { white-space: pre-wrap; overflow-wrap: break-word; }
+#s-note .why.why-split { display: flex; flex-direction: column; gap: 6px; white-space: normal; }
+#s-note .why-body { white-space: pre-wrap; overflow-wrap: break-word; }
+#s-note .why-warn { white-space: pre-wrap; overflow-wrap: break-word; font-size: 12.5px; line-height: 1.45; color: var(--text-weak);
+  background: rgba(0, 0, 0, 0.22); border: 1px solid var(--side-line); border-left: 2px solid #7d6847; border-radius: 5px; padding: 5px 8px; }
 #s-note .raw { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--text-weak); word-break: break-all; }
 #s-note .none { color: var(--text-weak); }
 #s-keys { flex: none; display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 12px; color: var(--text-weak); line-height: 1.7; }
@@ -373,8 +391,22 @@ html.mobile-scroll, html.mobile-scroll body {
 #stage.mobile.empty > #hint {
   width: 100%;
   justify-content: flex-start;
-  padding: max(56px, calc(env(safe-area-inset-top, 0px) + 48px)) 14px 24px;
-  gap: 14px;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 14px 24px;
+  gap: 12px;
+}
+#stage.mobile #hint .h-topbar {
+  position: static;
+  width: 100%;
+}
+#stage.mobile #hint .h-topbar-inner {
+  gap: 6px;
+}
+#stage.mobile #hint .h-nav-group {
+  gap: 5px;
+}
+#stage.mobile #hint .nav-pill {
+  padding: 0 9px;
+  font-size: 12.5px;
 }
 #stage.mobile #hint .h-link {
   padding: 10px 12px;
@@ -383,7 +415,7 @@ html.mobile-scroll, html.mobile-scroll body {
 }
 #stage.mobile .nav-pill {
   min-height: 36px;
-  padding: 0 12px;
+  padding: 0 10px;
   box-sizing: border-box;
 }
 #stage.mobile #s-ctrl { order: 1; gap: 6px; }
@@ -407,7 +439,7 @@ html.mobile-scroll, html.mobile-scroll body {
   order: 4;
   flex: none;
   min-height: 0;
-  max-height: 216px;
+  max-height: 284px;
   padding: 0;
   border-top: 6px solid var(--side-bg);
   border-bottom: 6px solid var(--side-bg);
@@ -421,4 +453,56 @@ html.mobile-scroll, html.mobile-scroll body {
 #stage.mobile #s-keys { display: none; }
 @media (max-width: 359px) {
   #stage.mobile #s-note dl { grid-template-columns: max-content minmax(0, 1fr); }
+}
+
+/* 宽屏空白首页顶栏（>= 560px）：与 series.html / catalog.html 的 .p-header 版心（980px）、底部分隔线与胶囊高度像素对齐；
+   < 560px 保持紧凑单行顶栏以确保 375×667 首屏完整容纳全部 6 张代表局卡片。 */
+@media (min-width: 560px) {
+  #stage:not(.compact).empty > #hint {
+    padding-top: 76px;
+  }
+  #stage:not(.compact).empty #hint .h-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: auto;
+    z-index: 10;
+    background: #23211e;
+    border-bottom: 1px solid #3d3935;
+  }
+  #stage:not(.compact).empty #hint .h-topbar-inner {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: max(10px, env(safe-area-inset-top, 0px)) 20px 10px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  #stage:not(.compact).empty #hint .h-brand-nav {
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  #stage:not(.compact).empty #hint .h-top-brand {
+    display: inline-block;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--text);
+    text-decoration: none;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  #stage:not(.compact).empty #hint .h-top-brand:hover {
+    color: #fff;
+  }
+  #stage:not(.compact).empty #hint .h-topbar .nav-pill {
+    min-height: 32px;
+    padding: 0 11px;
+    font-size: 13.5px;
+    line-height: 1.4;
+    box-sizing: border-box;
+  }
+  #stage:not(.compact).empty #hint .h-topbar .nav-pill.active {
+    border-color: #635b53;
+  }
 }

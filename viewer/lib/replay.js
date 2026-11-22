@@ -71,6 +71,21 @@ export function replayChess(game) {
   return out;
 }
 
+export function uciToSan(fenBefore, uci) {
+  if (typeof uci !== 'string' || !/^[a-h][1-8][a-h][1-8][qrbn]?$/i.test(uci)) return null;
+  try {
+    const c = new Chess(fenBefore);
+    const m = c.move({
+      from: uci.slice(0, 2).toLowerCase(),
+      to: uci.slice(2, 4).toLowerCase(),
+      promotion: uci[4] ? uci[4].toLowerCase() : undefined,
+    });
+    return m ? m.san : null;
+  } catch {
+    return null;
+  }
+}
+
 function fenStateKey(fen, kind) {
   if (typeof fen !== 'string') return null;
   const parts = fen.trim().split(/\s+/);
@@ -196,11 +211,41 @@ export function loadGamesWithAnalysis(inputs) {
     target.hasAnalysis = true;
     for (const r of a.rows) {
       const mv = target.game.moves[r.ply - 1];
+      const step = target.rep.steps[r.ply - 1];
       if (!mv) continue;
       const rawTag = target.rep.kind === 'chess' ? r.lichess : r.cls;
       const tag = typeof rawTag === 'string' ? rawTag.trim().toLowerCase() : '';
       const nag = CLS_NAG[tag];
       if (nag && !mv.nags.includes(nag)) mv.nags.push(nag);
+      if (step) {
+        const fenBefore = r.ply === 1 ? target.rep.start : target.rep.steps[r.ply - 2].fen;
+        let bestSan = null, bestZh = null, bestWxf = null;
+        if (typeof r.best === 'string' && r.best.length >= 4 && r.played_best === false) {
+          if (target.rep.kind === 'chess') {
+            bestSan = uciToSan(fenBefore, r.best);
+          } else if (/^[a-i][0-9][a-i][0-9]$/.test(r.best)) {
+            try {
+              const posBefore = XQ.parseFen(fenBefore);
+              bestZh = XQ.zhMove(posBefore, r.best);
+              bestWxf = bestZh ? XQ.wxfMove(posBefore, r.best) : null;
+            } catch { /* 非法局面安全降级 */ }
+          }
+        }
+        step.eval = {
+          before: typeof r.before === 'string' ? r.before : null,
+          after: typeof r.after === 'string' ? r.after : null,
+          loss: typeof r.loss === 'number' ? r.loss : null,
+          wp_before: typeof r.wp_before === 'number' ? r.wp_before : null,
+          wp_after: typeof r.wp_after === 'number' ? r.wp_after : null,
+          best: typeof r.best === 'string' ? r.best : null,
+          played_best: typeof r.played_best === 'boolean' ? r.played_best : null,
+          lichess: typeof r.lichess === 'string' ? r.lichess : null,
+          cls: typeof r.cls === 'string' ? r.cls : null,
+          bestSan,
+          bestZh,
+          bestWxf,
+        };
+      }
     }
   }
   return entries.map(({ game, rep }) => ({ game, rep }));
