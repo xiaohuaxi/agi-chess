@@ -8,15 +8,18 @@
 
 ## 免安装在线浏览（GitHub Pages）
 
-若只想查看仓库已入库的 192 盘正式模型对局（或拖入自己的本地 `.pgn` 棋谱），无需克隆仓库或启动本地服务，直接在桌面或手机浏览器打开在线阅读器即可（传入对局目录名会自动叠加同目录 `analysis.jsonl` 的恶手标注）：
+若只想查看仓库已入库的 192 盘正式模型对局（或拖入自己的本地 `.pgn` 棋谱），无需克隆仓库或启动本地服务，直接在桌面或手机浏览器打开在线棋谱站即可（三页顶栏互通，传入对局目录名会自动叠加同目录 `analysis.jsonl` 的逐着引擎评分、最佳着与恶手标注）：
 
-- [在线阅读器首页（内置代表局直达与中英切换）](https://xiaohuaxi.github.io/agi-chess/)（[English UI](https://xiaohuaxi.github.io/agi-chess/?lang=en)）
-- [国际象棋 · Gemini 4 Neon `xhigh` vs Carbon `high`（第 1 局，第 40 半回合 `20...Re8??` 现场）](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-carbon-high-20261119&ply=40)
-- [国际象棋 · GPT-6.2 Astra `max` vs Gemini 4 Neon `xhigh`（第 4 局，`59.Qhd5#`，Astra 11.7 ACPL 零大失误）](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-astra-max-20261119-4)
-- [中国象棋 · Opus 5.5 `high` vs Gemini 4 Carbon `high`（第 3 局，第 9 半回合 `5.车九平八??` 炮隔炮打车）](https://xiaohuaxi.github.io/agi-chess/?files=runs/carbon-vs-agy-opus-high-xq-20261114-3&ply=9)
-- [国际象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](https://xiaohuaxi.github.io/agi-chess/?files=runs/g7-c-opus-astra-1)
-- [中国象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](https://xiaohuaxi.github.io/agi-chess/?files=runs/g7-x-opus-astra-1)
-- [国际象棋等级分锚定局（Opus Max vs Maia-1900）](https://xiaohuaxi.github.io/agi-chess/?files=runs/zc/maia-1900-s1-w)
+- **[精选阅读器首页](https://xiaohuaxi.github.io/agi-chess/)**（[English UI](https://xiaohuaxi.github.io/agi-chess/?lang=en)）：内置代表局一键直达、本地 `.pgn` 拖放与中英切换。
+- **[无引擎对阵总览榜（`series.html`）](https://xiaohuaxi.github.io/agi-chess/series.html)**（[中国象棋分栏 `?variant=xiangqi`](https://xiaohuaxi.github.io/agi-chess/series.html?variant=xiangqi) · [English](https://xiaohuaxi.github.io/agi-chess/series.html?lang=en)）：按棋种与可比实验条件分列展示无引擎模型番棋总览、三模型循环赛摘要、引擎标定锚点及经典名场面直达入口。
+- **[全部 192 盘可筛选目录（`catalog.html`）](https://xiaohuaxi.github.io/agi-chess/catalog.html)**（[批次直达示例 `?batch=zc`](https://xiaohuaxi.github.io/agi-chess/catalog.html?batch=zc) · [English](https://xiaohuaxi.github.io/agi-chess/catalog.html?lang=en)）：收录全部 192 盘正式对局，支持按棋种、对阵类别（模型互弈 / 对引擎或随机走子）、模型胶囊与关键词组合筛选；从总览榜或目录页点进阅读器看谱后，顶栏可一键带筛选上下文返回原页面。
+- 代表局与关键失误现场直达：
+  - [国际象棋 · Gemini 4 Neon `xhigh` vs Carbon `high`（第 1 局，第 40 半回合 `20...Re8??` 现场）](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-carbon-high-20261119&ply=40)
+  - [国际象棋 · GPT-6.2 Astra `max` vs Gemini 4 Neon `xhigh`（第 4 局，`59.Qhd5#`，Astra 11.7 ACPL 零大失误）](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-astra-max-20261119-4)
+  - [中国象棋 · Opus 5.5 `high` vs Gemini 4 Carbon `high`（第 3 局，第 9 半回合 `5.车九平八??` 炮隔炮打车）](https://xiaohuaxi.github.io/agi-chess/?files=runs/carbon-vs-agy-opus-high-xq-20261114-3&ply=9)
+  - [国际象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](https://xiaohuaxi.github.io/agi-chess/?files=runs/g7-c-opus-astra-1)
+  - [中国象棋巅峰对局（Opus Max vs Astra Max 第 1 局）](https://xiaohuaxi.github.io/agi-chess/?files=runs/g7-x-opus-astra-1)
+  - [国际象棋等级分锚定局（Opus Max vs Maia-1900）](https://xiaohuaxi.github.io/agi-chess/?files=runs/zc/maia-1900-s1-w)
 
 仓库 `runs/` 目录包含全部 86 个正式模型对局目录（共 192 盘）的 `game.pgn`：其中 **79 个单盘目录**（64 个模型互弈 + 15 个单盘模型对引擎 `b1-ch-*`/`b1-xq-*`）可直接写成 `runs/<tag>`，**7 个多盘批次目录**（`b1`、`b1-session`、`b2`、`b3max-ch`、`b3max-xq`、`zc`、`zx`，共 113 盘）位于二级子目录 `runs/<batch>/<game>`（如 `runs/zc/maia-1900-s1-w`）。将在线网址中的 `files=` 替换为任意目录路径即可直接查看该盘棋谱、模型思考理由与引擎恶手徽章。
 
@@ -49,7 +52,8 @@ node viewer/serve.mjs
 | 本盘开头 / 末尾 | Home / End |
 | 上一盘 / 下一盘 | PgUp / PgDn |
 
-- **桌面双栏与手机端纵向堆叠**：桌面宽窗口（至少 900 像素）采用左右双栏，右栏显示着法列表、评注理由、引擎恶手徽章及用时、token 等信息，也可点击任意着法跳步；手机端或窄于 900 像素的普通浏览窗口会自动切换为上下堆叠的可纵向滚动版式（上方棋盘与控制条，下方完整着法列表与评注详情），无需横屏也能读完理由（仅录制模式 `rec=1` 或显式传 `layout=compact` 时才隐藏信息栏、只保留棋盘与棋手条）。
+- **桌面双栏与手机端纵向堆叠**：全站固定采用暗色护眼主题。桌面宽窗口（至少 900 像素）采用左右双栏，右栏显示着法列表、当步评注理由、引擎分析、耗时与 token 等信息，也可点击任意着法跳步；手机端或窄于 900 像素的普通浏览窗口会自动切换为上下堆叠版式——**翻步栏紧贴棋盘正下方**，其下依次为当步棋评详情与 **8 行整行对齐滚动框**展示着法列表，无需横屏即可顺畅翻步读评（仅录制模式 `rec=1` 或显式传 `layout=compact` 时才隐藏信息栏、只保留棋盘与棋手条）。
+- **逐着引擎评分、最佳着与告警分段展示**：当伴随加载了同目录 `analysis.jsonl` 时，评注区除叠加恶手/失误/不精确徽章外，现已同步展示**先手（白方 / 红方）固定视角**的逐着引擎评分/胜率变化与走前引擎最佳着；对含通道重试 `⚠` 的历史评注，会将告警原文分段弱化显示，与模型棋评正文区分开。
 - **手动翻步自动同步地址栏 `ply`**：手动按方向键、点击着法或点按翻步按钮后，浏览器地址栏会自动更新当前 `ply=`（及多盘时的 `game=`），直接复制当前网址即可把指定半回合局面分享给他人。
 - **界面语言切换**：页面顶栏与空白首页提供中英切换入口，也可通过网址参数 `lang=en` / `lang=zh` 指定。阅读器只渲染记录中已有的理由与标注，不实时调用引擎，也不会凭空补齐棋谱未记录的指标。
 

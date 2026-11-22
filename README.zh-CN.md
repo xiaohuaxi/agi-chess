@@ -6,9 +6,9 @@
 
 本项目让未经棋类专训的通用大模型在不借引擎、不给合法着法提示的条件下，像真人一样下国际象棋与中国象棋，实测它们的真实棋力、拆解它们为何犯错，并检验思考深度、局面表示与思考延续方式对下法的影响。仓库收录了完整的对弈与局面题程序、192 盘正式对局棋谱、9 批局面题数据、等级分标定脚本、研究报告及配套棋谱阅读器。
 
-> **免安装在线棋谱阅读器（GitHub Pages）：[点此直接在浏览器打开（`xiaohuaxi.github.io/agi-chess`）](https://xiaohuaxi.github.io/agi-chess/)**
+> **免安装在线棋谱站（GitHub Pages）：[精选阅读器首页](https://xiaohuaxi.github.io/agi-chess/) · [无引擎对阵总览榜（Series Board）](https://xiaohuaxi.github.io/agi-chess/series.html) · [全部 192 盘可筛选目录（All 192 Games）](https://xiaohuaxi.github.io/agi-chess/catalog.html)**
 >
-> 无需克隆仓库、无需安装引擎或配置 API Key，桌面端与手机浏览器均可直接打开**[在线棋谱阅读器](https://xiaohuaxi.github.io/agi-chess/)**，逐步查看每步模型思考理由、引擎复盘恶手徽章、耗时与 token 统计。首页内置近期 Gemini 4 Neon / Carbon / GPT-6.2 Astra 与经典 Claude Opus Max 代表局一键入口，仓库收录的**全部 192 盘正式对局**均可通过 `?files=runs/<tag>` 直接在线打开（也可拖入本地 `.pgn` 棋谱）。离线环境、查看本机新跑对局或导出 MP4 视频时，运行 `node viewer/serve.mjs` 即可（见下方离线说明与[棋谱阅读器指南](docs/viewer-guide.md)）。
+> 无需克隆仓库、无需安装引擎或配置 API Key，桌面端与手机浏览器均可直接打开**[在线棋谱阅读器](https://xiaohuaxi.github.io/agi-chess/)**逐步查看每步模型思考理由、引擎逐着评分与最佳着、恶手徽章及耗时与 token 统计；也可进入**[无引擎对阵总览榜](https://xiaohuaxi.github.io/agi-chess/series.html)**按棋种查看无引擎模型番棋战绩、循环赛摘要、引擎标定锚点与名场面直达，或在**[全部 192 盘可筛选目录](https://xiaohuaxi.github.io/agi-chess/catalog.html)**按棋种、对阵类别、模型胶囊与关键词筛选任意正式对局（同样支持 `?files=runs/<tag>` 直达或拖入本地 `.pgn` 棋谱）。离线环境、查看本机新跑对局或导出 MP4 视频时，运行 `node viewer/serve.mjs` 即可（见下方离线说明与[棋谱阅读器指南](docs/viewer-guide.md)）。
 
 [![在线棋谱阅读器：Gemini 4 Neon xhigh 对 Carbon high 第 40 半回合 20...Re8??](docs/assets/viewer-hero.png)](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-carbon-high-20261119&ply=40)
 
@@ -34,7 +34,7 @@
 1. **直接点开在线代表局与引擎恶手复盘（无需 clone 仓库）**：
 
    点击任一在线链接即可看谱（传对局目录会自动叠加同目录 `analysis.jsonl` 的恶手标注）：
-   - [在线阅读器首页（内置代表局一键直达与中英切换）](https://xiaohuaxi.github.io/agi-chess/)
+   - **[在线阅读器首页（内置代表局与中英切换）](https://xiaohuaxi.github.io/agi-chess/)** · **[无引擎对阵总览榜（`series.html`）](https://xiaohuaxi.github.io/agi-chess/series.html)** · **[全部 192 盘可筛选目录（`catalog.html`）](https://xiaohuaxi.github.io/agi-chess/catalog.html)**
    - [国际象棋 · Gemini 4 Neon `xhigh` vs Carbon `high`（第 1 局，`36.Qd8#`，Neon 10.7 ACPL 零大失误）](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-carbon-high-20261119)
    - [国际象棋 · GPT-6.2 Astra `max` vs Gemini 4 Neon `xhigh`（第 4 局，`59.Qhd5#`，Astra 11.7 ACPL 零大失误）](https://xiaohuaxi.github.io/agi-chess/?files=runs/neon-xhigh-vs-astra-max-20261119-4)
    - [国际象棋 · Gemini 4 Carbon `high` vs Opus 5.5 `high`（首局，`69.Qg7#`，Carbon 7.0 ACPL 零大失误）](https://xiaohuaxi.github.io/agi-chess/?files=runs/carbon-vs-agy-opus-high-20261114)
@@ -103,7 +103,7 @@
 
 **核心定量结论摘要**（详见[研究索引](docs/research.md)与[实验历史](docs/history.md)）：
 
-- **棋力锚定区间（Opus Max 对引擎 67 盘标定）：** 国际象棋（30 盘）按 200 半回合上限引擎评分裁决（领先 ≥300 厘兵判胜）拟合为比 Maia-1900 高 **+189**（95% 区间 66–313），折合 **Lichess 超快棋约 1800 / 快棋约 1920**（按原始到上限判和口径为 +281，折合超快棋约 1910 / 快棋约 2020）；中国象棋（37 盘）比 Fairy-Stockfish `nodes=100` 高 **+121 Elo**（95% 区间 +1..+236），接近或略高于 `nodes=300`（+82）、明显低于 `nodes=1000`（+385）。
+- **棋力锚定区间（Opus Max 对引擎 67 盘标定）：** 国际象棋（30 盘）按 200 半回合上限引擎评分裁决（领先 ≥300 厘兵判胜）拟合为比 Maia-1900 高 **+189**（95% 区间 66–313），折合 **Lichess 超快棋约 1800 / 快棋约 1920**（按原始到上限判和口径为 +281，折合超快棋约 1910 / 快棋约 2020）；中国象棋（37 盘）比 Fairy-Stockfish `nodes=100` 高 **+121 Elo**（95% 区间 +1..+236），接近或略高于 `nodes=300`（+82）、明显低于 `nodes=1000`（+298）。
 - **合法着法与吃子规则并非主瓶颈：** 在真实棋手协议下，模型极少走非法着法；针对整盘漏吃/送子局面的复盘诊断（14 个失误点）显示，模型在单问“列出全部合法吃子”时 **26/26 全对**，但在正常选着时 13/14 次连可见理由都未提该吃子——失误主因是搜索中的注意力漏扫与多步算力不足，而非不认识棋盘或规则。
 - **局面表示与单步盲区（尤以中国象棋显著）：** 输入并非越多越好——中国象棋仅给**子力清单（`pieces`）**时大失误率最低（21%，而给全量 `FEN + 字符棋盘 + 清单` 时达 34%，且字符棋盘易把黑方 `車` 误认成红车）；模型在中国象棋中反复出现“炮隔己方炮打车”等单步自送吃及连续多步双方对挂着的大子视而不见的盲区。
 - **思考深度主导棋力，跨轮思考延续有利有弊：** 调高 `effort`（`medium → high → xhigh → max`）是降低大失误率最显著的单一手段（如九月 Opus vs GPT-6 Astra 巅峰对决升至双方 `max` 后，Opus 国象 3:1、中象 4:0）；连续会话（`session`）确实复用了前序思考并节省每步思考 token，但保留前序思考有时会固化早期盲区（Opus 开 `drop_thinking` 丢弃前序思考后漏吃减少，但思考 token 与耗时翻 2–3 倍）。

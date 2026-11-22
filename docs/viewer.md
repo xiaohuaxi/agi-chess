@@ -7,7 +7,7 @@
 > **状态（2026-10-02）：走子音效已做、用户试听后合回 main：录视频默认有声、网页默认静音，见「走子音效」。**
 > **不做成对外 app（2026-10-02 用户定，不立项）**：调研见 `viewer-survey/README.md` 末节。
 > **状态（2026-10-03）：加了英文界面（`lang=en`）和棋手显示名覆盖（`names=`），用于英文讲解与视频展示，见「英文界面」。默认仍是中文、画面不变。**
-> **状态（2026-11-22）：补齐 GitHub Pages 在线静态部署（`viewer/build-pages.mjs` + GitHub Actions Playwright CI/CD）、`SITE_ROOT` 子路径双通、手机端可滚动纵向堆叠版式 `.mobile`（`<900px` 保留着法与评注，不影响 `rec=1` / `layout=compact` 录屏窄版）、手动翻步防抖 `replaceState` 更新 `ply` 深链接、顶栏/首页中英切换及 `agy:` 前缀剥离。**
+> **状态（2026-11-22）：补齐 GitHub Pages 在线静态部署（`viewer/build-pages.mjs` + GitHub Actions Playwright CI/CD）与三页同级静态架构（精选阅读器 `index.html`、无引擎对阵总览榜 `series.html`、全部 192 盘可筛选目录 `catalog.html`，共享 `lib/nav.js` 上下文导航，全站固定暗色主题）；新增 `viewer/catalog-meta.json` + 零依赖 `viewer/build-catalog.mjs`（严格只扫 `git ls-files runs/`）生成入库受检的 `viewer/lib/catalog-data.json`；支持 `SITE_ROOT` 子路径双通、先手固定视角的逐着引擎评分/胜率变化与最佳着展示、`CHANNEL_WARN_RE` 通道重试告警分段弱化渲染、`match.js` `fullName()` 首词忽略大小写厂商前缀去重、手机端 `.mobile` 版式（翻步栏紧贴棋盘正下方 + 8 行整行对齐 `284px` 着法滚动框，不影响 `rec=1` / `layout=compact` 录屏窄版）、手动翻步防抖 `replaceState` 更新 `ply` 深链接及 `agy:` 前缀剥离。**
 
 ## 一句话
 
@@ -28,19 +28,21 @@
 **输入是棋谱文件。**
 - 国际象棋：标准 PGN，一个文件里可以有多盘。
 - 中国象棋：xqbase「中国象棋电脑应用规范」的 PGN（原文 `www.xqbase.com/protocol/cchess_pgn.htm`、`cchess_move.htm`）。要点：`[Game "Chinese Chess"]` 放第一个标签；双方标签是 `Red` / `Black`；`Format` 不写默认是中文记谱；黑方数字用全角「１２３」，同线第几个兵的「一二三」仍用汉字（如「一卒平５」）；同一纵线上有多个同种子时用前 / 中 / 后或一二三四五区分，两条纵线都有多个兵另有编号规则；仕、相同线不写前后，靠进退区分。逐条规则第 1 步已对照原文定下，写在 `agi_chess/xiangqi.py` 的 `pgn_move` 注释里：一线两兵前 / 后、三兵前 / 中 / 后、四五兵从前往后一至五；两条纵线各有两个以上兵时，这两条线上的兵一起编一至五，先按走棋方的纵线号从小到大（右边先）、同线从前往后，其余纵线的兵照常写（原文说明里「即先看最左边一列」与「先从右到左」和例局矛盾，以例局为准）。评注后的黑方着法照原文例子直接接着写，不补「N...」。读别人的棋谱时容错半角数字、繁体字（俥傌砲後進）、GBK 编码（解码失败回退 `gb18030`）。
-- 评注里的 `[%emt]` 显示成用时；自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite] [%illegal] [%flagged] [%empty] [%dropped]` 显示成带中文标签的数字；不认识的命令原样列出，后面的文字当理由显示。着法后的 `?` `??` `!` 等标注照常显示。
+- 评注里的 `[%emt]` 显示成用时；自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite] [%illegal] [%flagged] [%empty] [%dropped]` 显示成带中文标签的数字；不认识的命令原样列出，后面的文字当理由显示。对含通道内联重试 `⚠` 告警的历史评注（由 `CHANNEL_WARN_RE` 匹配提取），面板将告警原文与模型理由正文分段并弱化渲染。着法后的 `?` `??` `!` 等标注照常显示；当伴随加载了同目录 `analysis.jsonl` 时，除叠加恶手/失误/不精确徽章外，还将分析记录里的走子方视角评分与胜率统一翻转为**先手（国际象棋白方 / 中国象棋红方）固定视角**展示变化，并将走前局面下的引擎最佳着坐标转为可读记谱（国际象棋用临时 `Chess` 实例转标准 SAN，中国象棋按当前界面语言调 `zhMove` 转中文四字记谱或调 `wxfMove` 转英文 WXF 记谱）。
 - 标签里的 `WhiteEffort` / `BlackEffort`（中国象棋 `RedEffort` / `BlackEffort`，本项目自定义，见下文导出）显示为思考深度；别人的棋谱没有就不显示。
 
-**打开方式与静态打包。** 页面是纯前端静态 ES 模块（第三方库放 `viewer/vendor/`，附来源和许可文本），不能用 `file://` 直接打开，同时支持**本机静态服务**与 **GitHub Pages 在线直开**两种部署形态：
-- **本机静态服务**：在仓库根目录运行 `node viewer/serve.mjs`（默认监听 `127.0.0.1:8765`，或 `python3 -m http.server 8765 --bind 127.0.0.1`），打开 `http://127.0.0.1:8765/viewer/`，页面无需构建或 `npm ci`。
-- **GitHub Pages 在线部署**（`https://xiaohuaxi.github.io/agi-chess/`）：由 `viewer/build-pages.mjs` 生成静态站点目录（将 `viewer/` 运行时静态文件 `index.html`、`app.js`、`app.css`、`lib/`、`vendor/` 与 `.nojekyll` 拷入站点根，并递归纳入 `runs/` 下全部正式对局的 `game.pgn` 与 `analysis.jsonl`；排除 `node_modules/`、`test/`、`serve.mjs`、`record.mjs`、`shot.mjs` 等开发/录制文件），经 GitHub Actions 跑完 Playwright 浏览器回归后自动部署。
-- **`SITE_ROOT` 子路径双通**：前端由 `new URL('.', import.meta.url)` 自动推导 `SITE_ROOT`——当页面跑在本机 `/viewer/` 子目录下时退回上一级仓库根，当跑在 GitHub Pages（如 `/agi-chess/` 站点根）时直接使用该部署根；`files=` 中的相对路径 `runs/<tag>` 与带前导斜杠的 `/runs/<tag>` 均按 `SITE_ROOT` 统一解析（支持目录简写自动补 `/game.pgn`，并自动尝试伴随加载同目录 `analysis.jsonl` 校验走子坐标与走前局面后叠加恶手/失误/不精确标注）。空白首页内置近期 Neon / Carbon / Astra 6.2 与经典 Opus Max 代表局入口、中英切换及本地 `.pgn` 拖放解析（拖入文件仅在浏览器本地读取，不上传）。
+**打开方式、三页架构与静态索引管线。** 页面是纯前端静态 ES 模块（第三方库放 `viewer/vendor/`，附来源和许可文本），全站固定采用暗色护眼主题，不能用 `file://` 直接打开，同时支持**本机静态服务**与 **GitHub Pages 在线直开**两种部署形态：
+- **三页同级静态架构与共享导航（`lib/nav.js`）**：站点由同级的精选阅读器 `index.html`、分棋种无引擎对阵总览榜 `series.html`（支持 `?variant=xiangqi` 分栏，按棋种与可比实验条件展示无引擎番棋总览、循环赛摘要、引擎标定锚点与名场面直达）及全部 192 盘可筛选目录 `catalog.html`（支持 `?batch=<id>` 及棋种/类别/模型胶囊/关键词组合筛选）组成。三页共用 `viewer/lib/nav.js` 维护顶栏导航与中英切换参数，并结合 `sessionStorage` 与 `history.state` 保存来源页 URL 与筛选状态，使从总览榜或目录页点进阅读器看谱后可一键原位返回。
+- **静态目录索引构建管线（`build-catalog.mjs`）**：由维护批次与系列元数据的 `viewer/catalog-meta.json` 配合零第三方依赖脚本 `viewer/build-catalog.mjs`（严格只扫描 `git ls-files runs/` 输出的已跟踪文件，绝不混入本机未入库的新跑目录或临时文件），离线汇总生成入库受检的 `viewer/lib/catalog-data.json`（测试套件同步校验其与仓库已入库 `runs/` 完全一致）。
+- **本机静态服务**：在仓库根目录运行 `node viewer/serve.mjs`（默认监听 `127.0.0.1:8765`，或 `python3 -m http.server 8765 --bind 127.0.0.1`），打开 `http://127.0.0.1:8765/viewer/`（以及同目录 `series.html`、`catalog.html`），页面无需构建或 `npm ci`。
+- **GitHub Pages 在线部署**（`https://xiaohuaxi.github.io/agi-chess/`）：由 `viewer/build-pages.mjs` 生成静态站点目录（将 `viewer/` 运行时静态文件 `index.html`、`series.html`、`catalog.html`、各自 JS/CSS、`lib/` 含 `catalog-data.json`、`vendor/` 与 `.nojekyll` 拷入站点根，并递归纳入 `runs/` 下全部正式对局的 `game.pgn` 与 `analysis.jsonl`；排除 `node_modules/`、`test/`、`serve.mjs`、`record.mjs`、`shot.mjs`、`build-*.mjs` 等开发/构建脚本），经 GitHub Actions 跑完 Playwright 浏览器回归后自动部署。
+- **`VIEWER_DIR` 与 `SITE_ROOT` 两级路径分离**：共享模块 `viewer/lib/nav.js` 由 `new URL('..', import.meta.url)` 定位页面目录 `VIEWER_DIR`（本机 `/viewer/`，线上 `/agi-chess/`），再据此推导数据根 `SITE_ROOT`——当 `VIEWER_DIR` 跑在本机 `/viewer/` 子目录下时退回上一级仓库根，当跑在 GitHub Pages（如 `/agi-chess/` 站点根）时直接复用 `VIEWER_DIR`；`files=` 中的相对路径 `runs/<tag>` 与带前导斜杠的 `/runs/<tag>` 均按 `SITE_ROOT` 统一解析（支持目录简写自动补 `/game.pgn`，并自动尝试伴随加载同目录 `analysis.jsonl` 校验走子坐标与走前局面后叠加引擎评分、最佳着与恶手标注）。空白首页内置近期 Neon / Carbon / Astra 6.2 与经典 Opus Max 代表局入口、中英切换及本地 `.pgn` 拖放解析（拖入文件仅在浏览器本地读取，不上传）。
 
 **版式（三态分工）。**
 - **宽版 `.wide`**（窗口宽 `>= 900px` 或强制 `layout=wide`，且非 `rec=1`）：左边棋盘，右边着法列表和当前这步的评注、理由、用时、token、非法重选次数。能暂停、前后单步、点着法跳到任意一步，有键盘快捷键，顶栏支持中英切换。
   - 已做（2026-09-30）：左边照搬窄版的棋手条 + 棋盘 + 棋手条（字号配色不变），棋盘边长随窗口高度（`100vh` 减上下留白、两条棋手条、顶部细条）；右边一栏从上到下是棋种（多盘时一个下拉框换盘）、双方全称与「思考深度」、结果，播放按钮（首 / 上一步 / 播放暂停 / 下一步 / 尾），着法列表（每回合一行，当前这步高亮，`?` `??` `?!` 标红、`!` `!!` `!?` 标绿），这步的详情（记谱、标注及其中文说法、将军、谁走的；用时、思考 / 输出 / 输入 token、缓存读写、非法重选、被拦截、空回复，各带中文标签，非零的异常次数用强调色；理由文字；不认识的命令原样列出），最底下一行快捷键提示。配色沿用窄版的变量，宽版自己的取值在 `app.css` 末尾「宽版」一节。
   - 快捷键与深链接同步：← → 单步（本盘到底再按 → 进下一盘，开头按 ← 回上一盘最后一步），空格 播放 / 暂停，Home / End 本盘首尾，PgUp / PgDn 上一盘 / 下一盘；点着法跳到那步。手动跳步先停下自动播放，再按播放从跳到的那一格往下播；在非 `rec=1`、非自动播放状态下，手动翻步或跳步会经防抖调用 `history.replaceState` 同步更新地址栏 `ply`（及多盘时的 `game`），方便直接复制当前 URL 分享指定半回合局面而不污染浏览器后退栈。跳到最后一步时直接带终局横幅。
-- **移动堆叠版 `.mobile`**（窗口宽 `< 900px` 且未传 `rec=1`、未强制 `layout=compact`/`wide`）：面向手机与窄窗读谱的可纵向滚动上下堆叠版式——上方为棋手条 + 棋盘 + 棋手条与播放控制，下方完整保留着法列表与当步评注详情（不再像早期实现那样在 `<900px` 直接隐藏右栏）。
+- **移动堆叠版 `.mobile`**（窗口宽 `< 900px` 且未传 `rec=1`、未强制 `layout=compact`/`wide`）：面向手机与窄窗读谱的可纵向滚动上下堆叠版式——上方为棋手条 + 棋盘 + 棋手条，**翻步控制栏紧贴棋盘正下方**，其下依次为当步棋评详情与 **8 行整行对齐（`284px` `border-box`）的着法滚动框**（既不像早期实现那样在 `<900px` 隐藏右栏，也不把百余回合列表全展开撑长页面）。
 - **录屏窄版 `.compact`**（`rec=1` 或显式传 `layout=compact`）：固定 `540×720` 设计结构，右侧信息栏整块不渲染，只剩页头、棋盘、页脚（棋手条），专供脚本逐帧录屏与无评注紧凑展示；细节见下文「录屏画面」。
 - 默认切换规则：`rec=1` 恒为 `.compact`（录 16:9 时视口宽 960，录制不靠窗口宽度自动判断）；否则显式 `layout=compact` / `layout=wide` 优先；未指定 `layout` 时按窗口宽度响应式切换（`>= 900px` 为 `.wide`，`< 900px` 为 `.mobile`）。
 - 三种版式都有：上一步高亮、被将军提示、终局结果和结束原因、可选的标题画面（默认不加，参数 `title=1` 开）。两种棋各照自己的主流软件画（见「棋盘」），不求统一。
@@ -194,7 +196,7 @@
   - **第五轮（2026-09-30）象棋的竖向分配**：规则两种棋一致（用户定）：**棋盘区高度固定，连播与否不变；连播多出的顶部细条从两条棋手条扣**（国际象棋 544，棋手条单盘 88 / 连播 76）。象棋取值（用户 2026-09-30 定稿）：棋盘区 572（`app.css` 的 `--xq-board-h`，页面在 `#stage` 上挂 `xq` 类时生效），棋手条连播 62（压到不局促的最矮）、单盘 74；字号不变，只压行高（30 / 24、两行间距 1，`--xq-row1-lh` 等，只作用于象棋的棋手条）。加总：单盘 74 + 572 + 74 = 720，连播 24 + 62 + 572 + 62 = 720。连播时字的墨迹离条上沿约 8、下沿 6–7.5，两行之间 5–8.5（带「将军」标签那条最紧）。棋盘不追满宽，压到不局促为止，左右留白可以接受（用户确认）。象棋棋盘宽：第三轮 445 → 第四轮 475 → 第五轮 482（两边各 29）。
 - **字号**：视频在手机上按屏宽显示，页面 1 像素约等于手机上 0.72 个点：名字 24 → 约 17 点，比分 28 → 约 20 点，第二行 16–18 → 约 12–13 点，都不用很大就看得清。
 - **底部有东西不怕被挡**：历史本机测试中，3:4 在小红书上按屏宽完整显示、上下是黑边，作者名、标题等浮层落在黑边里，不压画面（当时9:16会压住底部约12%；平台版本可能影响效果，见[历史录屏经验](viewer-survey/post-studio-recording.md)）。
-- **大小写与前缀剥离**：模型简称和思考深度一律小写（`opus+xhigh`，用户已同意）。简称剥离后端与路由前缀——如 `claude:opus` → `opus`，`agy:claude-opus-5-5`、`agy:gemini-4-neon` 等带 `agy:` 前缀的棋手名同样剥去 `agy:` 提取真实模型名（不把 `agy` 当厂商，也不额外补固定厂商前缀）；不是模型的棋手（引擎、人）照原名显示。观众可能不知道 astra 是哪家，放标题画面交代（如「Claude opus 对 GPT astra」）。
+- **大小写与前缀剥离**：模型简称和思考深度一律小写（`opus+xhigh`，用户已同意）。简称剥离后端与路由前缀——如 `claude:opus` → `opus`，`agy:claude-opus-5-5`、`agy:gemini-4-neon` 等带 `agy:` 前缀的棋手名同样剥去 `agy:` 提取真实模型名（不把 `agy` 当厂商，也不额外补固定厂商前缀）；不是模型的棋手（引擎、人）照原名显示。观众可能不知道 astra 是哪家，在标题画面与右栏全称 `lib/match.js` 的 `fullName()` 中补厂商前缀（如「Claude opus 对 GPT astra」），并对首词做忽略大小写去重——当模型标识本身已以厂商名开头时（如 `gpt-6.2-astra`、`claude-opus-5-5`、`gemini-4-neon`），不再重复拼出 `GPT gpt-6.2-astra`，保留紧凑的技术标识体系。
 - **标题画面**（可选）：第几局（多盘时）、双方全称与思考深度，停 `titlehold` 秒（默认 3），做法见「播放」。赛制棋谱里没有，先不写。
 - 颜色、间距、字重这类审美值做出来以后截图给用户看，满意再提交，不靠文字定。
 - **实施时逐项确认细节**（用户要求）：每种文字的字号、字重、行高，每行实际占多高，各块的内外边距，加起来是否正好等于 720；最长的名字（如 `deepseek-v4-pro+xhigh`）、最长的记谱、五位数的 token 放进去会不会挤；在打样截图上逐项量一遍，写进页面样式的注释里。
