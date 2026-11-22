@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>404 · 棋谱阅读器 / Game Viewer</title>
+<style>
+  :root {
+    --bg: #262421;
+    --card: #2e2b28;
+    --card-active: #3b3733;
+    --line: #3d3935;
+    --accent: #e8a33d;
+    --text: #ece8e1;
+    --weak: #9d968c;
+  }
+  html, body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, system-ui, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    box-sizing: border-box;
+  }
+  main {
+    width: 100%;
+    max-width: 440px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px 22px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .code {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+  }
+  h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--weak);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  a.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  a.btn.primary {
+    background: var(--accent);
+    color: #1c1a17;
+    border: 1px solid var(--accent);
+  }
+  a.btn.primary:hover { filter: brightness(1.06); }
+  a.btn.primary:active { filter: brightness(0.95); }
+  a.btn.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid #524c46;
+    font-weight: 400;
+  }
+  a.btn.secondary:hover { background: #383430; }
+  a.btn.secondary:active { background: var(--card-active); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <div class="code">404</div>
+  <h1>页面不存在 · Page Not Found</h1>
+  <p>找不到所请求的页面或棋谱路径。请返回阅读器首页浏览精选对局，或将本地 PGN 文件拖入页面。</p>
+  <p lang="en">The requested page or game record could not be found. Return to the viewer home to browse featured LLM games or drop a local PGN file.</p>
+  <div class="actions">
+    <a class="btn primary" id="home-zh" href="/agi-chess/">返回阅读器首页</a>
+    <a class="btn secondary" id="home-en" href="/agi-chess/?lang=en">English Viewer · EN</a>
+  </div>
+</main>
+<script>
+  (() => {
+    const p = location.pathname;
+    const base = p.startsWith('/agi-chess/') || p === '/agi-chess' ? '/agi-chess/'
+      : p.startsWith('/viewer/') || p === '/viewer' ? '/viewer/' : '/';
+    document.getElementById('home-zh').href = base;
+    document.getElementById('home-en').href = base + '?lang=en';
+  })();
+</script>
+</body>
+</html>

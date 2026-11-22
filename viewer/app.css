@@ -177,13 +177,14 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
   font-size: var(--row1-size); line-height: var(--row1-lh); white-space: nowrap; }
 #title .t-row .name { flex: 0 1 auto; min-width: 0; overflow: hidden; }
 
-/* ---- 没有棋谱时的提示（拖文件进来，或直接点内置代表局） ---- */
+/* ---- 没有棋谱时的提示（拖文件进来，或直接点内置代表局；错误态也复用此容器） ---- */
 #hint { display: none; }
 #stage.empty > :not(#hint) { display: none; }
 #stage.empty > #hint { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center;
-  gap: 24px; padding: 24px 32px; text-align: center; font-size: var(--row2-size); line-height: 1.6; color: var(--text-weak); }
+  gap: 20px; padding: 24px 32px; box-sizing: border-box; text-align: center; font-size: var(--row2-size); line-height: 1.55; color: var(--text-weak); }
+#hint .h-topbar { width: 100%; max-width: 460px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
 #hint .h-msg { white-space: pre-line; }
-#hint .h-samples { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 440px; text-align: left; }
+#hint .h-samples { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 460px; text-align: left; }
 #hint .h-title { font-size: 14px; color: var(--text-weak); text-align: center; margin-bottom: 2px; }
 #hint .h-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px;
   background: var(--bar-bg); border: 1px solid #3d3935; border-radius: 8px; color: var(--text); text-decoration: none;
@@ -192,6 +193,29 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
 #hint .h-link:active { background: var(--bar-active-bg); border-color: var(--accent); }
 #hint .h-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #hint .h-arr { flex: none; font-size: 18px; line-height: 1; color: var(--accent); }
+
+/* 错误提示卡片：克制的左侧 3px 状态色条 + 当前语言说明 + 返回首页出口 */
+#hint .h-error { width: 100%; max-width: 460px; box-sizing: border-box; padding: 14px 16px; background: var(--bar-bg);
+  border: 1px solid #4a3532; border-left: 3px solid var(--tag-bg); border-radius: 8px; text-align: left;
+  display: flex; flex-direction: column; gap: 6px; }
+#hint .e-title { font-size: 16px; line-height: 1.5; font-weight: 600; color: var(--text); }
+#hint .e-detail { font-family: ui-monospace, Menlo, monospace; font-size: 13px; line-height: 1.5; color: #f08a7e;
+  word-break: break-all; }
+#hint .e-hint { font-size: 14px; line-height: 1.5; color: var(--text-weak); }
+#hint .e-home { align-self: flex-start; margin-top: 4px; display: inline-flex; align-items: center; min-height: 36px;
+  padding: 0 14px; background: #383430; border: 1px solid #524c46; border-radius: 6px; color: var(--text);
+  font-size: 14px; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+#hint .e-home:hover { background: var(--bar-active-bg); }
+#hint .e-home:active { border-color: var(--accent); }
+
+/* 顶栏轻量导航胶囊（首页、EN/中文）：采用中性弱色，不抢棋盘与恶手标签主视觉；窄版录屏态隐藏 */
+.s-nav { margin-left: auto; flex: none; display: flex; align-items: center; gap: 6px; }
+.nav-pill { display: inline-flex; align-items: center; justify-content: center; padding: 3px 9px; font-size: 13px;
+  line-height: 1.4; color: var(--text-weak); background: var(--bar-bg); border: 1px solid #3d3935; border-radius: 6px;
+  text-decoration: none; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.nav-pill:hover { color: var(--text); background: #383430; border-color: #524c46; }
+.nav-pill:active { color: var(--text); background: var(--bar-active-bg); border-color: var(--accent); }
+#stage.compact .h-topbar, #stage.compact .s-nav { display: none; }
 
 /* ================================================================ 宽版（给人读棋谱；docs/viewer.md「版式」）
   左边沿用窄版的棋手条 + 棋盘 + 棋手条（字号配色同上），右边一栏 #side：对局信息、播放按钮、着法列表、这步的评注和数字。
@@ -217,11 +241,13 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
 
 #side { flex-direction: column; gap: 12px; min-width: 0; font-size: 15px; line-height: 1.5; color: var(--text); }
 #side button { font: inherit; color: var(--text); background: var(--side-bg); border: 1px solid var(--side-line);
-  border-radius: 6px; cursor: pointer; }
+  border-radius: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 #side button:hover { background: var(--side-cur); }
-#s-head { display: flex; align-items: center; gap: 8px; color: var(--text-weak); }
+#side button:active { background: var(--bar-active-bg); border-color: var(--accent); }
+#s-head { display: flex; align-items: center; gap: 8px; color: var(--text-weak); min-width: 0; }
+#s-head > span:first-child { flex: none; }
 #s-head select { font: inherit; color: var(--text); background: var(--side-bg); border: 1px solid var(--side-line);
-  border-radius: 6px; padding: 4px 6px; min-width: 0; max-width: 100%; }
+  border-radius: 6px; padding: 4px 6px; min-width: 0; flex: 0 1 auto; max-width: 100%; }
 #s-players { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; background: var(--side-bg); border-radius: 8px; }
 #s-players .p { display: flex; align-items: center; white-space: nowrap; min-width: 0; }
 #s-players .p .disc { width: 12px; height: 12px; margin-right: 8px; }
@@ -239,8 +265,9 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
 #s-moves .r { display: grid; grid-template-columns: 44px 1fr 1fr; align-items: center; }
 #s-moves .no { color: var(--text-weak); text-align: right; padding-right: 10px; font-size: 13px; }
 #s-moves .m { padding: 2px 8px; margin: 1px 4px; border-radius: 4px; cursor: pointer; white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis; }
+  overflow: hidden; text-overflow: ellipsis; -webkit-tap-highlight-color: transparent; }
 #s-moves .m:hover { background: var(--side-line); }
+#s-moves .m:active { background: var(--side-cur); }
 #s-moves .m.cur { background: var(--side-cur); box-shadow: inset 3px 0 0 var(--accent); }
 #s-moves .m.bad { color: #f08a7e; } #s-moves .m.good { color: #8fd19e; }
 #s-moves .start { grid-column: 2 / 4; color: var(--text-weak); }
@@ -252,12 +279,12 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
 #s-note .nag { display: inline-block; margin-left: 8px; padding: 0 6px; border-radius: 4px; font-size: 13px; font-weight: 400;
   background: var(--side-line); }
 #s-note .nag.bad { background: var(--tag-bg); color: #fff; } #s-note .nag.good { background: var(--win-bg); color: #fff; }
-#s-note dl { display: grid; grid-template-columns: max-content 1fr max-content 1fr; gap: 2px 12px; margin: 0 0 6px;
+#s-note dl { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr); gap: 2px 12px; margin: 0 0 6px;
   font-size: 14px; font-variant-numeric: tabular-nums; }
-#s-note dt { color: var(--text-weak); } #s-note dd { margin: 0; }
+#s-note dt { color: var(--text-weak); } #s-note dd { margin: 0; min-width: 0; }
 #s-note dd.warn { color: var(--accent); }
 #s-note .lbl { color: var(--text-weak); font-size: 13px; margin-top: 6px; }
-#s-note .why { white-space: pre-wrap; }
+#s-note .why { white-space: pre-wrap; overflow-wrap: break-word; }
 #s-note .raw { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--text-weak); word-break: break-all; }
 #s-note .none { color: var(--text-weak); }
 #s-keys { flex: none; display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 12px; color: var(--text-weak); line-height: 1.7; }
@@ -265,3 +292,118 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
   line-height: 1.4; color: var(--text); }
 #stage.wide.empty > #side { display: none; }
 #s-keys > span { white-space: nowrap; }
+
+/* ================================================================ 手机自动窄屏态（FORCED === null && innerWidth < 900）
+  仅在未传 rec=1 且未强制 layout=compact/wide 的窄视口生效；棋盘等比自适应屏宽，下方纵向叠排翻步条、当前步理由与恶手评注、着法表。 */
+html.mobile-scroll, html.mobile-scroll body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: auto;
+}
+#stage.mobile {
+  --side-bg: #2e2b28; --side-line: #3d3935; --side-cur: #4a4540;
+  --pad-x: 12px;
+  --row1-size: 18px; --row1-lh: 24px;
+  --effort-size: 15px;
+  --score-size: 22px;
+  --row2-size: 14px; --row2-lh: 20px;
+  --delta-size: 13px;
+  --tag-size: 12px;
+  --disc: 11px;
+  --banner-size: 20px; --banner-why-size: 15px; --banner-name-size: 17px;
+  --title-head-size: 15px; --title-head-lh: 22px;
+  --sum-kind-size: 20px; --sum-title-size: 17px; --sum-name-size: 20px; --sum-score-size: 40px;
+  width: 100%;
+  max-width: 540px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding-bottom: calc(16px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+#stage.mobile > .bar {
+  flex: none;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+#stage.mobile > #board-area {
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+}
+#stage.mobile #board-chess {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  pointer-events: none;
+}
+#stage.mobile #board-xq {
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+#stage.mobile > #summary {
+  flex: none;
+  padding: 28px 16px;
+}
+#stage.mobile.summary > #strip { display: none; }
+#stage.mobile > #side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px 0;
+  box-sizing: border-box;
+  width: 100%;
+}
+#stage.mobile.empty > #side { display: none; }
+#stage.mobile.empty > #hint {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 16px 14px 24px;
+  gap: 16px;
+}
+#stage.mobile.empty #hint .h-msg {
+  order: 2;
+}
+#stage.mobile #hint .h-link {
+  padding: 10px 12px;
+  gap: 8px;
+  font-size: 13.5px;
+}
+#stage.mobile .nav-pill {
+  min-height: 36px;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+#stage.mobile #s-ctrl { order: 1; gap: 6px; }
+#stage.mobile #s-ctrl button {
+  min-height: 42px;
+  height: 42px;
+  font-size: 16px;
+  touch-action: manipulation;
+}
+#stage.mobile #s-head { order: 2; flex-wrap: wrap; row-gap: 6px; }
+#stage.mobile #s-note {
+  order: 3;
+  max-height: none;
+  overflow: visible;
+}
+#stage.mobile #s-note dl {
+  gap: 2px 8px;
+  font-size: 13px;
+}
+#stage.mobile #s-moves {
+  order: 4;
+  flex: none;
+  min-height: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+#stage.mobile #s-moves .m { padding: 5px 8px; }
+#stage.mobile #s-players { order: 5; }
+#stage.mobile #s-keys { display: none; }
+@media (max-width: 359px) {
+  #stage.mobile #s-note dl { grid-template-columns: max-content minmax(0, 1fr); }
+}

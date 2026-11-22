@@ -19,6 +19,7 @@ if (pw) {
   try { browser = await pw.chromium.launch({ executablePath: resolveChromium(undefined, pw) }); }
   catch (e) { skip = `起不来浏览器：${e.message.split('\n')[0]}`; }
 }
+if (process.env.VIEWER_REQUIRE_BROWSER === '1' && skip) throw new Error(skip);
 
 async function withPage(query, fn, viewport = { width: 540, height: 720 }) {
   const server = await serve(ROOT);

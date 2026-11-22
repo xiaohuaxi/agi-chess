@@ -56,6 +56,7 @@ if (pw) {
     });
   } catch (e) { skip = `起不来浏览器：${e.message.split('\n')[0]}`; }
 }
+if (process.env.VIEWER_REQUIRE_BROWSER === '1' && skip) throw new Error(skip);
 
 // 在页面脚本之前装好探针：记下每次放声（buffer 时长 → 哪声，延迟几秒）和解码好了几个声音文件。
 const SPY = () => {

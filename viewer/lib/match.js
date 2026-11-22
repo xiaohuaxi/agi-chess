@@ -4,7 +4,7 @@
 import { T, reasonEn } from './i18n.js';
 
 // 模型后端前缀：「claude:opus」→「opus」。其余（引擎、random、人）照原名显示。
-const MODEL_PREFIXES = new Set(['claude', 'codex', 'deepseek', 'gpt', 'openai', 'gemini', 'grok', 'openrouter']);
+const MODEL_PREFIXES = new Set(['agy', 'claude', 'codex', 'deepseek', 'gpt', 'openai', 'gemini', 'grok', 'openrouter']);
 
 // 两方在标签里的名字：国际象棋 White / Black，中国象棋 Red / Black。side 是 'w'（红 / 白）或 'b'。
 // names 里有这个人时 name 换成显示名；key（算比分用）始终按棋谱里的名字，覆盖不影响谁的分归谁。

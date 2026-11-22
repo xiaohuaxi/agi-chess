@@ -9,14 +9,20 @@ test('棋手显示名：模型取冒号后小写并带深度，引擎照原名',
   assert.deepEqual(playerOf(g, 'w'), { name: 'opus', effort: 'xhigh', key: 'opus+XHigh' });
   assert.equal(playerOf(g, 'b').name, 'engine:fsf:nodes=100');
   assert.equal(playerOf({ tags: { White: 'codex:astra', WhiteEffort: 'max' } }, 'w').name, 'astra');
+  const agyGame = { tags: { White: 'agy:gemini-4-neon', Black: 'agy:claude-opus-5-5', WhiteEffort: 'xhigh', BlackEffort: 'high' } };
+  assert.deepEqual(playerOf(agyGame, 'w'), { name: 'gemini-4-neon', effort: 'xhigh', key: 'gemini-4-neon+xhigh' });
+  assert.deepEqual(playerOf(agyGame, 'b'), { name: 'claude-opus-5-5', effort: 'high', key: 'claude-opus-5-5+high' });
 });
 
-test('标题画面全称：补厂商，认不出的照原名', () => {
+test('标题画面全称：补厂商，认不出的照原名（agy 同时跑多家族模型，不映射固定厂商）', () => {
   const g = { tags: { White: 'codex:astra', Black: 'claude:opus', WhiteEffort: 'max' } };
   assert.deepEqual(fullName(g, 'w'), { name: 'GPT astra', effort: 'max' });
   assert.deepEqual(fullName(g, 'b'), { name: 'Claude opus', effort: '' });
   assert.equal(fullName({ tags: { Red: 'engine:fsf:nodes=100' } }, 'w').name, 'engine:fsf:nodes=100');
   assert.deepEqual(fullName(g, 'w', false), { name: 'astra', effort: 'max' });   // vendor=0
+  const agyGame = { tags: { White: 'agy:gemini-4-neon', Black: 'agy:claude-opus-5-5', WhiteEffort: 'xhigh', BlackEffort: 'high' } };
+  assert.deepEqual(fullName(agyGame, 'w'), { name: 'gemini-4-neon', effort: 'xhigh' });
+  assert.deepEqual(fullName(agyGame, 'b'), { name: 'claude-opus-5-5', effort: 'high' });
 });
 
 test('token 写法', () => {

@@ -43,8 +43,11 @@ const NAMES = parseNames(params.get('names')); // 显示名覆盖，没给就是
 const pl = (game, side) => playerOf(game, side, NAMES);
 const TITLE_INSET = 24;                        // 标题卡片左右各离棋盘边多远
 const FORCED = REC ? 'compact' : ['compact', 'wide'].includes(params.get('layout')) ? params.get('layout') : null;
-// 自动选版式的分界。录 16:9 时页面宽 960 会判成宽版，所以录制靠 rec=1（恒为窄版），不靠自动判断
+// 自动选版式的分界：宽 ≥ WIDE_MIN 为桌面宽版，未传 layout 的窄视口进可滚动手机态 .mobile；rec=1 恒为窄版 .compact
 const WIDE_MIN = 900;
+// 站点根自适应：本机开发从仓库根起服务访问 /viewer/ 时回退上一级，线上 Pages 平铺部署（如 /agi-chess/）时取当前目录。
+const SELF_DIR = new URL('.', import.meta.url);
+const SITE_ROOT = SELF_DIR.pathname.endsWith('/viewer/') ? new URL('..', import.meta.url) : SELF_DIR;
 const frames = (n = 2) => new Promise((ok) => {
   const step = () => (n-- <= 0 ? ok() : requestAnimationFrame(step));
   step();
@@ -52,16 +55,20 @@ const frames = (n = 2) => new Promise((ok) => {
 
 // ---------------------------------------------------------------- 读棋谱
 // 支持传目录简写（如 ?files=/runs/g7-c-opus-astra-1 → 自动补 /game.pgn）；
-// 当路径以 /game.pgn（或 game.pgn）结尾且未显式传同目录 analysis.jsonl 时，自动尝试伴随加载同目录 analysis.jsonl（404 静默忽略）。
+// 仅对 runs/ 棋谱路径（/runs/... 或 runs/...）按 SITE_ROOT 归一化为完整 URL，绝不改写 /rec/... 与 /viewer/test/fixtures/...；
+// 当路径以 /game.pgn 结尾且未显式传同目录 analysis.jsonl 时，自动尝试伴随加载同目录 analysis.jsonl（404 静默忽略）。
+function resolveInputPath(raw) {
+  const clean = raw.trim().replace(/\/+$/, '');
+  const target = /\.(pgn|jsonl)$/i.test(clean) ? clean : `${clean}/game.pgn`;
+  return /^\/?runs\//.test(target) ? new URL(target.replace(/^\/+/, ''), SITE_ROOT).href : target;
+}
+
 async function fetchTexts(paths) {
-  const norm = paths.map((p) => {
-    const clean = p.replace(/\/+$/, '');
-    return /\.(pgn|jsonl)$/i.test(clean) ? clean : `${clean}/game.pgn`;
-  });
+  const norm = paths.map(resolveInputPath);
   const explicit = new Set(norm);
   const groups = await Promise.all(norm.map(async (p) => {
     const res = await fetch(p);
-    if (!res.ok) throw new Error(`读不到棋谱 ${p}：${res.status}`);
+    if (!res.ok) throw new Error(L.fetchErr(p, res.status));
     const main = { name: p, text: decodeText(new Uint8Array(await res.arrayBuffer())) };
     if (!/(^|\/)game\.pgn$/i.test(p)) return [main];
     const ana = p.replace(/game\.pgn$/i, 'analysis.jsonl');
@@ -255,16 +262,61 @@ function showTitle(gi) {
   for (const [el, full] of names) fitMiddle(el, full);
 }
 
-// ---------------------------------------------------------------- 宽版右栏
+// ---------------------------------------------------------------- 宽版右栏 / 手机面板与导航链接
 // 换了一盘（或换了棋谱）才重建对局信息和着法列表；同一盘里走动只改高亮和下面的评注。
-let side = { games: null, gi: -1, cells: new Map() };
+let side = { games: null, gi: -1, hasNav: false, cells: new Map() };
+let hasUrlFiles = false;
+let manualStepped = false;
+let urlTimer = null;
+
+const homeHref = (lang = LANG) => location.pathname + (lang === 'en' ? '?lang=en' : '');
+
+function buildStateUrl({ lang = LANG, dropAutoplay = manualStepped } = {}) {
+  const q = new URLSearchParams();
+  if ((hasUrlFiles || !games.length) && params.has('files')) q.set('files', params.get('files'));
+  if (lang === 'en') q.set('lang', 'en');
+  for (const k of ['layout', 'names', 'sound', 'vol', 'vendor', 'title', 'gap', 'openhold', 'titlehold', 'resulthold', 'summaryhold', 'anim']) {
+    if (params.has(k)) q.set(k, params.get(k));
+  }
+  if (!dropAutoplay && params.has('autoplay')) q.set('autoplay', params.get('autoplay'));
+  if (hasUrlFiles && games.length) {
+    if (summaryShown()) {
+      q.set('summary', '1');
+    } else {
+      if (games.length > 1) q.set('game', String(pos.gi + 1));
+      if (pos.ply > 0) q.set('ply', String(pos.ply));
+    }
+  } else if (!games.length && params.has('files')) {
+    for (const k of ['game', 'ply', 'summary']) if (params.has(k)) q.set(k, params.get(k));
+  }
+  const s = q.toString().replace(/%2F/gi, '/').replace(/%2C/gi, ',');
+  return location.pathname + (s ? `?${s}` : '');
+}
+
+function syncNavLinks() {
+  const nextLang = LANG === 'en' ? 'zh' : 'en';
+  const href = !games.length && !params.has('files') ? homeHref(nextLang) : buildStateUrl({ lang: nextLang, dropAutoplay: true });
+  for (const a of document.querySelectorAll('a.lang-switch')) a.href = href;
+}
+
+function scheduleReplaceUrl() {
+  if (REC || !hasUrlFiles) return;
+  clearTimeout(urlTimer);
+  urlTimer = setTimeout(() => {
+    urlTimer = null;
+    if (REC || !hasUrlFiles || playing || !games.length) return;
+    const url = buildStateUrl({ lang: LANG, dropAutoplay: true });
+    try { history.replaceState(null, '', url); } catch { /* 受限沙箱静默忽略 */ }
+  }, 150);
+}
 
 function renderSide(gi, ply, final) {
   const g = games[gi], { game, rep, notes, startTurn, xiangqi } = g;
   const steps = rep.steps;
-  if (side.games !== games || side.gi !== gi) {
-    side = { games, gi, cells: new Map() };
-    // 对局信息：棋种、第几局（多盘时是下拉框，可以换盘）
+  const wantNav = !REC && hasUrlFiles;
+  if (side.games !== games || side.gi !== gi || side.hasNav !== wantNav) {
+    side = { games, gi, hasNav: wantNav, cells: new Map() };
+    // 对局信息：棋种（保持第一个 span 为棋种名）、第几局（多盘时是下拉框，可以换盘）、末尾首页与中英切换
     const head = [h('span', null, xiangqi ? L.xiangqi : L.chess)];
     if (games.length > 1) {
       const sel = h('select');
@@ -277,6 +329,15 @@ function renderSide(gi, ply, final) {
       });
       sel.value = gi;
       head.push(sel);
+    }
+    if (wantNav) {
+      const nav = h('div', 's-nav');
+      const home = h('a', 'nav-pill home-link', L.home);
+      home.href = homeHref();
+      const lang = h('a', 'nav-pill lang-switch', LANG === 'en' ? '中文' : 'EN');
+      lang.href = buildStateUrl({ lang: LANG === 'en' ? 'zh' : 'en', dropAutoplay: true });
+      nav.append(home, lang);
+      head.push(nav);
     }
     $('s-head').replaceChildren(...head);
     // 双方：圆片、全称、思考深度；最后一行结果
@@ -317,6 +378,8 @@ function renderSide(gi, ply, final) {
   }
   const sel = $('s-game');
   if (sel) sel.value = gi;
+  // 先更新 #s-note 再量 #s-moves 高度与滚动位置，避免首帧 #s-note 撑高后挤矮 #s-moves 导致当前步落出可视区
+  $('s-note').replaceChildren(...noteView(g, ply, final));
   for (const c of $('s-moves').querySelectorAll('.cur')) c.classList.remove('cur');
   const cell = side.cells.get(ply);
   if (cell) {
@@ -325,7 +388,7 @@ function renderSide(gi, ply, final) {
     if (top < box.scrollTop + 8) box.scrollTop = Math.max(0, top - 8);            // 只滚列表本身，不动页面
     else if (bottom > box.scrollTop + box.clientHeight - 8) box.scrollTop = bottom - box.clientHeight + 8;
   }
-  $('s-note').replaceChildren(...noteView(g, ply, final));
+  syncNavLinks();
 }
 
 // 当前这步的评注：记谱、标注、谁走的；各项数字（带中文标签）；理由文字；不认识的命令原样列出。
@@ -367,12 +430,14 @@ function noteView(g, ply, final) {
 let games = [];
 const boards = {};
 let pos = { gi: 0, ply: 0, opts: {} };   // 现在画着哪一格（总比分那格不改它）
-let wide = false;
+let layoutMode = 'compact';
+let lastViewportW = typeof innerWidth === 'number' ? innerWidth : 0;
+const hasSide = () => layoutMode === 'wide' || layoutMode === 'mobile';
 
 // opts.final：见 frameData（默认 true，静态看 ply=end 时带横幅）；opts.title：盖上标题画面；
 // opts.anim：走子滑动的秒数（0 或不给就不动），rec=1 时动画停在起点等录制脚本拨进度。
 async function show(gi, ply, opts = {}) {
-  $('stage').classList.remove('summary', 'empty');
+  $('stage').classList.remove('summary', 'empty', 'error');
   $('summary').hidden = true;
   $('title').hidden = true;
   ply = Math.max(0, Math.min(ply, games[gi].rep.steps.length));
@@ -385,22 +450,24 @@ async function show(gi, ply, opts = {}) {
   $('board-chess').hidden = d.xiangqi;
   $('board-xq').hidden = !d.xiangqi;
   $('stage').classList.toggle('xq', d.xiangqi);
+  if (!d.xiangqi) boards.chess?.resize();
   const other = d.xiangqi ? boards.chess : boards.xq;
   other?.moves.stop();                   // 换了棋种：另一块棋盘上没走完的那段直接结束
   await (d.xiangqi ? boards.xq : boards.chess).render(d, { anim: opts.anim || 0, paused: REC });
   showBanner(d.banner);
   if (opts.title) showTitle(gi);
-  if (wide) renderSide(gi, ply, opts.final ?? true);
+  if (hasSide()) renderSide(gi, ply, opts.final ?? true);
   await document.fonts.ready;
   await frames(2);
 }
 
 async function summary() {
-  $('stage').classList.remove('empty');
+  $('stage').classList.remove('empty', 'error');
   $('stage').classList.add('summary');
   $('strip').hidden = true;
   $('summary').hidden = false;
   showSummary();
+  if (hasSide() && games.length) renderSide(pos.gi, pos.ply, true);
   await document.fonts.ready;
   await frames(2);
 }
@@ -458,6 +525,8 @@ function fail(e) {
 // 自动播放：画一格、停 anim + hold 秒（走子滑动算在这格之内）、再下一格，到 end 那格为止。播完再调从头来。
 async function play() {
   if (REC || playing || !seq.length) return;
+  clearTimeout(urlTimer);
+  urlTimer = null;
   if (done) resetSequence();
   playing = true;
   syncPlay();
@@ -516,6 +585,11 @@ function goto(gi, ply) {
     else if (fin) ring('end');
     cur = seqIndex(gi, ply);
     setDone(false);
+    if (!REC && hasUrlFiles) {
+      manualStepped = true;
+      syncNavLinks();
+      scheduleReplaceUrl();
+    }
   }).finally(() => { if (want === me) want = null; });
   chain = p.catch(() => {});
   return p;
@@ -554,7 +628,7 @@ function loadAudio() {
   const ctx = new AudioContext();
   audio = { ctx, bufs: {} };
   for (const [k, s] of Object.entries(SOUNDS)) {
-    fetch(s.file).then((r) => r.arrayBuffer()).then((b) => ctx.decodeAudioData(b))
+    fetch(new URL(s.file, SELF_DIR).href).then((r) => r.arrayBuffer()).then((b) => ctx.decodeAudioData(b))
       .then((buf) => { audio.bufs[k] = buf; })
       .catch((e) => console.warn(`音效 ${k} 读不了：${e.message || e}`));   // 只是少一声，不影响看棋
   }
@@ -595,14 +669,18 @@ function applyLang() {
 
 // ---------------------------------------------------------------- 版式
 function applyLayout() {
-  const w = FORCED ? FORCED === 'wide' : innerWidth >= WIDE_MIN;
+  const mode = FORCED ?? (innerWidth >= WIDE_MIN ? 'wide' : 'mobile');
   const st = $('stage');
-  st.classList.toggle('wide', w);
-  st.classList.toggle('compact', !w);
-  const changed = w !== wide;
-  wide = w;
+  st.classList.toggle('wide', mode === 'wide');
+  st.classList.toggle('compact', mode === 'compact');
+  st.classList.toggle('mobile', mode === 'mobile');
+  document.documentElement.classList.toggle('mobile-scroll', mode === 'mobile');
+  const widthChanged = mode === 'mobile' && innerWidth !== lastViewportW;
+  const changed = mode !== layoutMode || widthChanged;
+  layoutMode = mode;
+  lastViewportW = innerWidth;
   boards.chess?.resize();
-  // 换了版式：棋手条宽度变了（名字从中间省略要重算），宽版右栏要补画，所以把当前这格重画一遍
+  // 换了版式或手机屏宽变了：棋手条宽度变了（名字从中间省略要重算），面板要补画，把当前这格重画一遍
   if (changed && games.length && !st.classList.contains('summary') && !st.classList.contains('empty')) {
     const { gi, ply, opts } = pos;
     chain = chain.then(() => show(gi, ply, opts)).catch(() => {});
@@ -627,54 +705,103 @@ async function useTexts(texts) {
   pause();
   await chain;
   games = gs;
-  $('stage').classList.remove('empty');
+  $('stage').classList.remove('empty', 'error');
   await ensureBoards();
   resetSequence();
   delete document.body.dataset.error;
 }
 
+function makeSamplesList() {
+  if (!L.samples?.length) return null;
+  const wrap = h('div', 'h-samples');
+  wrap.append(h('div', 'h-title', L.samplesTitle));
+  const tail = LANG === 'en' ? '&lang=en' : '';
+  for (const [label, path] of L.samples) {
+    const a = h('a', 'h-link');
+    a.href = `?files=${path}${tail}`;
+    a.append(h('span', 'h-name', label), h('span', 'h-arr', '›'));
+    wrap.append(a);
+  }
+  return wrap;
+}
+
 function showHint(text, withSamples = false) {
+  $('stage').classList.remove('error');
   $('stage').classList.add('empty');
   const box = $('hint');
-  const kids = [h('div', 'h-msg', text)];
-  if (withSamples && L.samples?.length) {
-    const wrap = h('div', 'h-samples');
-    wrap.append(h('div', 'h-title', L.samplesTitle));
-    const tail = LANG === 'en' ? '&lang=en' : '';
-    for (const [label, path] of L.samples) {
-      const a = h('a', 'h-link');
-      a.href = `?files=${path}${tail}`;
-      a.append(h('span', 'h-name', label), h('span', 'h-arr', '›'));
-      wrap.append(a);
-    }
-    kids.push(wrap);
+  const kids = [];
+  if (!REC && FORCED !== 'compact') {
+    const top = h('div', 'h-topbar');
+    const lang = h('a', 'nav-pill lang-switch', LANG === 'en' ? '中文' : 'EN');
+    lang.href = homeHref(LANG === 'en' ? 'zh' : 'en');
+    top.append(lang);
+    kids.push(top);
+  }
+  kids.push(h('div', 'h-msg', text));
+  if (withSamples) {
+    const samples = makeSamplesList();
+    if (samples) kids.push(samples);
   }
   box.replaceChildren(...kids);
 }
 
+function showError(err) {
+  if (REC) return;
+  const raw = String(err && err.message || err);
+  const displayErr = location.origin && location.origin !== 'null' ? raw.replaceAll(location.origin, '') : raw;
+  $('stage').classList.add('empty', 'error');
+  const box = $('hint');
+  const kids = [];
+  if (FORCED !== 'compact') {
+    const top = h('div', 'h-topbar');
+    const lang = h('a', 'nav-pill lang-switch', LANG === 'en' ? '中文' : 'EN');
+    lang.href = buildStateUrl({ lang: LANG === 'en' ? 'zh' : 'en' });
+    top.append(lang);
+    kids.push(top);
+  }
+  const card = h('div', 'h-error');
+  card.append(h('div', 'e-title', L.errTitle), h('div', 'e-detail', displayErr), h('div', 'e-hint', L.errHint));
+  const back = h('a', 'e-home home-link', `← ${L.backHome}`);
+  back.href = homeHref();
+  card.append(back);
+  kids.push(card);
+  const samples = makeSamplesList();
+  if (samples) kids.push(samples);
+  box.replaceChildren(...kids);
+}
+
 async function init() {
-  loadAudio();
-  const files = (params.get('files') || '').split(',').map((s) => s.trim()).filter(Boolean);
-  if (!files.length) {
-    if (REC) throw new Error('没给棋谱：网址加 ?files=/runs/xxx/game.pgn');
-    showHint(L.hint, true);
-    return true;
-  }
-  await useTexts(await fetchTexts(files));
-  const still = !REC && params.get('autoplay') !== '1' && ['game', 'ply', 'summary'].some((k) => params.has(k));
-  if (still) {                                            // 静态看某一格
-    const gi = Math.max(0, Math.min(games.length - 1, (Number(params.get('game')) || 1) - 1));
-    const p = params.get('ply');
-    if (params.get('summary') === '1' && games.length > 1) await summary();
-    else {
-      await show(gi, p === 'end' ? Infinity : Number(p) || 0);
-      cur = seqIndex(pos.gi, pos.ply);                     // 之后按播放从这一格接着往下
+  try {
+    loadAudio();
+    const files = (params.get('files') || '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (!files.length) {
+      if (REC) throw new Error('没给棋谱：网址加 ?files=/runs/xxx/game.pgn');
+      hasUrlFiles = false;
+      showHint(L.hint, true);
+      return true;
     }
-  } else {
-    await draw(seq[0]);                                   // 先画出第一格；next() 第一次调用仍从这一格算起
+    await useTexts(await fetchTexts(files));
+    hasUrlFiles = true;
+    manualStepped = false;
+    const still = !REC && params.get('autoplay') !== '1' && ['game', 'ply', 'summary'].some((k) => params.has(k));
+    if (still) {                                            // 静态看某一格
+      const gi = Math.max(0, Math.min(games.length - 1, (Number(params.get('game')) || 1) - 1));
+      const p = params.get('ply');
+      if (params.get('summary') === '1' && games.length > 1) await summary();
+      else {
+        await show(gi, p === 'end' ? Infinity : Number(p) || 0);
+        cur = seqIndex(pos.gi, pos.ply);                     // 之后按播放从这一格接着往下
+      }
+    } else {
+      await draw(seq[0]);                                   // 先画出第一格；next() 第一次调用仍从这一格算起
+    }
+    if (!REC && params.get('autoplay') === '1') play();
+    return true;
+  } catch (e) {
+    fail(e);
+    showError(e);
+    throw e;
   }
-  if (!REC && params.get('autoplay') === '1') play();
-  return true;
 }
 
 // 拖文件进页面：按文件名排序后当作一场比赛，从头播（autoplay=0 时只画第一格）。
@@ -683,6 +810,10 @@ async function onDrop(e) {
   e.preventDefault();
   const list = [...(e.dataTransfer?.files || [])].sort((a, b) => a.name.localeCompare(b.name));
   if (!list.length) return;
+  hasUrlFiles = false;
+  manualStepped = false;
+  clearTimeout(urlTimer);
+  urlTimer = null;
   try {
     await useTexts(await Promise.all(list.map(async (f) => ({
       name: f.name,
@@ -692,7 +823,7 @@ async function onDrop(e) {
     else await draw(seq[0]);
   } catch (err) {
     fail(err);
-    showHint(document.body.dataset.error);
+    showError(err);
   }
 }
 document.addEventListener('dragover', (e) => e.preventDefault());
@@ -733,4 +864,4 @@ window.viewer = {
   get done() { return done; },
   ready: init(),
 };
-window.viewer.ready.catch(fail);
+window.viewer.ready.catch(() => {});

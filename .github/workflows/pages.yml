@@ -1,0 +1,87 @@
+name: Deploy Viewer to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'viewer/**'
+      - 'runs/**'
+      - 'LICENSE'
+      - '.github/workflows/pages.yml'
+  pull_request:
+    paths:
+      - 'viewer/**'
+      - 'runs/**'
+      - 'LICENSE'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'viewer/package-lock.json'
+
+      - name: Install CJK fonts for Xiangqi SVG rendering
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+
+      - name: Install viewer dev dependencies & Chromium
+        run: |
+          npm --prefix viewer ci
+          npx --no-install --prefix viewer playwright-core install --with-deps chromium
+
+      - name: Run viewer test suite
+        env:
+          VIEWER_REQUIRE_BROWSER: '1'
+        run: node --test 'viewer/test/*.test.js'
+
+      - name: Build and verify Pages artifact
+        run: |
+          node viewer/build-pages.mjs _site
+          test -f _site/.nojekyll
+          test -f _site/index.html
+          test -f _site/404.html
+          test -f _site/og-card.png
+          test -f _site/LICENSE
+          test ! -e _site/node_modules
+          test ! -e _site/test
+          test -z "$(find _site -name '*.mjs' -o -name '*.py' -o -name 'package*.json')"
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

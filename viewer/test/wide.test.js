@@ -40,6 +40,7 @@ if (pw) {
   try { browser = await pw.chromium.launch({ executablePath: resolveChromium(undefined, pw) }); }
   catch (e) { skip = `起不来浏览器：${e.message.split('\n')[0]}`; }
 }
+if (process.env.VIEWER_REQUIRE_BROWSER === '1' && skip) throw new Error(skip);
 
 async function withPage(query, viewport, fn) {
   const server = await serve(ROOT);
@@ -58,7 +59,7 @@ async function withPage(query, viewport, fn) {
 }
 
 const WIDE = { width: 1440, height: 900 };
-const layout = (page) => page.evaluate(() => document.getElementById('stage').className.split(' ').filter((c) => c === 'wide' || c === 'compact').join());
+const layout = (page) => page.evaluate(() => document.getElementById('stage').className.split(' ').filter((c) => ['wide', 'compact', 'mobile'].includes(c)).join());
 // 右栏现在高亮的是第几盘、第几个半回合（等到画完为止）
 async function at(page, gi, ply) {
   await page.waitForFunction(([gi, ply]) => {
@@ -68,17 +69,27 @@ async function at(page, gi, ply) {
   }, [gi, ply], { timeout: 5000 });
 }
 
-test('版式：按窗口宽度自动选，layout= 强制，rec=1 恒为窄版，窗口改大小时跟着切', { skip }, async () => {
+test('版式：按窗口宽度自动选（≥900 wide、<900 mobile），layout= 强制，rec=1 恒为窄版，窗口改大小时跟着切', { skip }, async () => {
   const q = `files=${FIX}chess-sample.pgn`;
   await withPage(q, WIDE, async (page) => {
     assert.equal(await layout(page), 'wide');
     await page.setViewportSize({ width: 540, height: 720 });
-    await page.waitForFunction(() => document.getElementById('stage').classList.contains('compact'));
+    await page.waitForFunction(() => document.getElementById('stage').classList.contains('mobile'));
+    assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('side')).display), 'flex');
+    assert.equal(await page.evaluate(() => document.documentElement.classList.contains('mobile-scroll')), true);
+    await page.setViewportSize(WIDE);
+    await page.waitForFunction(() => document.getElementById('stage').classList.contains('wide'));
+    assert.equal(await page.evaluate(() => document.documentElement.classList.contains('mobile-scroll')), false);
+  });
+  await withPage(q, { width: 540, height: 720 }, async (page) => assert.equal(await layout(page), 'mobile'));
+  await withPage(`layout=compact&${q}`, WIDE, async (page) => {
+    assert.equal(await layout(page), 'compact');
     assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('side')).display), 'none');
   });
-  await withPage(q, { width: 540, height: 720 }, async (page) => assert.equal(await layout(page), 'compact'));
-  await withPage(`layout=compact&${q}`, WIDE, async (page) => assert.equal(await layout(page), 'compact'));
-  await withPage(`rec=1&layout=wide&${q}`, WIDE, async (page) => assert.equal(await layout(page), 'compact'));
+  await withPage(`rec=1&layout=wide&${q}`, WIDE, async (page) => {
+    assert.equal(await layout(page), 'compact');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('side')).display), 'none');
+  });
   await withPage(`layout=wide&${q}`, { width: 800, height: 700 }, async (page) => assert.equal(await layout(page), 'wide'));
 });
 
@@ -188,7 +199,7 @@ test('目录简写与空白页示例：files=/runs/<dir> 自动加载 game.pgn �
     }));
     assert.equal(empty.isEmpty, true);
     assert.match(empty.msg, /把棋谱文件（\.pgn）拖进来/);
-    assert.ok(empty.hrefs.includes('?files=/runs/g7-c-opus-astra-1') && empty.hrefs.length >= 4);
+    assert.ok(empty.hrefs.includes('?files=/runs/g7-c-opus-astra-1') && empty.hrefs.length === 6);
   });
   await withPage('layout=wide&files=/runs/g7-c-opus-astra-1&ply=62', WIDE, async (page) => {
     await at(page, 0, 62);
