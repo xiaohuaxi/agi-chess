@@ -174,15 +174,18 @@ test('评注面板：标注、将军、非法重选、不认识的命令', { ski
     assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#s-moves .m.bad, #s-moves .m.good')]
       .map((e) => [e.textContent, e.className])), [['e4!', 'm good'], ['e5??', 'm bad'], ['Nf6??', 'm bad']]);
     assert.equal(await page.evaluate(() => document.querySelector('#s-players').textContent),
-      'Claude opus思考深度 xhighGPT astra结果：白方胜');
+      'Claude Opus思考深度 xhighGPT Astra结果：白方胜');
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.bar .name')].map((e) => e.textContent)),
+      ['GPT Astra', 'Claude Opus']);
     await page.keyboard.press('ArrowRight');
     await at(page, 0, 1);
     const n1 = await page.evaluate(() => ({
       nags: [...document.querySelectorAll('#s-note .nag')].map((e) => e.textContent),
+      who: document.querySelector('#s-note .who').textContent,
       warn: [...document.querySelectorAll('#s-note dd.warn')].map((e) => e.textContent),
       raw: document.querySelector('#s-note .raw').textContent, why: document.querySelector('#s-note .why').textContent,
     }));
-    assert.deepEqual(n1, { nags: ['! 好棋'], warn: ['2'], raw: '[%clk 0:01:00]', why: '走中心' });
+    assert.deepEqual(n1, { nags: ['! 好棋'], who: 'Claude Opus +xhigh', warn: ['2'], raw: '[%clk 0:01:00]', why: '走中心' });
     await page.keyboard.press('End');
     await at(page, 0, 7);
     assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#s-note .nag')].map((e) => e.textContent)), ['将军']);
@@ -209,6 +212,15 @@ test('目录简写与空白页示例：files=/runs/<dir> 自动加载 game.pgn �
     }));
     assert.ok(loaded.badCount > 0);
     assert.deepEqual(loaded.nags, ['?? 大错']);
+  });
+  // title=1 宽版下默认走 displayPlayer，显式 vendor=0 时不补厂商、退回 fullName(..., false)
+  await withPage(`layout=wide&title=1&files=${FIX}chess-sample.pgn`, WIDE, async (page) => {
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#title .t-row .name')].map((e) => e.textContent)),
+      ['Claude Opus', 'Maia 1100']);
+  });
+  await withPage(`layout=wide&title=1&vendor=0&files=${FIX}chess-sample.pgn`, WIDE, async (page) => {
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#title .t-row .name')].map((e) => e.textContent)),
+      ['opus', 'engine:maia-1100']);
   });
 });
 

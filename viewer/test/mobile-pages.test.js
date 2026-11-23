@@ -86,7 +86,7 @@ test('手机屏（360/375/390）：国象与中象代表局零横向溢出、棋
     assert.ok(m0.pillH >= 36, `nav-pill height ${m0.pillH} < 36`);
     assert.equal(m0.orderOk, true);
     assert.equal(m0.keysHidden, true);
-    assert.deepEqual(m0.players, ['gemini-4-carbon', 'gemini-4-neon']);
+    assert.deepEqual(m0.players, ['Gemini 4 Carbon', 'Gemini 4 Neon']);
     assert.ok(m0.docScrollH > m0.innerH);
 
     // 触控点按「下一步」推进到 ply=40（20... Re8?? Blunder）
@@ -132,7 +132,7 @@ test('手机屏（360/375/390）：国象与中象代表局零横向溢出、棋
     assert.ok(xq.boardH > xq.boardW);
     assert.deepEqual(xq.nags, ['?? 大错']);
     assert.ok(xq.whyLen > 20);
-    assert.deepEqual(xq.players, ['gemini-4-carbon', 'claude-opus-5-5']);
+    assert.deepEqual(xq.players, ['Gemini 4 Carbon', 'Claude Opus 5.5 (agy)']);
 
     // 着法框整行对齐：可见高度固定 8 行（8 * 34 = 272px）且与 scrollTop 均为单行高度整数倍，无半行腰斩
     const movesAlign = await page.evaluate(() => {
@@ -350,6 +350,8 @@ test('build-pages.mjs：静态产物完整性、过滤 *.mjs/*.py/package*.json 
     assert.equal(existsSync(join(siteDir, '.nojekyll')), true);
     assert.equal(existsSync(join(siteDir, 'series.html')), true);
     assert.equal(existsSync(join(siteDir, 'catalog.html')), true);
+    assert.equal(existsSync(join(siteDir, 'series', 'index.html')), true);
+    assert.equal(existsSync(join(siteDir, 'catalog', 'index.html')), true);
     assert.equal(existsSync(join(siteDir, 'pages.css')), true);
     assert.equal(existsSync(join(siteDir, 'lib', 'catalog-data.json')), true);
     assert.equal(existsSync(join(siteDir, 'catalog-meta.json')), false);
@@ -429,6 +431,48 @@ test('/agi-chess/ 子路径端到端加载（空根 /runs/ 404）', { skip }, as
         }));
         assert.equal(zc.curPly, 10);
         assert.ok(zc.badCount > 0);
+
+        // 4) /agi-chess/catalog/ 与 /agi-chess/series/ 尾斜杠静态重定向（保留 query 与 hash）
+        await page.goto(`http://127.0.0.1:${port}/agi-chess/catalog/?q=neon&lang=en#h1`);
+        await page.waitForFunction(() => location.pathname === '/agi-chess/catalog.html');
+        await page.evaluate(() => window.pageReady);
+        assert.deepEqual(await page.evaluate(() => ({
+          pathname: location.pathname,
+          q: new URLSearchParams(location.search).get('q'),
+          lang: new URLSearchParams(location.search).get('lang'),
+          hash: location.hash,
+          rows: document.querySelectorAll('.cat-row').length,
+        })), { pathname: '/agi-chess/catalog.html', q: 'neon', lang: 'en', hash: '#h1', rows: 8 });
+
+        await page.goto(`http://127.0.0.1:${port}/agi-chess/series/?variant=xiangqi&lang=en#h2`);
+        await page.waitForFunction(() => location.pathname === '/agi-chess/series.html');
+        await page.evaluate(() => window.pageReady);
+        assert.deepEqual(await page.evaluate(() => ({
+          pathname: location.pathname,
+          variant: new URLSearchParams(location.search).get('variant'),
+          lang: new URLSearchParams(location.search).get('lang'),
+          hash: location.hash,
+          activeVar: document.querySelector('.seg-btn.active')?.dataset.variant,
+        })), { pathname: '/agi-chess/series.html', variant: 'xiangqi', lang: 'en', hash: '#h2', activeVar: 'xiangqi' });
+
+        // 5) 404.html 三页入口（无相对路径，?lang=en 自动沿用，含 /ladder/ 引导）
+        await page.goto(`http://127.0.0.1:${port}/agi-chess/404.html`);
+        const p404Zh = await page.evaluate(() => ({
+          hrefs: ['#link-home', '#link-series', '#link-catalog'].map((s) => document.querySelector(s)?.getAttribute('href')),
+          text: document.body.textContent,
+        }));
+        assert.deepEqual(p404Zh.hrefs, ['/agi-chess/', '/agi-chess/series.html', '/agi-chess/catalog.html']);
+        assert.match(p404Zh.text, /\/ladder\//);
+
+        await page.goto(`http://127.0.0.1:${port}/agi-chess/404.html?lang=en`);
+        const p404En = await page.evaluate(() => ({
+          lang: document.documentElement.lang,
+          hrefs: ['#link-home', '#link-series', '#link-catalog'].map((s) => document.querySelector(s)?.getAttribute('href')),
+        }));
+        assert.deepEqual(p404En, {
+          lang: 'en',
+          hrefs: ['/agi-chess/?lang=en', '/agi-chess/series.html?lang=en', '/agi-chess/catalog.html?lang=en'],
+        });
       },
       { root: emptyRoot, mounts: { '/agi-chess/': siteDir }, prefix: '/agi-chess/' },
     );

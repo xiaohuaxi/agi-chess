@@ -16,14 +16,15 @@ export function normalizeFilesParam(raw) {
     .join(',');
 }
 
-export function pageHref(page, extra = {}, lang = 'zh') {
+export function pageHref(page, extra = {}, lang = 'zh', hash = '') {
   const rel = page === 'index' ? './' : `${page}.html`;
   const u = new URL(rel, VIEWER_DIR);
   for (const [k, v] of Object.entries(extra || {})) {
     if (v !== undefined && v !== null && v !== '') u.searchParams.set(k, String(v));
   }
   if (lang === 'en') u.searchParams.set('lang', 'en');
-  return u.pathname + u.search;
+  const h = hash ? (hash.startsWith('#') ? hash : `#${hash}`) : '';
+  return u.pathname + u.search + h;
 }
 
 export function viewerGameHref(files, { ply = null, autoplay = false, lang = 'zh' } = {}) {

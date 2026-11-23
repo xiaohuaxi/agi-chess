@@ -17,7 +17,7 @@
         {
           "key": "agy:gemini-4-neon+xhigh",
           "raw": "agy:gemini-4-neon",
-          "techName": "gemini-4-neon",
+          "techName": "Gemini 4 Neon",
           "effort": "xhigh",
           "labelZh": "Gemini 4 Neon",
           "labelEn": "Gemini 4 Neon",
@@ -45,7 +45,7 @@
         {
           "key": "codex:gpt-6.2-astra+max",
           "raw": "codex:gpt-6.2-astra",
-          "techName": "gpt-6.2-astra",
+          "techName": "GPT-6.2 Astra",
           "effort": "max",
           "labelZh": "GPT-6.2 Astra",
           "labelEn": "GPT-6.2 Astra",
@@ -73,7 +73,7 @@
         {
           "key": "agy:gemini-4-carbon+high",
           "raw": "agy:gemini-4-carbon",
-          "techName": "gemini-4-carbon",
+          "techName": "Gemini 4 Carbon",
           "effort": "high",
           "labelZh": "Gemini 4 Carbon",
           "labelEn": "Gemini 4 Carbon",
@@ -110,7 +110,7 @@
       "selfPlay": false,
       "sideA": {
         "raw": "agy:gemini-4-neon",
-        "techName": "gemini-4-neon",
+        "techName": "Gemini 4 Neon",
         "effort": "xhigh",
         "labelZh": "Gemini 4 Neon",
         "labelEn": "Gemini 4 Neon",
@@ -118,7 +118,7 @@
       },
       "sideB": {
         "raw": "agy:gemini-4-carbon",
-        "techName": "gemini-4-carbon",
+        "techName": "Gemini 4 Carbon",
         "effort": "high",
         "labelZh": "Gemini 4 Carbon",
         "labelEn": "Gemini 4 Carbon",
@@ -232,7 +232,7 @@
       "selfPlay": false,
       "sideA": {
         "raw": "agy:gemini-4-neon",
-        "techName": "gemini-4-neon",
+        "techName": "Gemini 4 Neon",
         "effort": "xhigh",
         "labelZh": "Gemini 4 Neon",
         "labelEn": "Gemini 4 Neon",
@@ -240,7 +240,7 @@
       },
       "sideB": {
         "raw": "codex:gpt-6.2-astra",
-        "techName": "gpt-6.2-astra",
+        "techName": "GPT-6.2 Astra",
         "effort": "max",
         "labelZh": "GPT-6.2 Astra",
         "labelEn": "GPT-6.2 Astra",
@@ -354,7 +354,7 @@
       "selfPlay": false,
       "sideA": {
         "raw": "agy:gemini-4-carbon",
-        "techName": "gemini-4-carbon",
+        "techName": "Gemini 4 Carbon",
         "effort": "high",
         "labelZh": "Gemini 4 Carbon",
         "labelEn": "Gemini 4 Carbon",
@@ -362,7 +362,7 @@
       },
       "sideB": {
         "raw": "codex:gpt-6.2-astra",
-        "techName": "gpt-6.2-astra",
+        "techName": "GPT-6.2 Astra",
         "effort": "max",
         "labelZh": "GPT-6.2 Astra",
         "labelEn": "GPT-6.2 Astra",
@@ -476,14 +476,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "agy:gemini-4-carbon",
-        "techName": "gemini-4-carbon",
+        "techName": "Gemini 4 Carbon",
         "effort": "high",
         "labelZh": "Gemini 4 Carbon",
         "labelEn": "Gemini 4 Carbon"
       },
       "sideB": {
         "raw": "agy:claude-opus-5-5",
-        "techName": "claude-opus-5-5",
+        "techName": "Claude Opus 5.5 (agy)",
         "effort": "high",
         "labelZh": "Claude Opus 5.5 (agy)",
         "labelEn": "Claude Opus 5.5 (agy)"
@@ -596,14 +596,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "gemini:gemini-4-argon-high",
-        "techName": "gemini-4-argon-high",
+        "techName": "Gemini 4 Argon",
         "effort": "high",
         "labelZh": "Gemini 4 Argon",
         "labelEn": "Gemini 4 Argon"
       },
       "sideB": {
         "raw": "agy:claude-opus-5-5-high",
-        "techName": "claude-opus-5-5-high",
+        "techName": "Claude Opus 5.5 (agy)",
         "effort": "high",
         "labelZh": "Claude Opus 5.5 (agy)",
         "labelEn": "Claude Opus 5.5 (agy)"
@@ -716,14 +716,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "claude:opus",
-        "techName": "Claude opus",
+        "techName": "Claude Opus",
         "effort": "max",
         "labelZh": "Claude Opus 5.5 (CLI)",
         "labelEn": "Claude Opus 5.5 (CLI)"
       },
       "sideB": {
         "raw": "codex:astra",
-        "techName": "GPT astra",
+        "techName": "GPT Astra",
         "effort": "max",
         "labelZh": "GPT-6 Astra",
         "labelEn": "GPT-6 Astra"
@@ -836,14 +836,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "claude:opus",
-        "techName": "Claude opus",
+        "techName": "Claude Opus",
         "effort": "xhigh",
         "labelZh": "Claude Opus 5.5 (CLI)",
         "labelEn": "Claude Opus 5.5 (CLI)"
       },
       "sideB": {
         "raw": "codex:astra",
-        "techName": "GPT astra",
+        "techName": "GPT Astra",
         "effort": "max",
         "labelZh": "GPT-6 Astra",
         "labelEn": "GPT-6 Astra"
@@ -956,14 +956,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "claude:opus",
-        "techName": "Claude opus",
+        "techName": "Claude Opus",
         "effort": "xhigh",
         "labelZh": "Claude Opus 5.5 (CLI)",
         "labelEn": "Claude Opus 5.5 (CLI)"
       },
       "sideB": {
         "raw": "codex:astra",
-        "techName": "GPT astra",
+        "techName": "GPT Astra",
         "effort": "xhigh",
         "labelZh": "GPT-6 Astra",
         "labelEn": "GPT-6 Astra"
@@ -1102,14 +1102,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "agy:gemini-4-carbon",
-        "techName": "gemini-4-carbon",
+        "techName": "Gemini 4 Carbon",
         "effort": "high",
         "labelZh": "Gemini 4 Carbon",
         "labelEn": "Gemini 4 Carbon"
       },
       "sideB": {
         "raw": "agy:claude-opus-5-5",
-        "techName": "claude-opus-5-5",
+        "techName": "Claude Opus 5.5 (agy)",
         "effort": "high",
         "labelZh": "Claude Opus 5.5 (agy)",
         "labelEn": "Claude Opus 5.5 (agy)"
@@ -1222,14 +1222,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "claude:opus",
-        "techName": "Claude opus",
+        "techName": "Claude Opus",
         "effort": "max",
         "labelZh": "Claude Opus 5.5 (CLI)",
         "labelEn": "Claude Opus 5.5 (CLI)"
       },
       "sideB": {
         "raw": "codex:astra",
-        "techName": "GPT astra",
+        "techName": "GPT Astra",
         "effort": "max",
         "labelZh": "GPT-6 Astra",
         "labelEn": "GPT-6 Astra"
@@ -1342,14 +1342,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "claude:opus",
-        "techName": "Claude opus",
+        "techName": "Claude Opus",
         "effort": "xhigh",
         "labelZh": "Claude Opus 5.5 (CLI)",
         "labelEn": "Claude Opus 5.5 (CLI)"
       },
       "sideB": {
         "raw": "codex:astra",
-        "techName": "GPT astra",
+        "techName": "GPT Astra",
         "effort": "max",
         "labelZh": "GPT-6 Astra",
         "labelEn": "GPT-6 Astra"
@@ -1462,14 +1462,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "claude:opus",
-        "techName": "Claude opus",
+        "techName": "Claude Opus",
         "effort": "xhigh",
         "labelZh": "Claude Opus 5.5 (CLI)",
         "labelEn": "Claude Opus 5.5 (CLI)"
       },
       "sideB": {
         "raw": "codex:astra",
-        "techName": "GPT astra",
+        "techName": "GPT Astra",
         "effort": "xhigh",
         "labelZh": "GPT-6 Astra",
         "labelEn": "GPT-6 Astra"
@@ -1584,14 +1584,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "agy:gemini-4-carbon",
-        "techName": "gemini-4-carbon",
+        "techName": "Gemini 4 Carbon",
         "effort": "high",
         "labelZh": "Gemini 4 Carbon",
         "labelEn": "Gemini 4 Carbon"
       },
       "sideB": {
         "raw": "codex:gpt-6.2-astra",
-        "techName": "gpt-6.2-astra",
+        "techName": "GPT-6.2 Astra",
         "effort": "xhigh",
         "labelZh": "GPT-6.2 Astra",
         "labelEn": "GPT-6.2 Astra"
@@ -1648,14 +1648,14 @@
       "selfPlay": true,
       "sideA": {
         "raw": "gemini:gemini-4-argon-high",
-        "techName": "gemini-4-argon-high",
+        "techName": "Gemini 4 Argon",
         "effort": "high",
         "labelZh": "Gemini 4 Argon（白）",
         "labelEn": "Gemini 4 Argon (White)"
       },
       "sideB": {
         "raw": "gemini:gemini-4-argon-high",
-        "techName": "gemini-4-argon-high",
+        "techName": "Gemini 4 Argon",
         "effort": "high",
         "labelZh": "Gemini 4 Argon（黑）",
         "labelEn": "Gemini 4 Argon (Black)"
@@ -1712,14 +1712,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "claude:opus",
-        "techName": "Claude opus",
+        "techName": "Claude Opus",
         "effort": "xhigh",
         "labelZh": "Claude Opus 5.5 (drop_thinking)",
         "labelEn": "Claude Opus 5.5 (drop_thinking)"
       },
       "sideB": {
         "raw": "codex:astra",
-        "techName": "GPT astra",
+        "techName": "GPT Astra",
         "effort": "xhigh",
         "labelZh": "GPT-6 Astra (session)",
         "labelEn": "GPT-6 Astra (session)"
@@ -1815,14 +1815,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "claude:opus",
-        "techName": "Claude opus",
+        "techName": "Claude Opus",
         "effort": "xhigh",
         "labelZh": "Claude Opus 5.5 (CLI)",
         "labelEn": "Claude Opus 5.5 (CLI)"
       },
       "sideB": {
         "raw": "codex:sol",
-        "techName": "GPT sol",
+        "techName": "GPT Sol",
         "effort": "xhigh",
         "labelZh": "GPT-6 Sol",
         "labelEn": "GPT-6 Sol"
@@ -1879,14 +1879,14 @@
       "selfPlay": true,
       "sideA": {
         "raw": "gemini:gemini-4-argon-high",
-        "techName": "gemini-4-argon-high",
+        "techName": "Gemini 4 Argon",
         "effort": "high",
         "labelZh": "Gemini 4 Argon（红）",
         "labelEn": "Gemini 4 Argon (Red)"
       },
       "sideB": {
         "raw": "gemini:gemini-4-argon-high",
-        "techName": "gemini-4-argon-high",
+        "techName": "Gemini 4 Argon",
         "effort": "high",
         "labelZh": "Gemini 4 Argon（黑）",
         "labelEn": "Gemini 4 Argon (Black)"
@@ -1943,14 +1943,14 @@
       "selfPlay": true,
       "sideA": {
         "raw": "gemini:gemini-3.8-flash-high",
-        "techName": "gemini-3.8-flash-high",
+        "techName": "Gemini 3.8 Flash",
         "effort": "high",
         "labelZh": "Gemini 3.8 Flash（红）",
         "labelEn": "Gemini 3.8 Flash (Red)"
       },
       "sideB": {
         "raw": "gemini:gemini-3.8-flash-high",
-        "techName": "gemini-3.8-flash-high",
+        "techName": "Gemini 3.8 Flash",
         "effort": "high",
         "labelZh": "Gemini 3.8 Flash（黑）",
         "labelEn": "Gemini 3.8 Flash (Black)"
@@ -2007,14 +2007,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "claude:opus",
-        "techName": "Claude opus",
+        "techName": "Claude Opus",
         "effort": "xhigh",
         "labelZh": "Claude Opus 5.5 (drop_thinking)",
         "labelEn": "Claude Opus 5.5 (drop_thinking)"
       },
       "sideB": {
         "raw": "codex:astra",
-        "techName": "GPT astra",
+        "techName": "GPT Astra",
         "effort": "xhigh",
         "labelZh": "GPT-6 Astra (session)",
         "labelEn": "GPT-6 Astra (session)"
@@ -2110,14 +2110,14 @@
       "selfPlay": false,
       "sideA": {
         "raw": "claude:opus",
-        "techName": "Claude opus",
+        "techName": "Claude Opus",
         "effort": "xhigh",
         "labelZh": "Claude Opus 5.5 (CLI)",
         "labelEn": "Claude Opus 5.5 (CLI)"
       },
       "sideB": {
         "raw": "codex:sol",
-        "techName": "GPT sol",
+        "techName": "GPT Sol",
         "effort": "xhigh",
         "labelZh": "GPT-6 Sol",
         "labelEn": "GPT-6 Sol"
@@ -2218,21 +2218,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 55,
         "acpl": 56.8,
-        "blunders": 7
+        "blunders": 7,
+        "aliases": [
+          "Carbon high"
+        ]
       },
       "b": {
         "raw": "codex:gpt-6.2-astra",
-        "name": "gpt-6.2-astra",
+        "name": "GPT-6.2 Astra",
+        "labelZh": "GPT-6.2 Astra",
+        "labelEn": "GPT-6.2 Astra",
         "short": "gpt-6.2-astra",
         "effort": "max",
         "plies": 55,
         "acpl": 38.8,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Astra 6.2 max"
+        ]
       }
     },
     {
@@ -2257,21 +2267,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 42,
         "acpl": 48,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Carbon high"
+        ]
       },
       "b": {
         "raw": "codex:gpt-6.2-astra",
-        "name": "gpt-6.2-astra",
+        "name": "GPT-6.2 Astra",
+        "labelZh": "GPT-6.2 Astra",
+        "labelEn": "GPT-6.2 Astra",
         "short": "gpt-6.2-astra",
         "effort": "max",
         "plies": 42,
         "acpl": 24.6,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Astra 6.2 max"
+        ]
       }
     },
     {
@@ -2296,21 +2316,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "codex:gpt-6.2-astra",
-        "name": "gpt-6.2-astra",
+        "name": "GPT-6.2 Astra",
+        "labelZh": "GPT-6.2 Astra",
+        "labelEn": "GPT-6.2 Astra",
         "short": "gpt-6.2-astra",
         "effort": "max",
         "plies": 72,
         "acpl": 46.4,
-        "blunders": 4
+        "blunders": 4,
+        "aliases": [
+          "Astra 6.2 max"
+        ]
       },
       "b": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 72,
         "acpl": 30,
-        "blunders": 4
+        "blunders": 4,
+        "aliases": [
+          "Carbon high"
+        ]
       }
     },
     {
@@ -2335,21 +2365,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "codex:gpt-6.2-astra",
-        "name": "gpt-6.2-astra",
+        "name": "GPT-6.2 Astra",
+        "labelZh": "GPT-6.2 Astra",
+        "labelEn": "GPT-6.2 Astra",
         "short": "gpt-6.2-astra",
         "effort": "max",
         "plies": 27,
         "acpl": 19,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Astra 6.2 max"
+        ]
       },
       "b": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 26,
         "acpl": 57.2,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Carbon high"
+        ]
       }
     },
     {
@@ -2374,7 +2414,9 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 40,
@@ -2383,7 +2425,9 @@
       },
       "b": {
         "raw": "codex:gpt-6.2-astra",
-        "name": "gpt-6.2-astra",
+        "name": "GPT-6.2 Astra",
+        "labelZh": "GPT-6.2 Astra",
+        "labelEn": "GPT-6.2 Astra",
         "short": "gpt-6.2-astra",
         "effort": "xhigh",
         "plies": 39,
@@ -2413,21 +2457,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "agy:gemini-4-neon",
-        "name": "gemini-4-neon",
+        "name": "Gemini 4 Neon",
+        "labelZh": "Gemini 4 Neon",
+        "labelEn": "Gemini 4 Neon",
         "short": "gemini-4-neon",
         "effort": "xhigh",
         "plies": 47,
         "acpl": 38.6,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Neon xhigh"
+        ]
       },
       "b": {
         "raw": "codex:gpt-6.2-astra",
-        "name": "gpt-6.2-astra",
+        "name": "GPT-6.2 Astra",
+        "labelZh": "GPT-6.2 Astra",
+        "labelEn": "GPT-6.2 Astra",
         "short": "gpt-6.2-astra",
         "effort": "max",
         "plies": 46,
         "acpl": 62.4,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Astra 6.2 max"
+        ]
       }
     },
     {
@@ -2452,21 +2506,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "agy:gemini-4-neon",
-        "name": "gemini-4-neon",
+        "name": "Gemini 4 Neon",
+        "labelZh": "Gemini 4 Neon",
+        "labelEn": "Gemini 4 Neon",
         "short": "gemini-4-neon",
         "effort": "xhigh",
         "plies": 58,
         "acpl": 59.6,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "Neon xhigh"
+        ]
       },
       "b": {
         "raw": "codex:gpt-6.2-astra",
-        "name": "gpt-6.2-astra",
+        "name": "GPT-6.2 Astra",
+        "labelZh": "GPT-6.2 Astra",
+        "labelEn": "GPT-6.2 Astra",
         "short": "gpt-6.2-astra",
         "effort": "max",
         "plies": 57,
         "acpl": 70.4,
-        "blunders": 5
+        "blunders": 5,
+        "aliases": [
+          "Astra 6.2 max"
+        ]
       }
     },
     {
@@ -2491,21 +2555,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "codex:gpt-6.2-astra",
-        "name": "gpt-6.2-astra",
+        "name": "GPT-6.2 Astra",
+        "labelZh": "GPT-6.2 Astra",
+        "labelEn": "GPT-6.2 Astra",
         "short": "gpt-6.2-astra",
         "effort": "max",
         "plies": 79,
         "acpl": 29.1,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Astra 6.2 max"
+        ]
       },
       "b": {
         "raw": "agy:gemini-4-neon",
-        "name": "gemini-4-neon",
+        "name": "Gemini 4 Neon",
+        "labelZh": "Gemini 4 Neon",
+        "labelEn": "Gemini 4 Neon",
         "short": "gemini-4-neon",
         "effort": "xhigh",
         "plies": 78,
         "acpl": 39.4,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "Neon xhigh"
+        ]
       }
     },
     {
@@ -2530,21 +2604,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "codex:gpt-6.2-astra",
-        "name": "gpt-6.2-astra",
+        "name": "GPT-6.2 Astra",
+        "labelZh": "GPT-6.2 Astra",
+        "labelEn": "GPT-6.2 Astra",
         "short": "gpt-6.2-astra",
         "effort": "max",
         "plies": 59,
         "acpl": 11.7,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "Astra 6.2 max"
+        ]
       },
       "b": {
         "raw": "agy:gemini-4-neon",
-        "name": "gemini-4-neon",
+        "name": "Gemini 4 Neon",
+        "labelZh": "Gemini 4 Neon",
+        "labelEn": "Gemini 4 Neon",
         "short": "gemini-4-neon",
         "effort": "xhigh",
         "plies": 58,
         "acpl": 25.7,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Neon xhigh"
+        ]
       }
     },
     {
@@ -2569,21 +2653,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "agy:gemini-4-neon",
-        "name": "gemini-4-neon",
+        "name": "Gemini 4 Neon",
+        "labelZh": "Gemini 4 Neon",
+        "labelEn": "Gemini 4 Neon",
         "short": "gemini-4-neon",
         "effort": "xhigh",
         "plies": 36,
         "acpl": 10.7,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "Neon xhigh"
+        ]
       },
       "b": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 35,
         "acpl": 33.5,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Carbon high"
+        ]
       }
     },
     {
@@ -2608,21 +2702,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "agy:gemini-4-neon",
-        "name": "gemini-4-neon",
+        "name": "Gemini 4 Neon",
+        "labelZh": "Gemini 4 Neon",
+        "labelEn": "Gemini 4 Neon",
         "short": "gemini-4-neon",
         "effort": "xhigh",
         "plies": 76,
         "acpl": 34,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Neon xhigh"
+        ]
       },
       "b": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 75,
         "acpl": 38.2,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Carbon high"
+        ]
       }
     },
     {
@@ -2647,21 +2751,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 39,
         "acpl": 38.9,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "Carbon high"
+        ]
       },
       "b": {
         "raw": "agy:gemini-4-neon",
-        "name": "gemini-4-neon",
+        "name": "Gemini 4 Neon",
+        "labelZh": "Gemini 4 Neon",
+        "labelEn": "Gemini 4 Neon",
         "short": "gemini-4-neon",
         "effort": "xhigh",
         "plies": 39,
         "acpl": 15.6,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Neon xhigh"
+        ]
       }
     },
     {
@@ -2686,21 +2800,31 @@
       "report": "docs/results/neon-carbon-astra-chess-20261119.md",
       "w": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 87,
         "acpl": 62,
-        "blunders": 7
+        "blunders": 7,
+        "aliases": [
+          "Carbon high"
+        ]
       },
       "b": {
         "raw": "agy:gemini-4-neon",
-        "name": "gemini-4-neon",
+        "name": "Gemini 4 Neon",
+        "labelZh": "Gemini 4 Neon",
+        "labelEn": "Gemini 4 Neon",
         "short": "gemini-4-neon",
         "effort": "xhigh",
         "plies": 87,
         "acpl": 54.8,
-        "blunders": 6
+        "blunders": 6,
+        "aliases": [
+          "Neon xhigh"
+        ]
       }
     },
     {
@@ -2725,7 +2849,9 @@
       "report": "docs/results/carbon-vs-agy-opus-high-20261114.md",
       "w": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 69,
@@ -2734,7 +2860,9 @@
       },
       "b": {
         "raw": "agy:claude-opus-5-5",
-        "name": "claude-opus-5-5",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5",
         "effort": "high",
         "plies": 68,
@@ -2764,7 +2892,9 @@
       "report": "docs/results/carbon-vs-agy-opus-high-20261114.md",
       "w": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 44,
@@ -2773,7 +2903,9 @@
       },
       "b": {
         "raw": "agy:claude-opus-5-5",
-        "name": "claude-opus-5-5",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5",
         "effort": "high",
         "plies": 43,
@@ -2803,7 +2935,9 @@
       "report": "docs/results/carbon-vs-agy-opus-high-20261114.md",
       "w": {
         "raw": "agy:claude-opus-5-5",
-        "name": "claude-opus-5-5",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5",
         "effort": "high",
         "plies": 57,
@@ -2812,7 +2946,9 @@
       },
       "b": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 57,
@@ -2842,7 +2978,9 @@
       "report": "docs/results/carbon-vs-agy-opus-high-20261114.md",
       "w": {
         "raw": "agy:claude-opus-5-5",
-        "name": "claude-opus-5-5",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5",
         "effort": "high",
         "plies": 51,
@@ -2851,7 +2989,9 @@
       },
       "b": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 51,
@@ -2881,7 +3021,9 @@
       "report": "docs/results/carbon-vs-agy-opus-high-xq-20261114.md",
       "w": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 38,
@@ -2890,7 +3032,9 @@
       },
       "b": {
         "raw": "agy:claude-opus-5-5",
-        "name": "claude-opus-5-5",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5",
         "effort": "high",
         "plies": 37,
@@ -2920,7 +3064,9 @@
       "report": "docs/results/carbon-vs-agy-opus-high-xq-20261114.md",
       "w": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 83,
@@ -2929,7 +3075,9 @@
       },
       "b": {
         "raw": "agy:claude-opus-5-5",
-        "name": "claude-opus-5-5",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5",
         "effort": "high",
         "plies": 82,
@@ -2959,7 +3107,9 @@
       "report": "docs/results/carbon-vs-agy-opus-high-xq-20261114.md",
       "w": {
         "raw": "agy:claude-opus-5-5",
-        "name": "claude-opus-5-5",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5",
         "effort": "high",
         "plies": 57,
@@ -2968,7 +3118,9 @@
       },
       "b": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 57,
@@ -2998,7 +3150,9 @@
       "report": "docs/results/carbon-vs-agy-opus-high-xq-20261114.md",
       "w": {
         "raw": "agy:claude-opus-5-5",
-        "name": "claude-opus-5-5",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5",
         "effort": "high",
         "plies": 88,
@@ -3007,7 +3161,9 @@
       },
       "b": {
         "raw": "agy:gemini-4-carbon",
-        "name": "gemini-4-carbon",
+        "name": "Gemini 4 Carbon",
+        "labelZh": "Gemini 4 Carbon",
+        "labelEn": "Gemini 4 Carbon",
         "short": "gemini-4-carbon",
         "effort": "high",
         "plies": 87,
@@ -3037,7 +3193,9 @@
       "report": "docs/results/argon-vs-agy-opus-high-20261020.md",
       "w": {
         "raw": "gemini:gemini-4-argon-high",
-        "name": "gemini-4-argon-high",
+        "name": "Gemini 4 Argon",
+        "labelZh": "Gemini 4 Argon",
+        "labelEn": "Gemini 4 Argon",
         "short": "gemini-4-argon-high",
         "effort": "high",
         "plies": 77,
@@ -3046,7 +3204,9 @@
       },
       "b": {
         "raw": "agy:claude-opus-5-5-high",
-        "name": "claude-opus-5-5-high",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5-high",
         "effort": "high",
         "plies": 76,
@@ -3076,7 +3236,9 @@
       "report": "docs/results/argon-vs-agy-opus-high-20261020.md",
       "w": {
         "raw": "agy:claude-opus-5-5-high",
-        "name": "claude-opus-5-5-high",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5-high",
         "effort": "high",
         "plies": 39,
@@ -3085,7 +3247,9 @@
       },
       "b": {
         "raw": "gemini:gemini-4-argon-high",
-        "name": "gemini-4-argon-high",
+        "name": "Gemini 4 Argon",
+        "labelZh": "Gemini 4 Argon",
+        "labelEn": "Gemini 4 Argon",
         "short": "gemini-4-argon-high",
         "effort": "high",
         "plies": 39,
@@ -3115,7 +3279,9 @@
       "report": "docs/results/argon-vs-agy-opus-high-20261020.md",
       "w": {
         "raw": "agy:claude-opus-5-5-high",
-        "name": "claude-opus-5-5-high",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5-high",
         "effort": "high",
         "plies": 64,
@@ -3124,7 +3290,9 @@
       },
       "b": {
         "raw": "gemini:gemini-4-argon-high",
-        "name": "gemini-4-argon-high",
+        "name": "Gemini 4 Argon",
+        "labelZh": "Gemini 4 Argon",
+        "labelEn": "Gemini 4 Argon",
         "short": "gemini-4-argon-high",
         "effort": "high",
         "plies": 63,
@@ -3153,21 +3321,33 @@
       "report": "docs/results/argon-high-chess-20261019.md",
       "w": {
         "raw": "gemini:gemini-4-argon-high",
-        "name": "gemini-4-argon-high",
+        "name": "Gemini 4 Argon",
+        "labelZh": "Gemini 4 Argon",
+        "labelEn": "Gemini 4 Argon",
         "short": "gemini-4-argon-high",
         "effort": "high",
         "plies": 43,
         "acpl": 21.4,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "Gemini 4 Argon（白）",
+          "Gemini 4 Argon (White)"
+        ]
       },
       "b": {
         "raw": "gemini:gemini-4-argon-high",
-        "name": "gemini-4-argon-high",
+        "name": "Gemini 4 Argon",
+        "labelZh": "Gemini 4 Argon",
+        "labelEn": "Gemini 4 Argon",
         "short": "gemini-4-argon-high",
         "effort": "high",
         "plies": 42,
         "acpl": 42.2,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "Gemini 4 Argon（黑）",
+          "Gemini 4 Argon (Black)"
+        ]
       }
     },
     {
@@ -3191,21 +3371,33 @@
       "report": "docs/results/argon-high-xiangqi-20261019.md",
       "w": {
         "raw": "gemini:gemini-4-argon-high",
-        "name": "gemini-4-argon-high",
+        "name": "Gemini 4 Argon",
+        "labelZh": "Gemini 4 Argon",
+        "labelEn": "Gemini 4 Argon",
         "short": "gemini-4-argon-high",
         "effort": "high",
         "plies": 79,
         "acpl": 58.7,
-        "blunders": 5
+        "blunders": 5,
+        "aliases": [
+          "Gemini 4 Argon（红）",
+          "Gemini 4 Argon (Red)"
+        ]
       },
       "b": {
         "raw": "gemini:gemini-4-argon-high",
-        "name": "gemini-4-argon-high",
+        "name": "Gemini 4 Argon",
+        "labelZh": "Gemini 4 Argon",
+        "labelEn": "Gemini 4 Argon",
         "short": "gemini-4-argon-high",
         "effort": "high",
         "plies": 79,
         "acpl": 48.2,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "Gemini 4 Argon（黑）",
+          "Gemini 4 Argon (Black)"
+        ]
       }
     },
     {
@@ -3230,7 +3422,9 @@
       "report": "docs/results/argon-vs-agy-opus-high-20261020.md",
       "w": {
         "raw": "gemini:gemini-4-argon-high",
-        "name": "gemini-4-argon-high",
+        "name": "Gemini 4 Argon",
+        "labelZh": "Gemini 4 Argon",
+        "labelEn": "Gemini 4 Argon",
         "short": "gemini-4-argon-high",
         "effort": "high",
         "plies": 38,
@@ -3239,7 +3433,9 @@
       },
       "b": {
         "raw": "agy:claude-opus-5-5-high",
-        "name": "claude-opus-5-5-high",
+        "name": "Claude Opus 5.5 (agy)",
+        "labelZh": "Claude Opus 5.5 (agy)",
+        "labelEn": "Claude Opus 5.5 (agy)",
         "short": "claude-opus-5-5-high",
         "effort": "high",
         "plies": 37,
@@ -3268,21 +3464,33 @@
       "report": "docs/results/carbon-vs-agy-opus-high-xq-20261114.md",
       "w": {
         "raw": "gemini:gemini-3.8-flash-high",
-        "name": "gemini-3.8-flash-high",
+        "name": "Gemini 3.8 Flash",
+        "labelZh": "Gemini 3.8 Flash",
+        "labelEn": "Gemini 3.8 Flash",
         "short": "gemini-3.8-flash-high",
         "effort": "high",
         "plies": null,
         "acpl": null,
-        "blunders": null
+        "blunders": null,
+        "aliases": [
+          "Gemini 3.8 Flash（红）",
+          "Gemini 3.8 Flash (Red)"
+        ]
       },
       "b": {
         "raw": "gemini:gemini-3.8-flash-high",
-        "name": "gemini-3.8-flash-high",
+        "name": "Gemini 3.8 Flash",
+        "labelZh": "Gemini 3.8 Flash",
+        "labelEn": "Gemini 3.8 Flash",
         "short": "gemini-3.8-flash-high",
         "effort": "high",
         "plies": null,
         "acpl": null,
-        "blunders": null
+        "blunders": null,
+        "aliases": [
+          "Gemini 3.8 Flash（黑）",
+          "Gemini 3.8 Flash (Black)"
+        ]
       }
     },
     {
@@ -3306,7 +3514,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 71,
@@ -3315,7 +3525,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 71,
@@ -3344,7 +3556,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 70,
@@ -3353,7 +3567,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 69,
@@ -3382,7 +3598,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 40,
@@ -3391,7 +3609,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 39,
@@ -3420,7 +3640,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 68,
@@ -3429,7 +3651,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 67,
@@ -3458,7 +3682,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 66,
@@ -3467,7 +3693,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 66,
@@ -3496,7 +3724,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 44,
@@ -3505,7 +3735,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 44,
@@ -3534,7 +3766,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 46,
@@ -3543,7 +3777,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 46,
@@ -3572,7 +3808,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 59,
@@ -3581,7 +3819,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 58,
@@ -3610,7 +3850,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=1900",
-        "name": "engine:stockfish:elo=1900",
+        "name": "Stockfish · elo=1900",
+        "labelZh": "Stockfish · elo=1900",
+        "labelEn": "Stockfish · elo=1900",
         "short": "engine:stockfish:elo=1900",
         "effort": "",
         "plies": 90,
@@ -3619,7 +3861,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 89,
@@ -3648,7 +3892,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 96,
@@ -3657,7 +3903,9 @@
       },
       "b": {
         "raw": "engine:stockfish:elo=1900",
-        "name": "engine:stockfish:elo=1900",
+        "name": "Stockfish · elo=1900",
+        "labelZh": "Stockfish · elo=1900",
+        "labelEn": "Stockfish · elo=1900",
         "short": "engine:stockfish:elo=1900",
         "effort": "",
         "plies": 96,
@@ -3686,7 +3934,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=1900",
-        "name": "engine:stockfish:elo=1900",
+        "name": "Stockfish · elo=1900",
+        "labelZh": "Stockfish · elo=1900",
+        "labelEn": "Stockfish · elo=1900",
         "short": "engine:stockfish:elo=1900",
         "effort": "",
         "plies": 36,
@@ -3695,7 +3945,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 36,
@@ -3724,7 +3976,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 96,
@@ -3733,7 +3987,9 @@
       },
       "b": {
         "raw": "engine:stockfish:elo=1900",
-        "name": "engine:stockfish:elo=1900",
+        "name": "Stockfish · elo=1900",
+        "labelZh": "Stockfish · elo=1900",
+        "labelEn": "Stockfish · elo=1900",
         "short": "engine:stockfish:elo=1900",
         "effort": "",
         "plies": 96,
@@ -3762,7 +4018,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=1900",
-        "name": "engine:stockfish:elo=1900",
+        "name": "Stockfish · elo=1900",
+        "labelZh": "Stockfish · elo=1900",
+        "labelEn": "Stockfish · elo=1900",
         "short": "engine:stockfish:elo=1900",
         "effort": "",
         "plies": 91,
@@ -3771,7 +4029,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 90,
@@ -3800,7 +4060,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 44,
@@ -3809,7 +4071,9 @@
       },
       "b": {
         "raw": "engine:stockfish:elo=1900",
-        "name": "engine:stockfish:elo=1900",
+        "name": "Stockfish · elo=1900",
+        "labelZh": "Stockfish · elo=1900",
+        "labelEn": "Stockfish · elo=1900",
         "short": "engine:stockfish:elo=1900",
         "effort": "",
         "plies": 43,
@@ -3838,7 +4102,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=1900",
-        "name": "engine:stockfish:elo=1900",
+        "name": "Stockfish · elo=1900",
+        "labelZh": "Stockfish · elo=1900",
+        "labelEn": "Stockfish · elo=1900",
         "short": "engine:stockfish:elo=1900",
         "effort": "",
         "plies": 96,
@@ -3847,7 +4113,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 96,
@@ -3876,7 +4144,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 33,
@@ -3885,7 +4155,9 @@
       },
       "b": {
         "raw": "engine:stockfish:elo=1900",
-        "name": "engine:stockfish:elo=1900",
+        "name": "Stockfish · elo=1900",
+        "labelZh": "Stockfish · elo=1900",
+        "labelEn": "Stockfish · elo=1900",
         "short": "engine:stockfish:elo=1900",
         "effort": "",
         "plies": 32,
@@ -3914,7 +4186,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=1900",
-        "name": "engine:stockfish:elo=1900",
+        "name": "Stockfish · elo=1900",
+        "labelZh": "Stockfish · elo=1900",
+        "labelEn": "Stockfish · elo=1900",
         "short": "engine:stockfish:elo=1900",
         "effort": "",
         "plies": 96,
@@ -3923,7 +4197,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 96,
@@ -3952,7 +4228,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=2100",
-        "name": "engine:stockfish:elo=2100",
+        "name": "Stockfish · elo=2100",
+        "labelZh": "Stockfish · elo=2100",
+        "labelEn": "Stockfish · elo=2100",
         "short": "engine:stockfish:elo=2100",
         "effort": "",
         "plies": 57,
@@ -3961,7 +4239,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 57,
@@ -3990,7 +4270,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 69,
@@ -3999,7 +4281,9 @@
       },
       "b": {
         "raw": "engine:stockfish:elo=2100",
-        "name": "engine:stockfish:elo=2100",
+        "name": "Stockfish · elo=2100",
+        "labelZh": "Stockfish · elo=2100",
+        "labelEn": "Stockfish · elo=2100",
         "short": "engine:stockfish:elo=2100",
         "effort": "",
         "plies": 69,
@@ -4028,7 +4312,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=2100",
-        "name": "engine:stockfish:elo=2100",
+        "name": "Stockfish · elo=2100",
+        "labelZh": "Stockfish · elo=2100",
+        "labelEn": "Stockfish · elo=2100",
         "short": "engine:stockfish:elo=2100",
         "effort": "",
         "plies": 45,
@@ -4037,7 +4323,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 44,
@@ -4066,7 +4354,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 96,
@@ -4075,7 +4365,9 @@
       },
       "b": {
         "raw": "engine:stockfish:elo=2100",
-        "name": "engine:stockfish:elo=2100",
+        "name": "Stockfish · elo=2100",
+        "labelZh": "Stockfish · elo=2100",
+        "labelEn": "Stockfish · elo=2100",
         "short": "engine:stockfish:elo=2100",
         "effort": "",
         "plies": 96,
@@ -4104,7 +4396,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=2100",
-        "name": "engine:stockfish:elo=2100",
+        "name": "Stockfish · elo=2100",
+        "labelZh": "Stockfish · elo=2100",
+        "labelEn": "Stockfish · elo=2100",
         "short": "engine:stockfish:elo=2100",
         "effort": "",
         "plies": 96,
@@ -4113,7 +4407,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 96,
@@ -4142,7 +4438,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 96,
@@ -4151,7 +4449,9 @@
       },
       "b": {
         "raw": "engine:stockfish:elo=2100",
-        "name": "engine:stockfish:elo=2100",
+        "name": "Stockfish · elo=2100",
+        "labelZh": "Stockfish · elo=2100",
+        "labelEn": "Stockfish · elo=2100",
         "short": "engine:stockfish:elo=2100",
         "effort": "",
         "plies": 96,
@@ -4180,7 +4480,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=2100",
-        "name": "engine:stockfish:elo=2100",
+        "name": "Stockfish · elo=2100",
+        "labelZh": "Stockfish · elo=2100",
+        "labelEn": "Stockfish · elo=2100",
         "short": "engine:stockfish:elo=2100",
         "effort": "",
         "plies": 51,
@@ -4189,7 +4491,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 51,
@@ -4218,7 +4522,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 56,
@@ -4227,7 +4533,9 @@
       },
       "b": {
         "raw": "engine:stockfish:elo=2100",
-        "name": "engine:stockfish:elo=2100",
+        "name": "Stockfish · elo=2100",
+        "labelZh": "Stockfish · elo=2100",
+        "labelEn": "Stockfish · elo=2100",
         "short": "engine:stockfish:elo=2100",
         "effort": "",
         "plies": 55,
@@ -4256,7 +4564,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=2300",
-        "name": "engine:stockfish:elo=2300",
+        "name": "Stockfish · elo=2300",
+        "labelZh": "Stockfish · elo=2300",
+        "labelEn": "Stockfish · elo=2300",
         "short": "engine:stockfish:elo=2300",
         "effort": "",
         "plies": 53,
@@ -4265,7 +4575,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 53,
@@ -4294,7 +4606,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 83,
@@ -4303,7 +4617,9 @@
       },
       "b": {
         "raw": "engine:stockfish:elo=2300",
-        "name": "engine:stockfish:elo=2300",
+        "name": "Stockfish · elo=2300",
+        "labelZh": "Stockfish · elo=2300",
+        "labelEn": "Stockfish · elo=2300",
         "short": "engine:stockfish:elo=2300",
         "effort": "",
         "plies": 83,
@@ -4332,7 +4648,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=2300",
-        "name": "engine:stockfish:elo=2300",
+        "name": "Stockfish · elo=2300",
+        "labelZh": "Stockfish · elo=2300",
+        "labelEn": "Stockfish · elo=2300",
         "short": "engine:stockfish:elo=2300",
         "effort": "",
         "plies": 85,
@@ -4341,7 +4659,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 84,
@@ -4370,7 +4690,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 96,
@@ -4379,7 +4701,9 @@
       },
       "b": {
         "raw": "engine:stockfish:elo=2300",
-        "name": "engine:stockfish:elo=2300",
+        "name": "Stockfish · elo=2300",
+        "labelZh": "Stockfish · elo=2300",
+        "labelEn": "Stockfish · elo=2300",
         "short": "engine:stockfish:elo=2300",
         "effort": "",
         "plies": 96,
@@ -4408,7 +4732,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:stockfish:elo=2300",
-        "name": "engine:stockfish:elo=2300",
+        "name": "Stockfish · elo=2300",
+        "labelZh": "Stockfish · elo=2300",
+        "labelEn": "Stockfish · elo=2300",
         "short": "engine:stockfish:elo=2300",
         "effort": "",
         "plies": 77,
@@ -4417,7 +4743,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 76,
@@ -4446,7 +4774,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 36,
@@ -4455,7 +4785,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 35,
@@ -4484,7 +4816,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 26,
@@ -4493,7 +4827,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 25,
@@ -4522,7 +4858,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 33,
@@ -4531,7 +4869,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 32,
@@ -4560,7 +4900,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 41,
@@ -4569,7 +4911,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 40,
@@ -4598,7 +4942,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 79,
@@ -4607,7 +4953,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 79,
@@ -4636,7 +4984,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 46,
@@ -4645,7 +4995,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 45,
@@ -4674,7 +5026,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 90,
@@ -4683,7 +5037,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 90,
@@ -4712,7 +5068,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 81,
@@ -4721,7 +5079,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 80,
@@ -4750,7 +5110,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 38,
@@ -4759,7 +5121,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 38,
@@ -4788,7 +5152,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=1000",
-        "name": "engine:fsf:nodes=1000",
+        "name": "Fairy-Stockfish · nodes=1000",
+        "labelZh": "Fairy-Stockfish · nodes=1000",
+        "labelEn": "Fairy-Stockfish · nodes=1000",
         "short": "engine:fsf:nodes=1000",
         "effort": "",
         "plies": 24,
@@ -4797,7 +5163,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 23,
@@ -4826,7 +5194,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 42,
@@ -4835,7 +5205,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=1000",
-        "name": "engine:fsf:nodes=1000",
+        "name": "Fairy-Stockfish · nodes=1000",
+        "labelZh": "Fairy-Stockfish · nodes=1000",
+        "labelEn": "Fairy-Stockfish · nodes=1000",
         "short": "engine:fsf:nodes=1000",
         "effort": "",
         "plies": 42,
@@ -4864,7 +5236,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=1000",
-        "name": "engine:fsf:nodes=1000",
+        "name": "Fairy-Stockfish · nodes=1000",
+        "labelZh": "Fairy-Stockfish · nodes=1000",
+        "labelEn": "Fairy-Stockfish · nodes=1000",
         "short": "engine:fsf:nodes=1000",
         "effort": "",
         "plies": 33,
@@ -4873,7 +5247,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 33,
@@ -4902,7 +5278,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 32,
@@ -4911,7 +5289,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=1000",
-        "name": "engine:fsf:nodes=1000",
+        "name": "Fairy-Stockfish · nodes=1000",
+        "labelZh": "Fairy-Stockfish · nodes=1000",
+        "labelEn": "Fairy-Stockfish · nodes=1000",
         "short": "engine:fsf:nodes=1000",
         "effort": "",
         "plies": 32,
@@ -4940,7 +5320,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=1000",
-        "name": "engine:fsf:nodes=1000",
+        "name": "Fairy-Stockfish · nodes=1000",
+        "labelZh": "Fairy-Stockfish · nodes=1000",
+        "labelEn": "Fairy-Stockfish · nodes=1000",
         "short": "engine:fsf:nodes=1000",
         "effort": "",
         "plies": 40,
@@ -4949,7 +5331,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 39,
@@ -4978,7 +5362,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 49,
@@ -4987,7 +5373,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=1000",
-        "name": "engine:fsf:nodes=1000",
+        "name": "Fairy-Stockfish · nodes=1000",
+        "labelZh": "Fairy-Stockfish · nodes=1000",
+        "labelEn": "Fairy-Stockfish · nodes=1000",
         "short": "engine:fsf:nodes=1000",
         "effort": "",
         "plies": 48,
@@ -5016,7 +5404,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=1000",
-        "name": "engine:fsf:nodes=1000",
+        "name": "Fairy-Stockfish · nodes=1000",
+        "labelZh": "Fairy-Stockfish · nodes=1000",
+        "labelEn": "Fairy-Stockfish · nodes=1000",
         "short": "engine:fsf:nodes=1000",
         "effort": "",
         "plies": 20,
@@ -5025,7 +5415,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 19,
@@ -5054,7 +5446,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 12,
@@ -5063,7 +5457,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=1000",
-        "name": "engine:fsf:nodes=1000",
+        "name": "Fairy-Stockfish · nodes=1000",
+        "labelZh": "Fairy-Stockfish · nodes=1000",
+        "labelEn": "Fairy-Stockfish · nodes=1000",
         "short": "engine:fsf:nodes=1000",
         "effort": "",
         "plies": 12,
@@ -5092,7 +5488,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 71,
@@ -5101,7 +5499,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 70,
@@ -5130,7 +5530,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 25,
@@ -5139,7 +5541,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 25,
@@ -5168,7 +5572,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 49,
@@ -5177,7 +5583,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 49,
@@ -5206,7 +5614,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 59,
@@ -5215,7 +5625,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 58,
@@ -5244,7 +5656,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 53,
@@ -5253,7 +5667,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 52,
@@ -5282,7 +5698,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 46,
@@ -5291,7 +5709,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 45,
@@ -5320,7 +5740,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 58,
@@ -5329,7 +5751,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 57,
@@ -5358,7 +5782,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 38,
@@ -5367,7 +5793,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 38,
@@ -5396,7 +5824,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 70,
@@ -5405,7 +5835,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 70,
@@ -5434,7 +5866,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 13,
@@ -5443,7 +5877,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 13,
@@ -5472,7 +5908,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 67,
@@ -5481,7 +5919,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 67,
@@ -5510,7 +5950,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 38,
@@ -5519,7 +5961,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 38,
@@ -5548,7 +5992,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 45,
@@ -5557,7 +6003,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 45,
@@ -5586,7 +6034,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 46,
@@ -5595,7 +6045,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 45,
@@ -5624,7 +6076,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 61,
@@ -5633,7 +6087,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 61,
@@ -5662,7 +6118,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 43,
@@ -5671,7 +6129,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 42,
@@ -5700,7 +6160,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 90,
@@ -5709,7 +6171,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 90,
@@ -5738,7 +6202,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 69,
@@ -5747,7 +6213,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 68,
@@ -5776,7 +6244,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 35,
@@ -5785,7 +6255,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 35,
@@ -5814,7 +6286,9 @@
       "report": "docs/results/opus-max-rating.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 40,
@@ -5823,7 +6297,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=300",
-        "name": "engine:fsf:nodes=300",
+        "name": "Fairy-Stockfish · nodes=300",
+        "labelZh": "Fairy-Stockfish · nodes=300",
+        "labelEn": "Fairy-Stockfish · nodes=300",
         "short": "engine:fsf:nodes=300",
         "effort": "",
         "plies": 40,
@@ -5853,21 +6329,31 @@
       "report": "docs/results/game-opus-drop-vs-astra-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 75,
         "acpl": 56.5,
-        "blunders": 5
+        "blunders": 5,
+        "aliases": [
+          "GPT-6 Astra (session)"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 74,
         "acpl": 70.1,
-        "blunders": 6
+        "blunders": 6,
+        "aliases": [
+          "Claude Opus 5.5 (drop_thinking)"
+        ]
       }
     },
     {
@@ -5892,21 +6378,31 @@
       "report": "docs/results/game-opus-drop-vs-astra-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 39,
         "acpl": 69.8,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "GPT-6 Astra (session)"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 39,
         "acpl": 41.8,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Claude Opus 5.5 (drop_thinking)"
+        ]
       }
     },
     {
@@ -5931,21 +6427,31 @@
       "report": "docs/results/game-opus-drop-vs-astra-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 43,
         "acpl": 14.8,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Claude Opus 5.5 (drop_thinking)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 42,
         "acpl": 35.7,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "GPT-6 Astra (session)"
+        ]
       }
     },
     {
@@ -5970,21 +6476,31 @@
       "report": "docs/results/game-opus-drop-vs-astra-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 50,
         "acpl": 25.5,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Claude Opus 5.5 (drop_thinking)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 49,
         "acpl": 46.4,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "GPT-6 Astra (session)"
+        ]
       }
     },
     {
@@ -6009,21 +6525,31 @@
       "report": "docs/results/game-opus-drop-vs-astra-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 24,
         "acpl": 96.8,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "GPT-6 Astra (session)"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 24,
         "acpl": 59.8,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "Claude Opus 5.5 (drop_thinking)"
+        ]
       }
     },
     {
@@ -6048,21 +6574,31 @@
       "report": "docs/results/game-opus-drop-vs-astra-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 36,
         "acpl": 69.6,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "GPT-6 Astra (session)"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 36,
         "acpl": 40.9,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "Claude Opus 5.5 (drop_thinking)"
+        ]
       }
     },
     {
@@ -6087,21 +6623,31 @@
       "report": "docs/results/game-opus-drop-vs-astra-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 53,
         "acpl": 48.6,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "Claude Opus 5.5 (drop_thinking)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 52,
         "acpl": 63,
-        "blunders": 5
+        "blunders": 5,
+        "aliases": [
+          "GPT-6 Astra (session)"
+        ]
       }
     },
     {
@@ -6126,21 +6672,31 @@
       "report": "docs/results/game-opus-drop-vs-astra-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 62,
         "acpl": 65.7,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "Claude Opus 5.5 (drop_thinking)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 61,
         "acpl": 82.4,
-        "blunders": 7
+        "blunders": 7,
+        "aliases": [
+          "GPT-6 Astra (session)"
+        ]
       }
     },
     {
@@ -6165,21 +6721,31 @@
       "report": "docs/results/game-opus-max-vs-astra-max-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 61,
         "acpl": 71.7,
-        "blunders": 7
+        "blunders": 7,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 61,
         "acpl": 55.7,
-        "blunders": 5
+        "blunders": 5,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -6204,21 +6770,31 @@
       "report": "docs/results/game-opus-max-vs-astra-max-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 40,
         "acpl": 45.3,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 40,
         "acpl": 24.1,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -6243,21 +6819,31 @@
       "report": "docs/results/game-opus-max-vs-astra-max-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 44,
         "acpl": 75.6,
-        "blunders": 4
+        "blunders": 4,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 44,
         "acpl": 57.3,
-        "blunders": 4
+        "blunders": 4,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -6282,21 +6868,31 @@
       "report": "docs/results/game-opus-max-vs-astra-max-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 33,
         "acpl": 20.4,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 32,
         "acpl": 48.8,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -6321,21 +6917,31 @@
       "report": "docs/results/game-opus-max-vs-astra-max-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 41,
         "acpl": 90.1,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 41,
         "acpl": 65,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -6360,21 +6966,31 @@
       "report": "docs/results/game-opus-max-vs-astra-max-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 72,
         "acpl": 79.8,
-        "blunders": 5
+        "blunders": 5,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 72,
         "acpl": 63.3,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -6399,21 +7015,31 @@
       "report": "docs/results/game-opus-max-vs-astra-max-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 16,
         "acpl": 17.9,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 15,
         "acpl": 83.9,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -6438,21 +7064,31 @@
       "report": "docs/results/game-opus-max-vs-astra-max-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 9,
         "acpl": 6.6,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 8,
         "acpl": 129,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -6477,21 +7113,31 @@
       "report": "docs/results/game-opus-vs-astra-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 67,
         "acpl": 37.1,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 66,
         "acpl": 50.7,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -6516,21 +7162,31 @@
       "report": "docs/results/game-opus-vs-astra-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 49,
         "acpl": 35.1,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 48,
         "acpl": 51.8,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -6555,21 +7211,31 @@
       "report": "docs/results/game-opus-vs-astra-max-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 54,
         "acpl": 34.5,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 54,
         "acpl": 16.9,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -6594,21 +7260,31 @@
       "report": "docs/results/game-opus-vs-astra-max-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 62,
         "acpl": 62.5,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 62,
         "acpl": 49.4,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -6633,21 +7309,31 @@
       "report": "docs/results/game-opus-vs-astra-xq-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 26,
         "acpl": 71.3,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 26,
         "acpl": 31.4,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -6672,21 +7358,31 @@
       "report": "docs/results/game-opus-vs-astra-xq-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 17,
         "acpl": 65.6,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 16,
         "acpl": 130.2,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -6711,21 +7407,31 @@
       "report": "docs/results/game-opus-vs-astra-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 53,
         "acpl": 16.2,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 52,
         "acpl": 33.8,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -6750,21 +7456,31 @@
       "report": "docs/results/game-opus-vs-astra-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 79,
         "acpl": 92.5,
-        "blunders": 7
+        "blunders": 7,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 78,
         "acpl": 105.4,
-        "blunders": 7
+        "blunders": 7,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -6789,21 +7505,31 @@
       "report": "docs/results/game-opus-vs-astra-xq-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 31,
         "acpl": 202.8,
-        "blunders": 9
+        "blunders": 9,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 31,
         "acpl": 171.6,
-        "blunders": 9
+        "blunders": 9,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -6828,21 +7554,31 @@
       "report": "docs/results/game-opus-vs-astra-xq-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 32,
         "acpl": 218.9,
-        "blunders": 4
+        "blunders": 4,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 31,
         "acpl": 266.3,
-        "blunders": 8
+        "blunders": 8,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -6867,21 +7603,31 @@
       "report": "docs/results/game-opus-vs-astra-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 32,
         "acpl": 30.6,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 31,
         "acpl": 60.1,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -6906,21 +7652,31 @@
       "report": "docs/results/game-opus-vs-astra-max-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 66,
         "acpl": 14.5,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 65,
         "acpl": 25,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -6945,21 +7701,31 @@
       "report": "docs/results/game-opus-vs-astra-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 43,
         "acpl": 81.8,
-        "blunders": 7
+        "blunders": 7,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "xhigh",
         "plies": 43,
         "acpl": 61.3,
-        "blunders": 5
+        "blunders": 5,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -6984,21 +7750,31 @@
       "report": "docs/results/game-opus-vs-astra-max-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 57,
         "acpl": 36.6,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 56,
         "acpl": 52.7,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -7023,21 +7799,31 @@
       "report": "docs/results/game-opus-vs-astra-max-xq-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 81,
         "acpl": 93.2,
-        "blunders": 8
+        "blunders": 8,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 80,
         "acpl": 97.2,
-        "blunders": 5
+        "blunders": 5,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -7062,21 +7848,31 @@
       "report": "docs/results/game-opus-vs-astra-max-xq-1.md",
       "w": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 23,
         "acpl": 74.6,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 23,
         "acpl": 26,
-        "blunders": 0
+        "blunders": 0,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       }
     },
     {
@@ -7101,21 +7897,31 @@
       "report": "docs/results/game-opus-vs-astra-max-xq-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 29,
         "acpl": 87.4,
-        "blunders": 3
+        "blunders": 3,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 29,
         "acpl": 55.7,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -7140,21 +7946,31 @@
       "report": "docs/results/game-opus-vs-astra-max-xq-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 51,
         "acpl": 25.6,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:astra",
-        "name": "GPT astra",
+        "name": "GPT Astra",
+        "labelZh": "GPT Astra",
+        "labelEn": "GPT Astra",
         "short": "astra",
         "effort": "max",
         "plies": 50,
         "acpl": 45.6,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "GPT-6 Astra"
+        ]
       }
     },
     {
@@ -7179,21 +7995,31 @@
       "report": "docs/results/game-opus-vs-sol-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 48,
         "acpl": 23,
-        "blunders": 1
+        "blunders": 1,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:sol",
-        "name": "GPT sol",
+        "name": "GPT Sol",
+        "labelZh": "GPT Sol",
+        "labelEn": "GPT Sol",
         "short": "sol",
         "effort": "xhigh",
         "plies": 47,
         "acpl": 44.5,
-        "blunders": 2
+        "blunders": 2,
+        "aliases": [
+          "GPT-6 Sol"
+        ]
       }
     },
     {
@@ -7218,21 +8044,31 @@
       "report": "docs/results/game-opus-vs-sol-1.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 43,
         "acpl": 99.7,
-        "blunders": 4
+        "blunders": 4,
+        "aliases": [
+          "Claude Opus 5.5 (CLI)"
+        ]
       },
       "b": {
         "raw": "codex:sol",
-        "name": "GPT sol",
+        "name": "GPT Sol",
+        "labelZh": "GPT Sol",
+        "labelEn": "GPT Sol",
         "short": "sol",
         "effort": "xhigh",
         "plies": 42,
         "acpl": 119.3,
-        "blunders": 7
+        "blunders": 7,
+        "aliases": [
+          "GPT-6 Sol"
+        ]
       }
     },
     {
@@ -7256,7 +8092,9 @@
       "report": "docs/results/batch3-maxdepth.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 23,
@@ -7265,7 +8103,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 23,
@@ -7294,7 +8134,9 @@
       "report": "docs/results/batch3-maxdepth.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 35,
@@ -7303,7 +8145,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 34,
@@ -7332,7 +8176,9 @@
       "report": "docs/results/batch3-maxdepth.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 30,
@@ -7341,7 +8187,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 30,
@@ -7370,7 +8218,9 @@
       "report": "docs/results/batch3-maxdepth.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 22,
@@ -7379,7 +8229,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 21,
@@ -7408,7 +8260,9 @@
       "report": "docs/results/batch3-maxdepth.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 11,
@@ -7417,7 +8271,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 10,
@@ -7446,7 +8302,9 @@
       "report": "docs/results/batch3-maxdepth.md",
       "w": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 16,
@@ -7455,7 +8313,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "max",
         "plies": 16,
@@ -7484,7 +8344,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 44,
@@ -7493,7 +8355,9 @@
       },
       "b": {
         "raw": "engine:maia-1100",
-        "name": "engine:maia-1100",
+        "name": "Maia 1100",
+        "labelZh": "Maia 1100",
+        "labelEn": "Maia 1100",
         "short": "engine:maia-1100",
         "effort": "",
         "plies": 43,
@@ -7522,7 +8386,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 49,
@@ -7531,7 +8397,9 @@
       },
       "b": {
         "raw": "engine:maia-1100",
-        "name": "engine:maia-1100",
+        "name": "Maia 1100",
+        "labelZh": "Maia 1100",
+        "labelEn": "Maia 1100",
         "short": "engine:maia-1100",
         "effort": "",
         "plies": 48,
@@ -7560,7 +8428,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 68,
@@ -7569,7 +8439,9 @@
       },
       "b": {
         "raw": "engine:maia-1100",
-        "name": "engine:maia-1100",
+        "name": "Maia 1100",
+        "labelZh": "Maia 1100",
+        "labelEn": "Maia 1100",
         "short": "engine:maia-1100",
         "effort": "",
         "plies": 67,
@@ -7598,7 +8470,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 22,
@@ -7607,7 +8481,9 @@
       },
       "b": {
         "raw": "engine:maia-1100",
-        "name": "engine:maia-1100",
+        "name": "Maia 1100",
+        "labelZh": "Maia 1100",
+        "labelEn": "Maia 1100",
         "short": "engine:maia-1100",
         "effort": "",
         "plies": 21,
@@ -7636,7 +8512,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 52,
@@ -7645,7 +8523,9 @@
       },
       "b": {
         "raw": "engine:maia-1100",
-        "name": "engine:maia-1100",
+        "name": "Maia 1100",
+        "labelZh": "Maia 1100",
+        "labelEn": "Maia 1100",
         "short": "engine:maia-1100",
         "effort": "",
         "plies": 51,
@@ -7674,7 +8554,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 21,
@@ -7683,7 +8565,9 @@
       },
       "b": {
         "raw": "engine:maia-1100",
-        "name": "engine:maia-1100",
+        "name": "Maia 1100",
+        "labelZh": "Maia 1100",
+        "labelEn": "Maia 1100",
         "short": "engine:maia-1100",
         "effort": "",
         "plies": 20,
@@ -7712,7 +8596,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 62,
@@ -7721,7 +8607,9 @@
       },
       "b": {
         "raw": "engine:maia-1100",
-        "name": "engine:maia-1100",
+        "name": "Maia 1100",
+        "labelZh": "Maia 1100",
+        "labelEn": "Maia 1100",
         "short": "engine:maia-1100",
         "effort": "",
         "plies": 61,
@@ -7750,7 +8638,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 39,
@@ -7759,7 +8649,9 @@
       },
       "b": {
         "raw": "engine:maia-1100",
-        "name": "engine:maia-1100",
+        "name": "Maia 1100",
+        "labelZh": "Maia 1100",
+        "labelEn": "Maia 1100",
         "short": "engine:maia-1100",
         "effort": "",
         "plies": 38,
@@ -7788,7 +8680,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 28,
@@ -7797,7 +8691,9 @@
       },
       "b": {
         "raw": "engine:maia-1100",
-        "name": "engine:maia-1100",
+        "name": "Maia 1100",
+        "labelZh": "Maia 1100",
+        "labelEn": "Maia 1100",
         "short": "engine:maia-1100",
         "effort": "",
         "plies": 27,
@@ -7826,7 +8722,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 52,
@@ -7835,7 +8733,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 52,
@@ -7864,7 +8764,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 52,
@@ -7873,7 +8775,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 51,
@@ -7902,7 +8806,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 56,
@@ -7911,7 +8817,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 56,
@@ -7940,7 +8848,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 46,
@@ -7949,7 +8859,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 45,
@@ -7978,7 +8890,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 46,
@@ -7987,7 +8901,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 45,
@@ -8016,7 +8932,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 73,
@@ -8025,7 +8943,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 73,
@@ -8054,7 +8974,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 66,
@@ -8063,7 +8985,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 66,
@@ -8092,7 +9016,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 55,
@@ -8101,7 +9027,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 54,
@@ -8130,7 +9058,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 39,
@@ -8139,7 +9069,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 39,
@@ -8168,7 +9100,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 44,
@@ -8177,7 +9111,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 43,
@@ -8206,7 +9142,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 78,
@@ -8215,7 +9153,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 78,
@@ -8244,7 +9184,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 35,
@@ -8253,7 +9195,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 35,
@@ -8282,7 +9226,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 33,
@@ -8291,7 +9237,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 33,
@@ -8320,7 +9268,9 @@
       "report": "docs/results/batch1-carryover.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "high",
         "plies": 32,
@@ -8329,7 +9279,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 32,
@@ -8358,7 +9310,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "engine:maia-1500",
-        "name": "engine:maia-1500",
+        "name": "Maia 1500",
+        "labelZh": "Maia 1500",
+        "labelEn": "Maia 1500",
         "short": "engine:maia-1500",
         "effort": "",
         "plies": 24,
@@ -8367,7 +9321,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 24,
@@ -8396,7 +9352,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 34,
@@ -8405,7 +9363,9 @@
       },
       "b": {
         "raw": "engine:maia-1500",
-        "name": "engine:maia-1500",
+        "name": "Maia 1500",
+        "labelZh": "Maia 1500",
+        "labelEn": "Maia 1500",
         "short": "engine:maia-1500",
         "effort": "",
         "plies": 34,
@@ -8434,7 +9394,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "engine:maia-1500",
-        "name": "engine:maia-1500",
+        "name": "Maia 1500",
+        "labelZh": "Maia 1500",
+        "labelEn": "Maia 1500",
         "short": "engine:maia-1500",
         "effort": "",
         "plies": 52,
@@ -8443,7 +9405,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 52,
@@ -8472,7 +9436,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 51,
@@ -8481,7 +9447,9 @@
       },
       "b": {
         "raw": "engine:maia-1500",
-        "name": "engine:maia-1500",
+        "name": "Maia 1500",
+        "labelZh": "Maia 1500",
+        "labelEn": "Maia 1500",
         "short": "engine:maia-1500",
         "effort": "",
         "plies": 50,
@@ -8510,7 +9478,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 57,
@@ -8519,7 +9489,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 56,
@@ -8548,7 +9520,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 54,
@@ -8557,7 +9531,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 53,
@@ -8586,7 +9562,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 74,
@@ -8595,7 +9573,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 73,
@@ -8624,7 +9604,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 40,
@@ -8633,7 +9615,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 39,
@@ -8662,7 +9646,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 63,
@@ -8671,7 +9657,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 63,
@@ -8700,7 +9688,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 53,
@@ -8709,7 +9699,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 52,
@@ -8738,7 +9730,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 50,
@@ -8747,7 +9741,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 50,
@@ -8776,7 +9772,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 33,
@@ -8785,7 +9783,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 32,
@@ -8814,7 +9814,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 55,
@@ -8823,7 +9825,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 54,
@@ -8852,7 +9856,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 83,
@@ -8861,7 +9867,9 @@
       },
       "b": {
         "raw": "engine:maia-1900",
-        "name": "engine:maia-1900",
+        "name": "Maia 1900",
+        "labelZh": "Maia 1900",
+        "labelEn": "Maia 1900",
         "short": "engine:maia-1900",
         "effort": "",
         "plies": 82,
@@ -8890,7 +9898,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "random",
-        "name": "random",
+        "name": "Random",
+        "labelZh": "随机棋手",
+        "labelEn": "Random",
         "short": "random",
         "effort": "",
         "plies": 11,
@@ -8899,7 +9909,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 11,
@@ -8928,7 +9940,9 @@
       "report": "docs/results/batch2-chess-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 15,
@@ -8937,7 +9951,9 @@
       },
       "b": {
         "raw": "random",
-        "name": "random",
+        "name": "Random",
+        "labelZh": "随机棋手",
+        "labelEn": "Random",
         "short": "random",
         "effort": "",
         "plies": 14,
@@ -8966,7 +9982,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 48,
@@ -8975,7 +9993,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 47,
@@ -9004,7 +10024,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 11,
@@ -9013,7 +10035,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 11,
@@ -9042,7 +10066,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 66,
@@ -9051,7 +10077,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 65,
@@ -9080,7 +10108,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 34,
@@ -9089,7 +10119,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 33,
@@ -9118,7 +10150,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 34,
@@ -9127,7 +10161,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 33,
@@ -9156,7 +10192,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 50,
@@ -9165,7 +10203,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 49,
@@ -9194,7 +10234,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 83,
@@ -9203,7 +10245,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 82,
@@ -9232,7 +10276,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 27,
@@ -9241,7 +10287,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=100",
-        "name": "engine:fsf:nodes=100",
+        "name": "Fairy-Stockfish · nodes=100",
+        "labelZh": "Fairy-Stockfish · nodes=100",
+        "labelEn": "Fairy-Stockfish · nodes=100",
         "short": "engine:fsf:nodes=100",
         "effort": "",
         "plies": 26,
@@ -9270,7 +10318,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 29,
@@ -9279,7 +10329,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 29,
@@ -9308,7 +10360,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 32,
@@ -9317,7 +10371,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 32,
@@ -9346,7 +10402,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 62,
@@ -9355,7 +10413,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 62,
@@ -9384,7 +10444,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 6,
@@ -9393,7 +10455,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 5,
@@ -9422,7 +10486,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 36,
@@ -9431,7 +10497,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 35,
@@ -9460,7 +10528,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 27,
@@ -9469,7 +10539,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 26,
@@ -9498,7 +10570,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 49,
@@ -9507,7 +10581,9 @@
       },
       "b": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 48,
@@ -9536,7 +10612,9 @@
       "report": "docs/results/batch2-xiangqi-strength.md",
       "w": {
         "raw": "claude:opus",
-        "name": "Claude opus",
+        "name": "Claude Opus",
+        "labelZh": "Claude Opus",
+        "labelEn": "Claude Opus",
         "short": "opus",
         "effort": "xhigh",
         "plies": 43,
@@ -9545,7 +10623,9 @@
       },
       "b": {
         "raw": "engine:fsf:nodes=30",
-        "name": "engine:fsf:nodes=30",
+        "name": "Fairy-Stockfish · nodes=30",
+        "labelZh": "Fairy-Stockfish · nodes=30",
+        "labelEn": "Fairy-Stockfish · nodes=30",
         "short": "engine:fsf:nodes=30",
         "effort": "",
         "plies": 43,

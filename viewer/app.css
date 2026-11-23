@@ -95,6 +95,11 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
 .disc.red { background: var(--disc-red); } .disc.black { background: var(--disc-black); } .disc.white { background: var(--disc-white); }
 .name { flex: 0 1 auto; min-width: 0; overflow: hidden; }
 .effort { flex: none; font-size: var(--effort-size); color: var(--text-weak); }
+/* 非录屏阅读器（桌面宽版与手机态）在 +effort 前补 5px 细间距，与 Series Board / Catalog 一致；严禁影响 layout=compact 与 rec=1 */
+#stage:not(.compact) .bar .effort,
+#stage:not(.compact) #banner .b-name .effort,
+#stage:not(.compact) #summary .s-row .effort,
+#stage:not(.compact) #title .t-row .effort { margin-left: 5px; }
 .win { flex: none; margin-left: 10px; font-size: var(--tag-size); line-height: 1; padding: 4px 6px; border-radius: 4px;
   background: var(--win-bg); color: #fff; }
 .score { flex: none; margin-left: auto; padding-left: 12px; font-size: var(--score-size); font-weight: 700;
@@ -288,8 +293,8 @@ html[lang="en"], html[lang="en"] body { font-family: -apple-system, system-ui, "
 #s-note .nag { display: inline-block; margin-left: 8px; padding: 0 6px; border-radius: 4px; font-size: 13px; font-weight: 400;
   background: var(--side-line); }
 #s-note .nag.bad { background: var(--tag-bg); color: #fff; } #s-note .nag.good { background: var(--win-bg); color: #fff; }
-#s-note .n-eval { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 6px 9px; margin: 0 0 8px;
-  background: rgba(0, 0, 0, 0.2); border: 1px solid var(--side-line); border-radius: 6px; font-size: 13.5px; line-height: 1.45;
+#s-note .n-eval { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 8px; margin: 0 0 8px;
+  background: rgba(0, 0, 0, 0.2); border: 1px solid var(--side-line); border-radius: 6px; font-size: 13px; line-height: 1.45;
   font-variant-numeric: tabular-nums; }
 #s-note .ev-item { white-space: nowrap; }
 #s-note .ev-k { color: var(--text-weak); }

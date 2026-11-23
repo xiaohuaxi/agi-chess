@@ -5,6 +5,134 @@ import { T, reasonEn } from './i18n.js';
 
 // 模型后端前缀：「claude:opus」→「opus」。其余（引擎、random、人）照原名显示。
 const MODEL_PREFIXES = new Set(['agy', 'claude', 'codex', 'deepseek', 'gpt', 'openai', 'gemini', 'grok', 'openrouter']);
+// 模型名尾部自带的思考深度后缀（仅用于对外展示名去重，不影响 playerOf().key 与比分归属）。
+const EFFORT_SUFFIX_RE = /-(?:minimal|low|medium|high|xhigh|max)$/i;
+// 无渠道前缀时仅对整串匹配已知模型 ID 的白名单做规范化，避免误改外部 PGN 棋手人名（如 Claude-Dupont、Stockfish 16）。
+const KNOWN_BARE_MODEL_RE = /^(?:gemini-\d+(?:\.\d+)?-[a-z0-9-]+|claude-(?:opus|sonnet|haiku)-\d+[.-]\d+(?:-[a-z0-9-]+)?|claude-\d+[.-]\d+-(?:opus|sonnet|haiku)(?:-[a-z0-9-]+)?|gpt-\d+(?:\.\d+)?[a-z]?(?:-[a-z0-9-]+)?|deepseek-(?:v\d+(?:\.\d+)?(?:-[a-z0-9-]+)?|r\d+(?:-[a-z0-9-]+)?|reasoner|chat)|grok-\d+(?:\.\d+)?(?:-[a-z0-9-]+)?)$/i;
+
+function capWord(w) {
+  if (!w) return w;
+  if (/^[a-z]\d+(?:\.\d+)*$/i.test(w)) return w[0].toUpperCase() + w.slice(1).toLowerCase();
+  if (/^\d/.test(w)) return w;
+  return w[0].toUpperCase() + w.slice(1).toLowerCase();
+}
+
+function formatModelToken(id, prefix) {
+  const clean = id.replace(EFFORT_SUFFIX_RE, '') || id;
+  const low = clean.toLowerCase();
+
+  // Gemini 家族：gemini-4-neon → Gemini 4 Neon，gemini-3.8-flash-high → Gemini 3.8 Flash
+  if (low === 'gemini' || low.startsWith('gemini-') || prefix === 'gemini') {
+    const rest = low.startsWith('gemini-') ? clean.slice(7) : low === 'gemini' ? '' : clean;
+    const parts = rest ? rest.split('-').filter(Boolean).map(capWord) : [];
+    return ['Gemini', ...parts].join(' ');
+  }
+
+  // Claude 家族：claude-opus-5-5-high → Claude Opus 5.5，claude:opus → Claude Opus
+  if (low === 'claude' || low.startsWith('claude-') || prefix === 'claude') {
+    const rest = low.startsWith('claude-') ? clean.slice(7) : low === 'claude' ? '' : clean;
+    if (!rest) return 'Claude';
+    let m = rest.match(/^(opus|sonnet|haiku)-(\d+)[.-](\d+)(?:-(.+))?$/i);
+    if (m) {
+      const tail = m[4] ? ' ' + m[4].split('-').filter(Boolean).map(capWord).join(' ') : '';
+      return `Claude ${capWord(m[1])} ${m[2]}.${m[3]}${tail}`;
+    }
+    m = rest.match(/^(\d+)[.-](\d+)-(opus|sonnet|haiku)(?:-(.+))?$/i);
+    if (m) {
+      const tail = m[4] ? ' ' + m[4].split('-').filter(Boolean).map(capWord).join(' ') : '';
+      return `Claude ${m[1]}.${m[2]} ${capWord(m[3])}${tail}`;
+    }
+    return ['Claude', ...rest.split('-').filter(Boolean).map(capWord)].join(' ');
+  }
+
+  // GPT / Codex / OpenAI 家族：gpt-6.2-astra → GPT-6.2 Astra，codex:astra → GPT Astra
+  if (low.startsWith('gpt-') || low === 'gpt' || prefix === 'codex' || prefix === 'gpt' || prefix === 'openai') {
+    const m = clean.match(/^gpt-(\d+(?:\.\d+)?[a-z]?)(?:-(.+))?$/i);
+    if (m) {
+      const tail = m[2] ? ' ' + m[2].split('-').filter(Boolean).map(capWord).join(' ') : '';
+      return `GPT-${m[1]}${tail}`;
+    }
+    const rest = low.startsWith('gpt-') ? clean.slice(4) : low === 'gpt' ? '' : clean;
+    const parts = rest ? rest.split('-').filter(Boolean).map(capWord) : [];
+    return ['GPT', ...parts].join(' ');
+  }
+
+  // DeepSeek 家族：deepseek-v4-pro → DeepSeek V4 Pro，deepseek:reasoner → DeepSeek Reasoner
+  if (low === 'deepseek' || low.startsWith('deepseek-') || prefix === 'deepseek') {
+    const rest = low.startsWith('deepseek-') ? clean.slice(9) : low === 'deepseek' ? '' : clean;
+    const parts = rest ? rest.split('-').filter(Boolean).map(capWord) : [];
+    return ['DeepSeek', ...parts].join(' ');
+  }
+
+  // Grok 家族：grok-4 → Grok 4
+  if (low === 'grok' || low.startsWith('grok-') || prefix === 'grok') {
+    const rest = low.startsWith('grok-') ? clean.slice(5) : low === 'grok' ? '' : clean;
+    const parts = rest ? rest.split('-').filter(Boolean).map(capWord) : [];
+    return ['Grok', ...parts].join(' ');
+  }
+
+  return null;
+}
+
+// 统一对外棋手显示名（单一事实源，供阅读器普通浏览态、目录页与总览榜共用）。
+// 纯展示转换，绝不影响 playerOf().key、比分归属或录屏短名；未知外部 PGN 棋手保守保留原名。
+export function displayName(raw, lang = 'zh') {
+  const s = String(raw ?? '').trim();
+  if (!s) return '?';
+  const low = s.toLowerCase();
+
+  if (low === 'random') return lang === 'en' ? 'Random' : '随机棋手';
+
+  // 引擎：Fairy-Stockfish / Stockfish / Maia，其余未知引擎保守保留原名
+  if (low.startsWith('engine:')) {
+    const body = s.slice(7);
+    const fsf = body.match(/^fsf(?::(.+))?$/i);
+    if (fsf) return fsf[1] ? `Fairy-Stockfish · ${fsf[1]}` : 'Fairy-Stockfish';
+    const sf = body.match(/^(?:sf|stockfish)(?::(.+))?$/i);
+    if (sf) return sf[1] ? `Stockfish · ${sf[1]}` : 'Stockfish';
+    const maia = body.match(/^maia[-:](.+)$/i);
+    if (maia) return `Maia ${maia[1]}`;
+    if (/^maia$/i.test(body)) return 'Maia';
+    return s;
+  }
+
+  const i = s.indexOf(':');
+  const hasPrefix = i > 0 && MODEL_PREFIXES.has(s.slice(0, i).toLowerCase());
+  const prefix = hasPrefix ? s.slice(0, i).toLowerCase() : '';
+  const body = hasPrefix ? s.slice(i + 1) : s;
+
+  if (prefix === 'openrouter') {
+    const slash = body.indexOf('/');
+    const sub = slash > 0 ? body.slice(slash + 1) : body;
+    return formatModelToken(sub, '') ?? (sub.replace(EFFORT_SUFFIX_RE, '') || sub);
+  }
+
+  // agy: 渠道同时运行多家族模型，严禁按 agy: 臆断厂商；非 Gemini 家族模型经 agy 代理时保留 (agy) 渠道标记。
+  if (prefix === 'agy') {
+    const formatted = formatModelToken(body, '');
+    const base = formatted ?? (body.replace(EFFORT_SUFFIX_RE, '') || body);
+    const isGemini = /^gemini(?:-|$)/i.test(body);
+    return isGemini ? base : `${base} (agy)`;
+  }
+
+  if (hasPrefix) {
+    const formatted = formatModelToken(body, prefix);
+    return formatted ?? (body.replace(EFFORT_SUFFIX_RE, '') || body);
+  }
+
+  if (KNOWN_BARE_MODEL_RE.test(s)) {
+    return formatModelToken(s, '') ?? s;
+  }
+  return s;
+}
+
+// 普通浏览模式的棋手展示信息：复用 playerOf() 的 key 与 effort，但 name 统一走 displayName（显式 names= 覆盖优先）。
+export function displayPlayer(game, side, { lang = 'zh', names = null } = {}) {
+  const p = playerOf(game, side, names);
+  const t = game.tags, raw = side === 'w' ? (t.Red ?? t.White ?? '?') : (t.Black ?? '?');
+  if (shownName(names, raw, playerOf(game, side).name) !== undefined) return p;
+  return { ...p, name: displayName(raw, lang) };
+}
 
 // 两方在标签里的名字：国际象棋 White / Black，中国象棋 Red / Black。side 是 'w'（红 / 白）或 'b'。
 // names 里有这个人时 name 换成显示名；key（算比分用）始终按棋谱里的名字，覆盖不影响谁的分归谁。
@@ -111,12 +239,14 @@ export function resultText(game, xiangqi, lang = 'zh') {
 }
 
 // 连播播完后的总比分：每个出场的人（名字 + 思考深度）一行，按总分从高到低，同分按出场先后。
-export function totals(games, names = null) {
+export function totals(games, names = null, opts = null) {
   const s = scoresBefore(games, games.length);
+  const useDisplay = Boolean(opts?.display);
+  const lang = opts?.lang || 'zh';
   const seen = [];
   for (const g of games) {
     for (const side of ['w', 'b']) {
-      const p = playerOf(g, side, names);
+      const p = useDisplay ? displayPlayer(g, side, { lang, names }) : playerOf(g, side, names);
       if (!seen.some((x) => x.key === p.key)) seen.push(p);
     }
   }

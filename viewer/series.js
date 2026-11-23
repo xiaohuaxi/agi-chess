@@ -39,13 +39,13 @@ function syncAddressAndHeader() {
   const q = currentFilterParams();
   if (LANG === 'en') q.set('lang', 'en');
   const qs = q.toString();
-  const nextUrl = location.pathname + (qs ? `?${qs}` : '');
+  const nextUrl = location.pathname + (qs ? `?${qs}` : '') + location.hash;
   try { history.replaceState(history.state, '', nextUrl); } catch { /* 忽略 */ }
 
   const nextLang = LANG === 'en' ? 'zh' : 'en';
   const langExtra = activeVariant === 'xiangqi' ? { variant: 'xiangqi' } : {};
   const langSwitch = document.querySelector('#top-header a.lang-switch');
-  if (langSwitch) langSwitch.href = pageHref('series', langExtra, nextLang);
+  if (langSwitch) langSwitch.href = pageHref('series', langExtra, nextLang, location.hash);
 }
 
 function bindViewerLink(a, targetFiles, href) {
@@ -75,7 +75,7 @@ function renderHeader(totalGames) {
 
   const nextLang = LANG === 'en' ? 'zh' : 'en';
   const langBtn = h('a', 'nav-pill lang-switch', LANG === 'en' ? '中文' : 'EN');
-  langBtn.href = pageHref('series', activeVariant === 'xiangqi' ? { variant: 'xiangqi' } : {}, nextLang);
+  langBtn.href = pageHref('series', activeVariant === 'xiangqi' ? { variant: 'xiangqi' } : {}, nextLang, location.hash);
   wrap.append(left, langBtn);
   document.getElementById('top-header').replaceChildren(wrap);
 }
@@ -372,6 +372,7 @@ async function init() {
   renderHeader(catalog.counts.total);
   syncAddressAndHeader();
   render();
+  addEventListener('hashchange', syncAddressAndHeader);
   await document.fonts?.ready;
   return true;
 }

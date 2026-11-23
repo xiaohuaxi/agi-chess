@@ -2,6 +2,7 @@
 // root 是站点根（仓库根目录）；mounts 把网址前缀映射到别的目录（例如把 /runs/ 指向外部未入库的本地对局目录；
 // 已入库的 192 盘正式对局 game.pgn 直接在仓内 runs/ 下，worktree 里也有）。
 import http from 'node:http';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,28 +15,72 @@ const TYPES = {
   '.png': 'image/png', '.pgn': 'text/plain; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.mp3': 'audio/mpeg',
 };
 
+const REDIRECT_PAGES = new Set(['catalog', 'series']);
+
 // → { port, close() }
 // files 把单个网址精确映射到单个本机文件（录制脚本用：只供给命令行点名的棋谱，不连带它所在的目录）。
 export async function serve(root, mounts = {}, files = {}, port = 0, host = '127.0.0.1') {
   const bases = Object.entries(mounts).sort((a, b) => b[0].length - a[0].length);
+  const allowedPrefixes = new Set(['/', '/viewer/']);
+  for (const [prefix] of bases) {
+    if (prefix.startsWith('/') && !prefix.startsWith('//') && prefix.endsWith('/')) {
+      allowedPrefixes.add(prefix);
+    }
+  }
   const server = http.createServer(async (req, res) => {
     try {
-      let rel = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+      // 拒绝协议相对路径（如 //evil.com/...），避免 new URL(req.url, 'http://x') 将主机名解析掉并把路径折叠到根前缀
+      if (!req.url || !req.url.startsWith('/') || req.url.startsWith('//')) {
+        res.writeHead(404).end();
+        return;
+      }
+      const urlObj = new URL(req.url, 'http://x');
+      let rel = decodeURIComponent(urlObj.pathname);
       if (rel === '/favicon.ico') { res.writeHead(204).end(); return; }
       if (Object.hasOwn(files, rel)) {
         const body = await readFile(files[rel]);
         res.writeHead(200, { 'content-type': TYPES[path.extname(files[rel])] || 'application/octet-stream' }).end(body);
         return;
       }
+      const origRel = rel;
       if (rel.endsWith('/')) rel += 'index.html';
       let base = root;
+      let matchedMount = '/';
       for (const [prefix, dir] of bases) {
-        if (rel.startsWith(prefix)) { base = dir; rel = rel.slice(prefix.length - 1); break; }
+        if (rel.startsWith(prefix)) { base = dir; matchedMount = prefix; rel = rel.slice(prefix.length - 1); break; }
       }
       const file = path.resolve(base, '.' + rel);
       if (file !== base && !file.startsWith(base + path.sep)) { res.writeHead(403).end(); return; }
-      const body = await readFile(file);
-      res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream' }).end(body);
+      try {
+        const body = await readFile(file);
+        res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream' }).end(body);
+      } catch (err) {
+        // 本机开发服务兼容：仅当 readFile 报 ENOENT 且命中已知挂载前缀下的 /catalog/ 或 /series/ 时，构造安全同源 302
+        if (err?.code === 'ENOENT' && origRel.startsWith('/') && !origRel.startsWith('//')) {
+          const m = origRel.match(/^(\/(?:[^/]+\/)?)(catalog|series)\/$/);
+          if (m && allowedPrefixes.has(m[1]) && REDIRECT_PAGES.has(m[2])) {
+            const [, dirPrefix, name] = m;
+            const candidates = [];
+            if (dirPrefix === matchedMount || (matchedMount === '/' && dirPrefix === '/viewer/')) {
+              const targetRel = dirPrefix === matchedMount ? `/${name}.html` : `/viewer/${name}.html`;
+              const diskPath = path.resolve(base, '.' + targetRel);
+              candidates.push([`${dirPrefix}${name}.html`, diskPath, base]);
+            }
+            if (dirPrefix === '/' && matchedMount === '/') {
+              candidates.push([`/viewer/${name}.html`, path.resolve(root, 'viewer', `${name}.html`), root]);
+            }
+            for (const [locPath, diskPath, checkBase] of candidates) {
+              if (!locPath.startsWith('/') || locPath.startsWith('//')) continue;
+              const safe = diskPath === checkBase || diskPath.startsWith(checkBase + path.sep);
+              if (safe && existsSync(diskPath)) {
+                res.writeHead(302, { location: locPath + urlObj.search }).end();
+                return;
+              }
+            }
+          }
+        }
+        throw err;
+      }
     } catch {
       res.writeHead(404).end();
     }

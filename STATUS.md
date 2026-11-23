@@ -1,13 +1,13 @@
 # 当前状态
 
-更新：2026-11-22。这里维护当前快照与待办，不追加流水账；实验总览表、历次维护和决定沿革见 [历史记录](docs/history.md)，报告与 `runs/` 映射见 [研究索引](docs/research.md)。
+更新：2026-11-23。这里维护当前快照与待办，不追加流水账；实验总览表、历次维护和决定沿革见 [历史记录](docs/history.md)，报告与 `runs/` 映射见 [研究索引](docs/research.md)。
 
 ## 已完成与可用
 
 - 两种棋的单盘对弈、暂停续跑、批量对弈、局面题、事后引擎分析与离线评级复算均已实现；入口见 [安装与运行](docs/setup.md)。整盘调用层已收归仓内，支持 Claude / Codex / DeepSeek / agy 与显式 OpenRouter 路由；新 Gemini 对局统一 `agy:`，旧记录可续跑。开盘前检查双方 CLI / Key，缺 CLI 给出需替换型号占位的 API 命令模板；dry-run 离线，resume 固定原后端。 对弈入口指引已澄清：通常优先仓库 CLI，通道验证或故障排查可按需直接调用底层；暂不新增对弈 skill。 独立 clone 冷读上手验收已完成：自行建立依赖环境，零成本入口及订阅、OpenRouter 短对弈的暂停/续跑/导出均可用；测试数据仅留临时副本，不入库。`quiz report` 会回写 `report.txt`，入门文档未明确提醒此副作用（其中“只读”原句指评级脚本，并非 quiz report）；本机缺 `ensurepip` 可用已有 pip 向独立环境安装依赖。
-- 中英双语棋谱阅读器支持理由、用量、逐着引擎评分与最佳着、失误标记、连播、走子动画及有声视频，[GitHub Pages 在线站点](https://xiaohuaxi.github.io/agi-chess/)已补齐三页同级架构——精选阅读器首页、[分棋种无引擎对阵总览榜（`series.html`）](https://xiaohuaxi.github.io/agi-chess/series.html)与[全部 192 盘可筛选目录（`catalog.html`）](https://xiaohuaxi.github.io/agi-chess/catalog.html)（含手机端紧贴棋盘翻步栏与 8 行着法滚动框、手动翻步 `ply` 深链接分享及 GitHub Actions Playwright CI/CD 自动部署）；见 [阅读器指南](docs/viewer-guide.md)。随仓有 95 个正式对局/局面题目录、192 份棋谱；原始 `game.jsonl`、`record.txt`、视频和新跑目录不入库，缺原始记录时不能重导或重新分析。
+- 中英双语棋谱阅读器支持理由、用量、逐着引擎评分与最佳着、失误标记、连播、走子动画及有声视频，[GitHub Pages 在线站点](https://xiaohuaxi.github.io/agi-chess/)已补齐三页同级架构——精选阅读器首页、[分棋种无引擎对阵总览榜（`series.html`）](https://xiaohuaxi.github.io/agi-chess/series.html)与[全部 192 盘可筛选目录（`catalog.html`）](https://xiaohuaxi.github.io/agi-chess/catalog.html)（含三页统一对外模型/引擎显示名与录屏短名隔离、手机端紧贴棋盘翻步栏与 8 行着法滚动框、`/catalog/` 与 `/series/` 尾斜杠静态重定向、404 三页入口、手动翻步 `ply` 深链接分享及 GitHub Actions Playwright CI/CD 自动部署）；见 [阅读器指南](docs/viewer-guide.md)。随仓有 95 个正式对局/局面题目录、192 份棋谱；原始 `game.jsonl`、`record.txt`、视频和新跑目录不入库，缺原始记录时不能重导或重新分析。
 - 第一轮研究、Opus Max 棋力定位、Argon High 及 Carbon High 对 agy Opus High 的报告均已完成。统计脚本和人类刻度数据在 `analysis/rating/`；自有内容许可与规则依赖边界已定，见 [依赖](docs/dependencies.md)和[许可说明](docs/license-review.md)。
-- 离线与通道验证快照（2026-11-15）：`--protocol real` 新对局默认切换为英文提示词 `--lang en`（`--lang zh` 逐字节保留历史中文提示，旧记录无 `lang` 自动按中文续跑），并将英文默认 `reason=plain` 定为 1–3 句客观第三人称局面短评、`reason=off` 收紧为无附加说明的单行 `Move:`；仓内 `llm-chat`（`agy_core.REFUSAL_MARKS`）与 `agi_chess/claude_cli.refusal_text` 同步补齐 `blocked by content safety filters` 首次即停熔断。全量 Python 单测 **373 项通过（0 skip）**、阅读器测试 **90 项**、两批题库校验全部通过，并在 `agy:claude-opus-5-5`（`high`）上完成 147 次真实调用验证（[报告](docs/results/english-prompts-filter-mitigation-20261115.md)）。此前 `agy 1.5.8 acp` 零工具收口、Python 3.13 干净归档副本与 Linux / WSL2 完整回归均已通过；安装建议沿用 Python 3.13（系统 `/usr/bin/python3` 3.9 亦可运行）。
+- 离线与通道验证快照（2026-11-23）：`--protocol real` 新对局默认切换为英文提示词 `--lang en`（`--lang zh` 逐字节保留历史中文提示，旧记录无 `lang` 自动按中文续跑），并将英文默认 `reason=plain` 定为 1–3 句客观第三人称局面短评、`reason=off` 收紧为无附加说明的单行 `Move:`；仓内 `llm-chat`（`agy_core.REFUSAL_MARKS`）与 `agi_chess/claude_cli.refusal_text` 同步补齐 `blocked by content safety filters` 首次即停熔断。全量 Python 单测 **373 项通过（0 skip）**、阅读器测试 **110 项通过（0 skip，含 S1–S8 真实用户场景专项端到端测试）**、两批题库校验全部通过，并在 `agy:claude-opus-5-5`（`high`）上完成 147 次真实调用验证（[报告](docs/results/english-prompts-filter-mitigation-20261115.md)）。此前 `agy 1.5.8 acp` 零工具收口、Python 3.13 干净归档副本与 Linux / WSL2 完整回归均已通过；安装建议沿用 Python 3.13（系统 `/usr/bin/python3` 3.9 亦可运行）。
 
 ## 核心研究结论
 

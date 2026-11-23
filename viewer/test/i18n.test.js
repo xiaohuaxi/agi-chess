@@ -46,6 +46,14 @@ test('对照表：中英两份键一一对应，英文里没有中文，中文�
   const e = TEXT.en;
   assert.equal(e.gameOf(2, 4), 'Game 2 of 4');
   assert.equal(e.finalScore(4), 'Final score · 4 games');
+  assert.equal(e.evalWp, 'White win%');
+  assert.equal(z.evalWp, '白方胜率');
+  assert.equal(z.pages.searchPlaceholder, '搜索棋手、引擎或目录');
+  assert.equal(e.pages.searchPlaceholder, 'Search players, engines or paths');
+  assert.ok(z.pages.searchAria.includes('maia-1900') && e.pages.searchAria.includes('maia-1900'));
+  assert.equal(z.samples[2][0], '中国象棋 · Claude Opus 5.5 (agy) vs Gemini 4 Carbon');
+  assert.equal(e.samples[2][0], 'Xiangqi · Claude Opus 5.5 (agy) vs Gemini 4 Carbon');
+  assert.ok([...z.samples, ...e.samples].every(([label]) => !/vs Carbon\b/.test(label)));
 });
 
 test('语言参数：lang=en 英文，其余（不给、写错）都是中文', () => {

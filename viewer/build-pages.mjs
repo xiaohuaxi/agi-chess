@@ -13,6 +13,38 @@ const DEFAULT_OUT = path.join(ROOT, '_site');
 const VIEWER_FILES = ['index.html', 'series.html', 'catalog.html', '404.html', 'og-card.png', 'app.css', 'pages.css', 'app.js', 'series.js', 'catalog.js'];
 const VIEWER_DIRS = ['lib', 'vendor'];
 const FORBIDDEN_NAMES = new Set(['node_modules', 'test', 'package.json', 'package-lock.json']);
+const PAGES_BASE_URL = 'https://xiaohuaxi.github.io/agi-chess/';
+const REDIRECT_PAGES = [
+  { dir: 'catalog', target: 'catalog.html', title: 'All Games Catalog · agi-chess', label: 'All Games Catalog (全部对局目录)' },
+  { dir: 'series', target: 'series.html', title: 'No-Engine Series Board · agi-chess', label: 'No-Engine Series Board (无引擎对阵总览)' },
+];
+
+function makeRedirectHtml({ target, title, label }) {
+  const rel = `../${target}`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<link rel="canonical" href="${PAGES_BASE_URL}${target}">
+<meta http-equiv="refresh" content="0; url=${rel}">
+<style>
+  html, body { margin: 0; min-height: 100vh; background: #262421; color: #ece8e1;
+    font-family: -apple-system, system-ui, "PingFang SC", "Noto Sans CJK SC", sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; }
+  p { margin: 0; font-size: 14px; color: #9d968c; }
+  a { color: #e8a33d; }
+</style>
+<script>location.replace('${rel}' + location.search + location.hash);</script>
+</head>
+<body>
+<p>Redirecting to <a id="redirect-link" href="${rel}">${label}</a>…</p>
+<script>document.getElementById('redirect-link').href = '${rel}' + location.search + location.hash;</script>
+</body>
+</html>
+`;
+}
 
 function isForbiddenEntry(name) {
   return FORBIDDEN_NAMES.has(name) || /\.mjs$/i.test(name) || /\.py$/i.test(name) || /^package.*\.json$/i.test(name);
@@ -63,6 +95,11 @@ export function buildPages(targetDir = DEFAULT_OUT) {
   }
   for (const d of VIEWER_DIRS) {
     copyTreeFiltered(path.join(VIEWER, d), path.join(outDir, d));
+  }
+  for (const spec of REDIRECT_PAGES) {
+    const dir = path.join(outDir, spec.dir);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'index.html'), makeRedirectHtml(spec), 'utf8');
   }
   copyFileSync(path.join(ROOT, 'LICENSE'), path.join(outDir, 'LICENSE'));
 

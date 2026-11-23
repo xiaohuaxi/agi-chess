@@ -52,11 +52,11 @@ function syncUrlAndLangSwitch() {
   const extra = Object.fromEntries(q.entries());
   if (LANG === 'en') q.set('lang', 'en');
   const qs = q.toString();
-  try { history.replaceState(history.state, '', location.pathname + (qs ? `?${qs}` : '')); } catch { /* 忽略 */ }
+  try { history.replaceState(history.state, '', location.pathname + (qs ? `?${qs}` : '') + location.hash); } catch { /* 忽略 */ }
 
   const nextLang = LANG === 'en' ? 'zh' : 'en';
   const langSwitch = document.querySelector('#top-header a.lang-switch');
-  if (langSwitch) langSwitch.href = pageHref('catalog', extra, nextLang);
+  if (langSwitch) langSwitch.href = pageHref('catalog', extra, nextLang, location.hash);
 }
 
 function renderHeader(totalGames) {
@@ -79,7 +79,7 @@ function renderHeader(totalGames) {
   const nextLang = LANG === 'en' ? 'zh' : 'en';
   const extra = Object.fromEntries(currentFilterParams().entries());
   const langBtn = h('a', 'nav-pill lang-switch', LANG === 'en' ? '中文' : 'EN');
-  langBtn.href = pageHref('catalog', extra, nextLang);
+  langBtn.href = pageHref('catalog', extra, nextLang, location.hash);
   wrap.append(left, langBtn);
   document.getElementById('top-header').replaceChildren(wrap);
 }
@@ -104,7 +104,7 @@ function resultShortText(g) {
 }
 
 function filterAndSortGames() {
-  const needle = state.q.toLowerCase();
+  const needle = state.q.replace(/\s+/g, ' ').toLowerCase();
   const out = catalog.games.filter((g) => {
     if (state.variant !== 'all' && g.variant !== state.variant) return false;
     if (state.cat !== 'all' && g.cat !== state.cat) return false;
@@ -115,12 +115,34 @@ function filterAndSortGames() {
       if (!hitTag && !hitRaw) return false;
     }
     if (needle) {
+      const sideTerms = (p) => {
+        const terms = [
+          p.raw,
+          p.short,
+          p.name,
+          p.labelZh,
+          p.labelEn,
+          p.effort,
+          p.effort ? `${p.short}+${p.effort}` : '',
+          p.effort ? `${p.labelEn || p.name} +${p.effort}` : '',
+          p.effort ? `${p.labelEn || p.name}+${p.effort}` : '',
+          p.effort ? `${p.labelZh || p.name} +${p.effort}` : '',
+          p.effort ? `${p.labelZh || p.name}+${p.effort}` : '',
+        ];
+        if (Array.isArray(p.aliases)) {
+          for (const a of p.aliases) {
+            terms.push(a);
+            if (p.effort) terms.push(`${a} +${p.effort}`, `${a}+${p.effort}`);
+          }
+        }
+        return terms;
+      };
       const hay = [
         g.dir, g.batch, g.date, g.protocol, g.sessionMode,
-        g.w.raw, g.w.name, g.w.effort,
-        g.b.raw, g.b.name, g.b.effort,
-      ].join(' ').toLowerCase();
-      if (!hay.includes(needle)) return false;
+        ...sideTerms(g.w),
+        ...sideTerms(g.b),
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(needle) && !needle.split(' ').every((tok) => hay.includes(tok))) return false;
     }
     return true;
   });
@@ -156,7 +178,8 @@ function renderGameRow(g) {
   const players = h('div', 'cat-players');
   const makePlayer = (p, discCls) => {
     const sp = h('span', 'cat-side');
-    sp.append(h('span', `disc ${discCls}`), h('span', 'cat-pname', p.name));
+    const disp = LANG === 'en' ? (p.labelEn || p.name) : (p.labelZh || p.name);
+    sp.append(h('span', `disc ${discCls}`), h('span', 'cat-pname', disp));
     if (p.effort) sp.append(h('span', 'cat-peff', `+${p.effort}`));
     return sp;
   };
@@ -305,6 +328,7 @@ function buildShell() {
   // 第 3 行：关键词搜索框 + 排序下拉
   const row3 = h('div', 'search-sort-row');
   const search = h('input', 'search-input');
+  search.id = 'cat-q';
   search.type = 'search';
   search.placeholder = P.searchPlaceholder;
   search.setAttribute('aria-label', P.searchAria);
@@ -359,6 +383,7 @@ async function init() {
   renderHeader(catalog.counts.total);
   buildShell();
   refreshView();
+  addEventListener('hashchange', syncUrlAndLangSwitch);
   await document.fonts?.ready;
   return true;
 }

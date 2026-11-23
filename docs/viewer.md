@@ -7,7 +7,7 @@
 > **状态（2026-10-02）：走子音效已做、用户试听后合回 main：录视频默认有声、网页默认静音，见「走子音效」。**
 > **不做成对外 app（2026-10-02 用户定，不立项）**：调研见 `viewer-survey/README.md` 末节。
 > **状态（2026-10-03）：加了英文界面（`lang=en`）和棋手显示名覆盖（`names=`），用于英文讲解与视频展示，见「英文界面」。默认仍是中文、画面不变。**
-> **状态（2026-11-22）：补齐 GitHub Pages 在线静态部署（`viewer/build-pages.mjs` + GitHub Actions Playwright CI/CD）与三页同级静态架构（精选阅读器 `index.html`、无引擎对阵总览榜 `series.html`、全部 192 盘可筛选目录 `catalog.html`，共享 `lib/nav.js` 上下文导航，全站固定暗色主题）；新增 `viewer/catalog-meta.json` + 零依赖 `viewer/build-catalog.mjs`（严格只扫 `git ls-files runs/`）生成入库受检的 `viewer/lib/catalog-data.json`；支持 `SITE_ROOT` 子路径双通、先手固定视角的逐着引擎评分/胜率变化与最佳着展示、`CHANNEL_WARN_RE` 通道重试告警分段弱化渲染、`match.js` `fullName()` 首词忽略大小写厂商前缀去重、手机端 `.mobile` 版式（翻步栏紧贴棋盘正下方 + 8 行整行对齐 `284px` 着法滚动框，不影响 `rec=1` / `layout=compact` 录屏窄版）、手动翻步防抖 `replaceState` 更新 `ply` 深链接及 `agy:` 前缀剥离。**
+> **状态（2026-11-23，v2.1 精修）：在 `lib/match.js` 新增纯展示单一事实源 `displayName()` / `displayPlayer()`，统一 `index.html` 普通浏览态、`series.html`、`catalog.html` 与首页精选卡的对外显示名（规范模型名与大小写、剥除尾部重复 `-high` 档位、`agy:` 不臆断厂商仅对非 Gemini 保留 `(agy)` 标记、引擎/随机规范化），同时 `layout=compact` 与 `rec=1` 严格保持原有录屏短名契约零回归；英文胜率标签改为 `White win%`，手机目录搜索 placeholder 精简且保留完整 `aria-label`；`build-pages.mjs` 生成 `catalog/index.html` 与 `series/index.html` 尾斜杠静态重定向壳（`serve.mjs` 本机同步支持，`catalog.js`/`series.js` 补修 `replaceState` 保留 `location.hash`），`404.html` 补齐三页入口与 `/ladder/` 引导。**
 
 ## 一句话
 
@@ -28,14 +28,16 @@
 **输入是棋谱文件。**
 - 国际象棋：标准 PGN，一个文件里可以有多盘。
 - 中国象棋：xqbase「中国象棋电脑应用规范」的 PGN（原文 `www.xqbase.com/protocol/cchess_pgn.htm`、`cchess_move.htm`）。要点：`[Game "Chinese Chess"]` 放第一个标签；双方标签是 `Red` / `Black`；`Format` 不写默认是中文记谱；黑方数字用全角「１２３」，同线第几个兵的「一二三」仍用汉字（如「一卒平５」）；同一纵线上有多个同种子时用前 / 中 / 后或一二三四五区分，两条纵线都有多个兵另有编号规则；仕、相同线不写前后，靠进退区分。逐条规则第 1 步已对照原文定下，写在 `agi_chess/xiangqi.py` 的 `pgn_move` 注释里：一线两兵前 / 后、三兵前 / 中 / 后、四五兵从前往后一至五；两条纵线各有两个以上兵时，这两条线上的兵一起编一至五，先按走棋方的纵线号从小到大（右边先）、同线从前往后，其余纵线的兵照常写（原文说明里「即先看最左边一列」与「先从右到左」和例局矛盾，以例局为准）。评注后的黑方着法照原文例子直接接着写，不补「N...」。读别人的棋谱时容错半角数字、繁体字（俥傌砲後進）、GBK 编码（解码失败回退 `gb18030`）。
-- 评注里的 `[%emt]` 显示成用时；自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite] [%illegal] [%flagged] [%empty] [%dropped]` 显示成带中文标签的数字；不认识的命令原样列出，后面的文字当理由显示。对含通道内联重试 `⚠` 告警的历史评注（由 `CHANNEL_WARN_RE` 匹配提取），面板将告警原文与模型理由正文分段并弱化渲染。着法后的 `?` `??` `!` 等标注照常显示；当伴随加载了同目录 `analysis.jsonl` 时，除叠加恶手/失误/不精确徽章外，还将分析记录里的走子方视角评分与胜率统一翻转为**先手（国际象棋白方 / 中国象棋红方）固定视角**展示变化，并将走前局面下的引擎最佳着坐标转为可读记谱（国际象棋用临时 `Chess` 实例转标准 SAN，中国象棋按当前界面语言调 `zhMove` 转中文四字记谱或调 `wxfMove` 转英文 WXF 记谱）。
+- **评注命令**：评注里的 `[%emt]` 显示成用时；自定义的 `[%think] [%out] [%in] [%cacheread] [%cachewrite] [%illegal] [%flagged] [%empty] [%dropped]` 显示成带中文标签的数字；不认识的命令原样列出，后面的文字当理由显示。
+- **评注原文保留（不做 `Move:`/`着法:` 正则改写）**：对含通道内联重试 `⚠` 告警的历史评注（由 `CHANNEL_WARN_RE` 匹配提取），面板将告警原文与模型理由正文分段并弱化渲染。至于部分理由中夹带的 `Move:` / `着法:` 文本，192 盘 12,730 条模型着法评注中仅 31 条含 `Move:`（4 条）/`着法:`（27 条，其中 13 条后紧跟 4 字符坐标），均属模型自纠漏出的原始发言而非结构化字段，阅读器有意保持原文不动、不做正则高亮或拆行，避免误伤真实模型文本。
+- **逐着引擎评估**：着法后的 `?` `??` `!` 等标注照常显示；当伴随加载了同目录 `analysis.jsonl` 时，除叠加恶手/失误/不精确徽章外，还将分析记录里的走子方视角评分与胜率统一翻转为**先手（国际象棋白方 / 中国象棋红方）固定视角**展示变化（英文胜率标签写明 `White win%`、中文为「白方胜率」），并将走前局面下的引擎最佳着坐标转为可读记谱（国际象棋用临时 `Chess` 实例转标准 SAN，中国象棋按当前界面语言调 `zhMove` 转中文四字记谱或调 `wxfMove` 转英文 WXF 记谱）。
 - 标签里的 `WhiteEffort` / `BlackEffort`（中国象棋 `RedEffort` / `BlackEffort`，本项目自定义，见下文导出）显示为思考深度；别人的棋谱没有就不显示。
 
 **打开方式、三页架构与静态索引管线。** 页面是纯前端静态 ES 模块（第三方库放 `viewer/vendor/`，附来源和许可文本），全站固定采用暗色护眼主题，不能用 `file://` 直接打开，同时支持**本机静态服务**与 **GitHub Pages 在线直开**两种部署形态：
 - **三页同级静态架构与共享导航（`lib/nav.js`）**：站点由同级的精选阅读器 `index.html`、分棋种无引擎对阵总览榜 `series.html`（支持 `?variant=xiangqi` 分栏，按棋种与可比实验条件展示无引擎番棋总览、循环赛摘要、引擎标定锚点与名场面直达）及全部 192 盘可筛选目录 `catalog.html`（支持 `?batch=<id>` 及棋种/类别/模型胶囊/关键词组合筛选）组成。三页共用 `viewer/lib/nav.js` 维护顶栏导航与中英切换参数，并结合 `sessionStorage` 与 `history.state` 保存来源页 URL 与筛选状态，使从总览榜或目录页点进阅读器看谱后可一键原位返回。
 - **静态目录索引构建管线（`build-catalog.mjs`）**：由维护批次与系列元数据的 `viewer/catalog-meta.json` 配合零第三方依赖脚本 `viewer/build-catalog.mjs`（严格只扫描 `git ls-files runs/` 输出的已跟踪文件，绝不混入本机未入库的新跑目录或临时文件），离线汇总生成入库受检的 `viewer/lib/catalog-data.json`（测试套件同步校验其与仓库已入库 `runs/` 完全一致）。
 - **本机静态服务**：在仓库根目录运行 `node viewer/serve.mjs`（默认监听 `127.0.0.1:8765`，或 `python3 -m http.server 8765 --bind 127.0.0.1`），打开 `http://127.0.0.1:8765/viewer/`（以及同目录 `series.html`、`catalog.html`），页面无需构建或 `npm ci`。
-- **GitHub Pages 在线部署**（`https://xiaohuaxi.github.io/agi-chess/`）：由 `viewer/build-pages.mjs` 生成静态站点目录（将 `viewer/` 运行时静态文件 `index.html`、`series.html`、`catalog.html`、各自 JS/CSS、`lib/` 含 `catalog-data.json`、`vendor/` 与 `.nojekyll` 拷入站点根，并递归纳入 `runs/` 下全部正式对局的 `game.pgn` 与 `analysis.jsonl`；排除 `node_modules/`、`test/`、`serve.mjs`、`record.mjs`、`shot.mjs`、`build-*.mjs` 等开发/构建脚本），经 GitHub Actions 跑完 Playwright 浏览器回归后自动部署。
+- **GitHub Pages 在线部署**（`https://xiaohuaxi.github.io/agi-chess/`）：由 `viewer/build-pages.mjs` 生成静态站点目录（将 `viewer/` 运行时静态文件 `index.html`、`series.html`、`catalog.html`、`404.html`、各自 JS/CSS、`lib/` 含 `catalog-data.json`、`vendor/` 与 `.nojekyll` 拷入站点根，并递归纳入 `runs/` 下全部正式对局的 `game.pgn` 与 `analysis.jsonl`；排除 `node_modules/`、`test/`、`serve.mjs`、`record.mjs`、`shot.mjs`、`build-*.mjs` 等开发/构建脚本），同时额外生成极简的 `catalog/index.html` 与 `series/index.html` 尾斜杠静态重定向壳（`location.replace('../<page>.html' + location.search + location.hash)`、`<meta http-equiv="refresh">`、`<link rel="canonical">` 与暗色兜底链接，不破坏相对路径也不复制页面主体；本机 `viewer/serve.mjs` 对 `/catalog/`、`/series/` 同步回退重定向；`catalog.js`/`series.js` 的 `replaceState` 同步保留 `location.hash`）。`404.html` 按站点根 `base` 推断补齐精选首页、对阵总览（`series.html`）与全部对局（`catalog.html`）三页入口（`?lang=en` 自动沿用），并温和提示寻找榜单（如 `/ladder/`）的访客直达 Series Board。站点经 GitHub Actions 跑完 Playwright 浏览器回归后自动部署。
 - **`VIEWER_DIR` 与 `SITE_ROOT` 两级路径分离**：共享模块 `viewer/lib/nav.js` 由 `new URL('..', import.meta.url)` 定位页面目录 `VIEWER_DIR`（本机 `/viewer/`，线上 `/agi-chess/`），再据此推导数据根 `SITE_ROOT`——当 `VIEWER_DIR` 跑在本机 `/viewer/` 子目录下时退回上一级仓库根，当跑在 GitHub Pages（如 `/agi-chess/` 站点根）时直接复用 `VIEWER_DIR`；`files=` 中的相对路径 `runs/<tag>` 与带前导斜杠的 `/runs/<tag>` 均按 `SITE_ROOT` 统一解析（支持目录简写自动补 `/game.pgn`，并自动尝试伴随加载同目录 `analysis.jsonl` 校验走子坐标与走前局面后叠加引擎评分、最佳着与恶手标注）。空白首页内置近期 Neon / Carbon / Astra 6.2 与经典 Opus Max 代表局入口、中英切换及本地 `.pgn` 拖放解析（拖入文件仅在浏览器本地读取，不上传）。
 
 **版式（三态分工）。**
@@ -45,6 +47,12 @@
 - **移动堆叠版 `.mobile`**（窗口宽 `< 900px` 且未传 `rec=1`、未强制 `layout=compact`/`wide`）：面向手机与窄窗读谱的可纵向滚动上下堆叠版式——上方为棋手条 + 棋盘 + 棋手条，**翻步控制栏紧贴棋盘正下方**，其下依次为当步棋评详情与 **8 行整行对齐（`284px` `border-box`）的着法滚动框**（既不像早期实现那样在 `<900px` 隐藏右栏，也不把百余回合列表全展开撑长页面）。
 - **录屏窄版 `.compact`**（`rec=1` 或显式传 `layout=compact`）：固定 `540×720` 设计结构，右侧信息栏整块不渲染，只剩页头、棋盘、页脚（棋手条），专供脚本逐帧录屏与无评注紧凑展示；细节见下文「录屏画面」。
 - 默认切换规则：`rec=1` 恒为 `.compact`（录 16:9 时视口宽 960，录制不靠窗口宽度自动判断）；否则显式 `layout=compact` / `layout=wide` 优先；未指定 `layout` 时按窗口宽度响应式切换（`>= 900px` 为 `.wide`，`< 900px` 为 `.mobile`）。
+- **归档站赛果展示与无滑杆取舍（定稿）**：
+  - **终局结果展示（Lichess 归档站口径）**：作为公开复盘归档站而非盲棋猜谱工具，阅读器在 `#s-players .res`、`#s-moves .end` 与多盘下拉 `#s-game` 直接显示弱化赛果便于定位对局；同时棋盘上的 `#banner` 终局横幅与 `#s-note` 的终局结论块仅在步进到末步时揭示，不提前遮挡棋盘。
+  - **省略进度滑杆**：桌面宽版与手机堆叠版均可直接点击着法表任意一手直跳，配合首/上一步/播放/下一步/尾按钮与键盘快捷键即可精准定位；额外增加进度滑杆既与着法表点击冗余、又在手机端徒增误触与垂直空间占用，故保持无滑杆设计。
+- **棋手显示名分工（普通浏览对外名 vs 录屏短名）**：
+  - **普通浏览模式**（`index.html` 桌面宽版与自动手机版，以及 `catalog.html`、`series.html`、`index.html` 精选卡）：统一使用 `viewer/lib/match.js` 的单一事实源 `displayName()` / `displayPlayer()`。规范带版本号模型（如 `Gemini 4 Neon`、`Gemini 4 Carbon`、`Gemini 4 Argon`、`Gemini 3.8 Flash`、`GPT-6.2 Astra`、`Claude Opus 5.5`），剥除模型名尾部自带的 `-high`/`-xhigh`/`-max`/`-medium` 避免与 `+effort` 重复；`agy:` 渠道同时运行多家族模型，绝不按 `agy:` 臆断厂商，非 Gemini 家族模型经 `agy:` 代理时保留 `(agy)` 标记（如 `Claude Opus 5.5 (agy)`）；历史无版本号浮动别名保守规整大小写而不臆造版本号（`Claude Opus`、`GPT Astra`、`GPT Sol`，Series Board 中有批次归档依据的特例覆盖仍优先）；引擎与随机棋手规范为 `Fairy-Stockfish · nodes=100`、`Stockfish · elo=1900`、`Maia 1900`、`Random` / `随机棋手`，未知外部 PGN 棋手原样保留。该展示层纯展示、不改动 `playerOf().key` 或计分归属。
+  - **录屏窄版与紧凑模式**（`rec=1` 或显式 `layout=compact`，含 `shot.mjs` 默认配置）：严格沿用原有的短名 `playerOf()` / `fullName()`（保留小写短名、`vendor=0` 与 `names=` 契约），确保 `540×720` 视频录制与版式测量零回归。
 - 三种版式都有：上一步高亮、被将军提示、终局结果和结束原因、可选的标题画面（默认不加，参数 `title=1` 开）。两种棋各照自己的主流软件画（见「棋盘」），不求统一。
 
 **播放。**

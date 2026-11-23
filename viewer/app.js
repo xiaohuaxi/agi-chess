@@ -24,7 +24,7 @@
 // window.viewer.show(game, ply) / summary()：直接画某一格（截图、调试用）。
 import { decodeText, moveNote } from './lib/pgn.js';
 import { loadGamesWithAnalysis } from './lib/replay.js';
-import { playerOf, fullName, startMoveNumber, fmtTokens, thinkTotals, points, scoresBefore, fmtScore, resultParts, resultText, totals } from './lib/match.js';
+import { displayPlayer, playerOf, fullName, startMoveNumber, fmtTokens, thinkTotals, points, scoresBefore, fmtScore, resultParts, resultText, totals } from './lib/match.js';
 import { formatStepEval, moveRows, nagLabel, noteItems, splitWarnings } from './lib/panel.js';
 import { playOptions, sequence } from './lib/play.js';
 import { T, langOf, parseNames } from './lib/i18n.js';
@@ -41,9 +41,11 @@ const SND = REC ? { on: false, vol: 1 } : soundOptions(params);   // 录制时�
 const VENDOR = params.get('vendor') !== '0';   // 标题画面名字前补厂商（「GPT astra」），vendor=0 不补
 const LANG = langOf(params), L = T(LANG);      // 界面语言：lang=en 英文，默认中文
 const NAMES = parseNames(params.get('names')); // 显示名覆盖，没给就是空表
-const pl = (game, side) => playerOf(game, side, NAMES);
 const TITLE_INSET = 24;                        // 标题卡片左右各离棋盘边多远
 const FORCED = REC ? 'compact' : ['compact', 'wide'].includes(params.get('layout')) ? params.get('layout') : null;
+// 普通浏览态（桌面宽版与自动手机态）使用统一对外显示名；显式 layout=compact 与 rec=1 严格沿用原录屏短名逻辑。
+const USE_DISPLAY_NAME = !REC && FORCED !== 'compact';
+const pl = (game, side) => (USE_DISPLAY_NAME ? displayPlayer(game, side, { lang: LANG, names: NAMES }) : playerOf(game, side, NAMES));
 // 自动选版式的分界：宽 ≥ WIDE_MIN 为桌面宽版，未传 layout 的窄视口进可滚动手机态 .mobile；rec=1 恒为窄版 .compact
 const WIDE_MIN = 900;
 const SELF_DIR = VIEWER_DIR;
@@ -216,7 +218,7 @@ function showBanner(d) {
 
 // 总比分画面（多盘连播播完后的一格，docs/viewer.md「播放」的 kind=end）：棋种、标题 + 每人一行名字与总分，领先的一行点亮。
 function showSummary() {
-  const rows = totals(games.map((g) => g.game), NAMES);
+  const rows = totals(games.map((g) => g.game), NAMES, USE_DISPLAY_NAME ? { display: true, lang: LANG } : null);
   const box = $('summary');
   // 这格没有棋盘，所以写明棋种；清单里混了两种棋就都写上
   const kinds = [...new Set(games.map((g) => (g.xiangqi ? L.xiangqi : L.chess)))].join(' / ');
@@ -244,7 +246,9 @@ function showTitle(gi) {
   const names = [];
   for (const s of ['w', 'b']) {
     if (s === 'b') kids.push(h('div', 't-vs', L.vs));
-    const p = fullName(g.game, s, VENDOR, NAMES);
+    const p = (USE_DISPLAY_NAME && VENDOR)
+      ? displayPlayer(g.game, s, { lang: LANG, names: NAMES })
+      : fullName(g.game, s, VENDOR, NAMES);
     const row = h('div', 't-row');
     row.append(h('span', 'disc ' + (s === 'w' ? (g.xiangqi ? 'red' : 'white') : 'black')));
     const name = h('span', 'name');
@@ -356,7 +360,7 @@ function renderSide(gi, ply, final) {
     $('s-head').replaceChildren(...head);
     // 双方：圆片、全称、思考深度；最后一行结果
     const ps = ['w', 'b'].map((s) => {
-      const p = fullName(game, s, true, NAMES), row = h('div', 'p');
+      const p = USE_DISPLAY_NAME ? displayPlayer(game, s, { lang: LANG, names: NAMES }) : fullName(game, s, true, NAMES), row = h('div', 'p');
       row.append(h('span', 'disc ' + (s === 'w' ? (xiangqi ? 'red' : 'white') : 'black')), h('span', 'pname', p.name));
       if (p.effort) { const e = h('span', 'eff', L.effort + ' '); e.append(h('b', null, p.effort)); row.append(e); }
       return row;
@@ -428,7 +432,7 @@ function noteView(g, ply, final) {
   for (const n of move.nags) head.append(h('span', 'nag' + ([2, 4, 6].includes(n) ? ' bad' : [1, 3, 5].includes(n) ? ' good' : ''), nagLabel(n, LANG)));
   if (st.check) head.append(h('span', 'nag bad', L.check));
   const p = pl(game, st.side);
-  head.append(h('span', 'who', p.name + (p.effort ? '+' + p.effort : '')));
+  head.append(h('span', 'who', p.name + (p.effort ? (USE_DISPLAY_NAME ? ' +' : '+') + p.effort : '')));
   const kids = [head];
   const ev = formatStepEval(st, xiangqi, LANG);
   if (ev) {

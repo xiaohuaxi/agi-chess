@@ -77,7 +77,7 @@ test('逐着引擎评估换算与最佳着转换：实盘黄金断言、国象�
   assert.deepEqual(formatStepEval(st40, false, 'en'), {
     scoreLabel: 'White eval',
     score: '+1.02 → +4.10',
-    wpLabel: 'Win%',
+    wpLabel: 'White win%',
     wp: '59.3% → 81.9%',
     bestLabel: 'Best',
     best: 'Kg7',
@@ -100,7 +100,7 @@ test('逐着引擎评估换算与最佳着转换：实盘黄金断言、国象�
   assert.deepEqual(formatStepEval(st9, true, 'en'), {
     scoreLabel: 'Red eval',
     score: '0 → -469 cp',
-    wpLabel: 'Win%',
+    wpLabel: 'White win%',
     wp: null,
     bestLabel: 'Best',
     best: 'R2+6',
@@ -286,7 +286,7 @@ test('/agi-chess/ 子路径三页全链路：英文零 CJK、手机窄屏零溢�
     assert.ok(!readerFromSeries.search.includes('autoplay='), readerFromSeries.search);
     assert.equal(readerFromSeries.curPly, 40);
     assert.match(readerFromSeries.evalText, /\+1\.02 → \+4\.10/);
-    assert.match(readerFromSeries.evalText, /59\.3% → 81\.9%/);
+    assert.match(readerFromSeries.evalText, /White win% 59\.3% → 81\.9%/);
     assert.match(readerFromSeries.evalText, /Kg7/);
     assert.equal(readerFromSeries.backText, '← Series Board');
     assert.equal(readerFromSeries.firstSpan, 'Chess');
@@ -328,10 +328,38 @@ test('/agi-chess/ 子路径三页全链路：英文零 CJK、手机窄屏零溢�
     assert.deepEqual((await collectUiTexts(page)).filter(hasCjk), [], 'catalog-en CJK');
     await checkNoOverflow(page, 'catalog-375');
 
-    // 关键词搜索 maia-1900 过滤并重置
+    // 验证统一对外显示名：无重复 -high +high、无大小写混乱 Claude opus、搜索框短 placeholder 与完整 aria-label
+    const catCheck = await page.evaluate(() => {
+      const names = [...document.querySelectorAll('.cat-side')].map((e) => e.textContent);
+      const inp = document.querySelector('.search-input');
+      return {
+        dupHigh: names.filter((t) => /-high\s*\+high/i.test(t)),
+        lowerOpus: names.filter((t) => t.includes('Claude opus')),
+        hasAgyOpus: names.some((t) => t.includes('Claude Opus 5.5 (agy)+high')),
+        hasArgon: names.some((t) => t.includes('Gemini 4 Argon+high')),
+        hasAstra62: names.some((t) => t.includes('GPT-6.2 Astra+max')),
+        placeholder: inp.placeholder,
+        aria: inp.getAttribute('aria-label'),
+      };
+    });
+    assert.deepEqual(catCheck.dupHigh, []);
+    assert.deepEqual(catCheck.lowerOpus, []);
+    assert.equal(catCheck.hasAgyOpus, true);
+    assert.equal(catCheck.hasArgon, true);
+    assert.equal(catCheck.hasAstra62, true);
+    assert.equal(catCheck.placeholder, 'Search players, engines or paths');
+    assert.match(catCheck.aria, /maia-1900/);
+
+    // 关键词搜索兼容性：maia-1900 / neon / gpt-6.2-astra / GPT-6.2 Astra 全命中
     await page.fill('.search-input', 'maia-1900');
     assert.equal(await page.evaluate(() => document.querySelectorAll('.cat-row').length), 30);
     assert.match(page.url(), /q=maia-1900/);
+    await page.fill('.search-input', 'gpt-6.2-astra');
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.cat-row').length), 9);
+    await page.fill('.search-input', 'GPT-6.2 Astra');
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.cat-row').length), 9);
+    await page.fill('.search-input', 'neon');
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.cat-row').length), 8);
     await page.click('.clear-btn');
     assert.equal(await page.evaluate(() => document.querySelectorAll('.cat-row').length), 192);
 
@@ -393,6 +421,37 @@ test('/agi-chess/ 子路径三页全链路：英文零 CJK、手机窄屏零溢�
     await ctx.close();
     await server.close();
     rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('serve.mjs 本机调试服务：/viewer/catalog/ 与 /viewer/series/ 尾斜杠回退到对应 .html 并保留 query 与 hash', { skip }, async () => {
+  const server = await serve(ROOT);
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  try {
+    await page.goto(`http://127.0.0.1:${server.port}/viewer/catalog/?q=neon&lang=en#local1`);
+    await page.waitForFunction(() => location.pathname === '/viewer/catalog.html');
+    await page.evaluate(() => window.pageReady);
+    assert.deepEqual(await page.evaluate(() => ({
+      pathname: location.pathname,
+      q: new URLSearchParams(location.search).get('q'),
+      hash: location.hash,
+      rows: document.querySelectorAll('.cat-row').length,
+    })), { pathname: '/viewer/catalog.html', q: 'neon', hash: '#local1', rows: 8 });
+
+    await page.goto(`http://127.0.0.1:${server.port}/viewer/series/?variant=xiangqi&lang=en#local2`);
+    await page.waitForFunction(() => location.pathname === '/viewer/series.html');
+    await page.evaluate(() => window.pageReady);
+    assert.deepEqual(await page.evaluate(() => ({
+      pathname: location.pathname,
+      variant: new URLSearchParams(location.search).get('variant'),
+      hash: location.hash,
+    })), { pathname: '/viewer/series.html', variant: 'xiangqi', hash: '#local2' });
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+    await server.close();
   }
 });
 

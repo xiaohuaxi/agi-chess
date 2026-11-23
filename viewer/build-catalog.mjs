@@ -7,7 +7,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hasCjk } from './lib/i18n.js';
-import { fullName, playerOf, points } from './lib/match.js';
+import { displayName, playerOf, points } from './lib/match.js';
 import { decodeText, parsePgn } from './lib/pgn.js';
 import { isXiangqi } from './lib/replay.js';
 
@@ -88,8 +88,10 @@ export function buildCatalogObject() {
 
     const wRaw = g.tags.Red ?? g.tags.White ?? '?';
     const bRaw = g.tags.Black ?? '?';
-    const wFull = fullName(g, 'w', true);
-    const bFull = fullName(g, 'b', true);
+    const wDispZh = displayName(wRaw, 'zh');
+    const wDispEn = displayName(wRaw, 'en');
+    const bDispZh = displayName(bRaw, 'zh');
+    const bDispEn = displayName(bRaw, 'en');
     const wShort = playerOf(g, 'w');
     const bShort = playerOf(g, 'b');
 
@@ -136,7 +138,9 @@ export function buildCatalogObject() {
       report: rule.report,
       w: {
         raw: wRaw,
-        name: wFull.name,
+        name: wDispEn,
+        labelZh: wDispZh,
+        labelEn: wDispEn,
         short: wShort.name,
         effort: wShort.effort,
         plies: wSt.plies,
@@ -145,7 +149,9 @@ export function buildCatalogObject() {
       },
       b: {
         raw: bRaw,
-        name: bFull.name,
+        name: bDispEn,
+        labelZh: bDispZh,
+        labelEn: bDispEn,
         short: bShort.name,
         effort: bShort.effort,
         plies: bSt.plies,
@@ -206,6 +212,16 @@ export function buildCatalogObject() {
       else bucket.l += 1;
 
       const sA = gm[aSide], sB = gm[bSide];
+      const attachAliases = (sideObj, spec) => {
+        const baseLabels = new Set([sideObj.labelZh, sideObj.labelEn, sideObj.name].filter(Boolean));
+        const list = Array.isArray(sideObj.aliases) ? [...sideObj.aliases] : [];
+        for (const cand of [spec.labelZh, spec.labelEn, spec.shortLabel]) {
+          if (cand && !baseLabels.has(cand) && !list.includes(cand)) list.push(cand);
+        }
+        if (list.length) sideObj.aliases = list;
+      };
+      attachAliases(sA, def.sideA);
+      attachAliases(sB, def.sideB);
       if (!gm.analyzed || sA.acpl === null || sB.acpl === null) {
         hasAllStats = false;
       } else {
@@ -261,8 +277,8 @@ export function buildCatalogObject() {
         raw: spec.raw,
         techName: sideObj.name,
         effort: spec.effort,
-        labelZh: spec.labelZh,
-        labelEn: spec.labelEn,
+        labelZh: spec.labelZh ?? displayName(spec.raw, 'zh'),
+        labelEn: spec.labelEn ?? displayName(spec.raw, 'en'),
         ...(spec.shortLabel ? { shortLabel: spec.shortLabel } : {}),
       };
     };
